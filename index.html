@@ -273,30 +273,36 @@
               <option value="Other">Other</option>
             </select>
           </div>
-          <!-- Upload Demo Script (optional) -->
+          <!-- Demo Context Toggle -->
           <div style="margin-bottom: 14px;">
-            <label style="display: block; font-size: 12px; font-weight: 700; color: #032D60; margin-bottom: 5px;">Upload Demo Script</label>
-            <div id="drop-zone" onclick="document.getElementById('file-input').click()"
-              style="border: 2px dashed #d1d5db; border-radius: 10px; padding: 24px 20px; text-align: center; cursor: pointer; transition: border-color 0.2s, background 0.2s;"
-              onmouseenter="this.style.borderColor='#0176D3'; this.style.background='#F8FBFF';"
-              onmouseleave="this.style.borderColor='#d1d5db'; this.style.background='transparent';"
-              ondragover="event.preventDefault(); this.style.borderColor='#0176D3'; this.style.background='#F8FBFF';"
-              ondragleave="this.style.borderColor='#d1d5db'; this.style.background='transparent';"
-              ondrop="event.preventDefault(); this.style.borderColor='#d1d5db'; this.style.background='transparent'; handleFileDrop(event);">
-              <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#9ca3af" stroke-width="1.5" style="margin: 0 auto 6px; display: block;"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
-              <p style="font-size: 13px; color: #666; margin: 0 0 2px;">Drop a PDF or Word doc here, or click to browse</p>
-              <p style="font-size: 11px; color: #aaa; margin: 0;">Optional — we'll extract the synopsis from it</p>
+            <label style="display: block; font-size: 12px; font-weight: 700; color: #032D60; margin-bottom: 8px;">Demo Context <span style="font-weight: 400; color: #888;">(optional)</span></label>
+            <div id="input-mode-toggle" style="display: inline-flex; background: #f3f4f6; border-radius: 8px; padding: 3px; margin-bottom: 12px;">
+              <button type="button" id="mode-synopsis" onclick="switchInputMode('synopsis')" class="cursor-pointer" style="padding: 6px 16px; font-size: 12px; font-weight: 600; border: none; border-radius: 6px; background: #0176D3; color: white; transition: all 0.15s;">Write Synopsis</button>
+              <button type="button" id="mode-upload" onclick="switchInputMode('upload')" class="cursor-pointer" style="padding: 6px 16px; font-size: 12px; font-weight: 600; border: none; border-radius: 6px; background: transparent; color: #666; transition: all 0.15s;">Upload Script</button>
             </div>
-            <input id="file-input" type="file" accept=".pdf,.doc,.docx" style="display: none;" onchange="handleFileSelect(this)">
-            <div id="file-selected" class="hidden" style="margin-top: 8px; padding: 10px 12px; background: #F0FDF4; border: 1px solid #BBF7D0; border-radius: 8px; display: flex; align-items: center; justify-content: space-between;">
-              <span id="file-selected-name" style="font-size: 13px; font-weight: 600; color: #166534;"></span>
-              <button onclick="clearFile()" class="cursor-pointer" style="font-size: 12px; color: #e5534b; background: none; border: none;">Remove</button>
+            <!-- Synopsis section -->
+            <div id="synopsis-section">
+              <textarea id="new-synopsis" rows="3" placeholder="Briefly describe the demo story or narrative you want to convey..." style="width: 100%; padding: 10px 12px; border: 1px solid #d1d5db; border-radius: 8px; font-size: 14px; line-height: 1.5; font-family: inherit; resize: vertical; box-sizing: border-box;"></textarea>
             </div>
-          </div>
-          <!-- Synopsis (shown when no file uploaded) -->
-          <div id="synopsis-field" style="margin-bottom: 14px;">
-            <label style="display: block; font-size: 12px; font-weight: 700; color: #032D60; margin-bottom: 5px;">Synopsis of Demo Story</label>
-            <textarea id="new-synopsis" rows="3" placeholder="Briefly describe the demo story or narrative you want to convey..." style="width: 100%; padding: 10px 12px; border: 1px solid #d1d5db; border-radius: 8px; font-size: 14px; line-height: 1.5; font-family: inherit; resize: vertical; box-sizing: border-box;"></textarea>
+            <!-- Upload section -->
+            <div id="upload-section" class="hidden">
+              <div id="drop-zone" onclick="document.getElementById('file-input').click()"
+                style="border: 2px dashed #d1d5db; border-radius: 10px; padding: 24px 20px; text-align: center; cursor: pointer; transition: border-color 0.2s, background 0.2s;"
+                onmouseenter="this.style.borderColor='#0176D3'; this.style.background='#F8FBFF';"
+                onmouseleave="this.style.borderColor='#d1d5db'; this.style.background='transparent';"
+                ondragover="event.preventDefault(); this.style.borderColor='#0176D3'; this.style.background='#F8FBFF';"
+                ondragleave="this.style.borderColor='#d1d5db'; this.style.background='transparent';"
+                ondrop="event.preventDefault(); this.style.borderColor='#d1d5db'; this.style.background='transparent'; handleFileDrop(event);">
+                <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#9ca3af" stroke-width="1.5" style="margin: 0 auto 6px; display: block;"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+                <p style="font-size: 13px; color: #666; margin: 0 0 2px;">Drop a PDF or Word doc here, or click to browse</p>
+                <p style="font-size: 11px; color: #aaa; margin: 0;">We'll extract the synopsis from your script</p>
+              </div>
+              <input id="file-input" type="file" accept=".pdf,.doc,.docx" style="display: none;" onchange="handleFileSelect(this)">
+              <div id="file-selected" class="hidden" style="margin-top: 8px; padding: 10px 12px; background: #F0FDF4; border: 1px solid #BBF7D0; border-radius: 8px; display: flex; align-items: center; justify-content: space-between;">
+                <span id="file-selected-name" style="font-size: 13px; font-weight: 600; color: #166534;"></span>
+                <button onclick="clearFile()" class="cursor-pointer" style="font-size: 12px; color: #e5534b; background: none; border: none;">Remove</button>
+              </div>
+            </div>
           </div>
           <p id="new-error" class="hidden" style="font-size: 13px; color: #e5534b; margin-bottom: 12px; padding: 8px 12px; background: #FEF2F2; border-radius: 6px;"></p>
           <div class="flex justify-end gap-3">
@@ -1521,6 +1527,27 @@ async function refineView() {
   }
 }
 
+// --- Input Mode Toggle ---
+function switchInputMode(mode) {
+  const synopsisBtn = document.getElementById('mode-synopsis');
+  const uploadBtn = document.getElementById('mode-upload');
+  const synopsisSection = document.getElementById('synopsis-section');
+  const uploadSection = document.getElementById('upload-section');
+  if (mode === 'synopsis') {
+    synopsisBtn.style.background = '#0176D3'; synopsisBtn.style.color = 'white';
+    uploadBtn.style.background = 'transparent'; uploadBtn.style.color = '#666';
+    synopsisSection.classList.remove('hidden');
+    uploadSection.classList.add('hidden');
+    clearFile();
+  } else {
+    uploadBtn.style.background = '#0176D3'; uploadBtn.style.color = 'white';
+    synopsisBtn.style.background = 'transparent'; synopsisBtn.style.color = '#666';
+    uploadSection.classList.remove('hidden');
+    synopsisSection.classList.add('hidden');
+    document.getElementById('new-synopsis').value = '';
+  }
+}
+
 // --- New Item Dialog ---
 function openNewItemDialog() {
   // Reset all fields
@@ -1532,6 +1559,7 @@ function openNewItemDialog() {
   document.getElementById('new-synopsis').value = '';
   document.getElementById('new-error').classList.add('hidden');
   clearFile();
+  switchInputMode('synopsis');
   document.getElementById('new-item-dialog').classList.remove('hidden');
 }
 
@@ -1558,16 +1586,12 @@ function setSelectedFile(file) {
   document.getElementById('drop-zone').classList.add('hidden');
   document.getElementById('file-selected').classList.remove('hidden');
   document.getElementById('file-selected-name').textContent = file.name;
-  // Hide synopsis field when a file is provided
-  document.getElementById('synopsis-field').classList.add('hidden');
 }
 
 function clearFile() {
   document.getElementById('file-input').value = '';
   document.getElementById('drop-zone').classList.remove('hidden');
   document.getElementById('file-selected').classList.add('hidden');
-  // Show synopsis field again
-  document.getElementById('synopsis-field').classList.remove('hidden');
 }
 
 // --- Generate view ---
