@@ -414,48 +414,53 @@ app.post('/api/upload', upload.single('file'), async (req, res) => {
     const trimmedText = extractedText.trim();
 
     // Try to find an existing synopsis in the document
-    // Strategy: find a "Synopsis" heading/label, then grab the paragraph(s) that follow it
+    // Match headings like "Synopsis", "Script Synopsis", "Demo Synopsis", etc.
     let synopsis = null;
-    const topSection = trimmedText.substring(0, 3000);
+    const topSection = trimmedText.substring(0, 5000);
     const lines = topSection.split('\n');
     let synopsisStartIdx = -1;
 
-    // Find the line that contains "Synopsis" as a heading or label
     for (let i = 0; i < lines.length; i++) {
       const line = lines[i].trim();
-      if (/^synopsis[\s:;\-–—]*$/i.test(line) || /^synopsis[\s:;\-–—]+/i.test(line)) {
-        // If the synopsis text is on the same line as the label (e.g. "Synopsis: blah blah")
-        const afterLabel = line.replace(/^synopsis[\s:;\-–—]*/i, '').trim();
+      // Match any line ending with "synopsis" (e.g. "Script Synopsis", "Synopsis:", "Demo Synopsis")
+      if (/\bsynopsis[\s:;\-–—]*$/i.test(line)) {
+        synopsisStartIdx = i + 1;
+        break;
+      }
+      // Match "Synopsis: some text here" on the same line
+      if (/\bsynopsis[\s:;\-–—]+\S/i.test(line)) {
+        const afterLabel = line.replace(/^.*?\bsynopsis[\s:;\-–—]*/i, '').trim();
         if (afterLabel.length > 10) {
-          synopsis = afterLabel;
-          // Also grab following lines until a blank line or new heading
+          const parts = [afterLabel];
           for (let j = i + 1; j < lines.length; j++) {
-            const nextLine = lines[j].trim();
-            if (!nextLine || /^[A-Z][a-z]*[\s:;\-–—]*$/.test(nextLine) || /^(scene|act|step|section|chapter)\s/i.test(nextLine)) break;
-            synopsis += ' ' + nextLine;
+            const next = lines[j].trim();
+            if (!next && parts.length > 0) break;
+            if (!next) continue;
+            parts.push(next);
           }
+          synopsis = parts.join(' ');
           break;
         }
-        // Synopsis is on the next line(s)
         synopsisStartIdx = i + 1;
         break;
       }
     }
 
-    // Collect synopsis paragraph lines after the heading
+    // Collect the paragraph(s) after the synopsis heading
     if (!synopsis && synopsisStartIdx >= 0) {
-      const synopsisLines = [];
+      const parts = [];
+      let hitContent = false;
       for (let j = synopsisStartIdx; j < lines.length; j++) {
         const line = lines[j].trim();
-        // Stop at blank line (after we have content), or at a new heading-like line
-        if (!line && synopsisLines.length > 0) break;
-        if (!line) continue; // skip blank lines before content starts
-        // Stop if this looks like a new section heading (short line, possibly followed by content)
-        if (synopsisLines.length > 0 && line.length < 40 && /^[A-Z]/.test(line) && !line.includes('.')) break;
-        synopsisLines.push(line);
+        if (!line) {
+          if (hitContent) break; // blank line after content = end of synopsis
+          continue; // skip leading blank lines
+        }
+        hitContent = true;
+        parts.push(line);
       }
-      if (synopsisLines.length > 0) {
-        synopsis = synopsisLines.join(' ');
+      if (parts.length > 0) {
+        synopsis = parts.join(' ');
       }
     }
 
