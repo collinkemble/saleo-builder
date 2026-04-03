@@ -1617,12 +1617,11 @@ async function generateFromPrompt() {
     let synopsisText = synopsis;
     let sourceFilename = null;
 
-    // If a file was uploaded, extract text from it as the synopsis
-    if (hasFile) {
-      errorEl.classList.add('hidden');
-      document.getElementById('generate-btn').disabled = true;
-      document.getElementById('generate-btn').style.opacity = '0.6';
+    document.getElementById('generate-btn').disabled = true;
+    document.getElementById('generate-btn').style.opacity = '0.6';
 
+    // If a file was uploaded, extract synopsis from it
+    if (hasFile) {
       const formData = new FormData();
       formData.append('file', fileInput.files[0]);
       const uploadResp = await fetch('/api/upload', { method: 'POST', body: formData });
@@ -1631,18 +1630,17 @@ async function generateFromPrompt() {
         throw new Error(err.error || 'Upload failed');
       }
       const uploadResult = await uploadResp.json();
-      synopsisText = uploadResult.text;
+      synopsisText = uploadResult.synopsis || '';
       sourceFilename = uploadResult.filename;
-
-      document.getElementById('generate-btn').disabled = false;
-      document.getElementById('generate-btn').style.opacity = '1';
     }
 
-    // Build prompt from brand info + synopsis
-    let prompt = `Create a new demo view for the brand ${brand}`;
-    if (brandDesc) prompt += `, ${brandDesc}`;
-    prompt += `. Update all replacement values to match the context of ${brand}.`;
-    if (synopsisText) prompt += `\n\nDemo Story Synopsis:\n${synopsisText}`;
+    // Build prompt using the Saleo format
+    let prompt = `I'm creating a demo for ${brand}`;
+    if (brandDesc) prompt += ` who is a ${brandDesc}`;
+    if (brandUrl) prompt += ` and their website is ${brandUrl}`;
+    prompt += `.`;
+    if (synopsisText) prompt += ` The synopsis of my demo story is ${synopsisText}.`;
+    prompt += ` Update all of the replacement values for this scenario.`;
 
     // Save to DB
     const email = document.getElementById('user-email').textContent;
@@ -1662,6 +1660,8 @@ async function generateFromPrompt() {
     if (!saveResp.ok) throw new Error('Failed to save view');
     const saved = await saveResp.json();
 
+    document.getElementById('generate-btn').disabled = false;
+    document.getElementById('generate-btn').style.opacity = '1';
     closeNewItemDialog();
     showToast('Saleo View created!');
     viewItem(saved.item.id);

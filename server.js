@@ -411,10 +411,48 @@ app.post('/api/upload', upload.single('file'), async (req, res) => {
       extractedText = extractedText.substring(0, 50000) + '\n\n[Document truncated — first 50,000 characters shown]';
     }
 
+    const trimmedText = extractedText.trim();
+
+    // Try to find an existing synopsis at the top of the document
+    // Look for lines like "Synopsis:", "Synopsis -", "SYNOPSIS:", etc. in the first ~500 chars
+    let synopsis = null;
+    const topSection = trimmedText.substring(0, 500);
+    const synopsisMatch = topSection.match(/(?:^|\n)\s*synopsis[:\s\-–—]+(.+?)(?:\n\n|\n[A-Z])/is);
+    if (synopsisMatch) {
+      synopsis = synopsisMatch[1].trim();
+    }
+
+    // If no synopsis found, use Gemini to generate one
+    if (!synopsis) {
+      const apiKey = process.env.GEMINI_API_KEY;
+      if (apiKey) {
+        try {
+          const model = process.env.GEMINI_MODEL || 'gemini-2.5-flash';
+          const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
+          const geminiResp = await fetch(geminiUrl, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              contents: [{ parts: [{ text: `Read this demo script and write a 1 to 3 sentence synopsis of the demo story. Return ONLY the synopsis text, nothing else.\n\n${trimmedText.substring(0, 30000)}` }] }],
+              generationConfig: { maxOutputTokens: 200, temperature: 0.3 }
+            })
+          });
+          if (geminiResp.ok) {
+            const geminiData = await geminiResp.json();
+            const generated = geminiData.candidates?.[0]?.content?.parts?.[0]?.text?.trim();
+            if (generated) synopsis = generated;
+          }
+        } catch (e) {
+          console.warn('Synopsis generation failed, continuing without:', e.message);
+        }
+      }
+    }
+
     res.json({
-      text: extractedText.trim(),
+      text: trimmedText,
+      synopsis: synopsis || null,
       filename: originalname,
-      charCount: extractedText.trim().length
+      charCount: trimmedText.length
     });
   } catch (err) {
     console.error('File upload failed:', err);
