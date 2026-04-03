@@ -260,6 +260,18 @@
             <input id="new-name" type="text" placeholder="e.g. Acme Corp Pipeline Demo" style="width: 100%; padding: 10px 12px; border: 1px solid #d1d5db; border-radius: 8px; font-size: 14px; box-sizing: border-box;">
           </div>
           <div style="margin-bottom: 14px;">
+            <label style="display: block; font-size: 12px; font-weight: 700; color: #032D60; margin-bottom: 5px;">Brand <span style="color: #e5534b;">*</span></label>
+            <input id="new-brand" type="text" placeholder="e.g. Acme Corp" style="width: 100%; padding: 10px 12px; border: 1px solid #d1d5db; border-radius: 8px; font-size: 14px; box-sizing: border-box;">
+          </div>
+          <div style="margin-bottom: 14px;">
+            <label style="display: block; font-size: 12px; font-weight: 700; color: #032D60; margin-bottom: 5px;">Brand Description</label>
+            <input id="new-brand-desc" type="text" placeholder="e.g. Global retailer specializing in outdoor gear" style="width: 100%; padding: 10px 12px; border: 1px solid #d1d5db; border-radius: 8px; font-size: 14px; box-sizing: border-box;">
+          </div>
+          <div style="margin-bottom: 14px;">
+            <label style="display: block; font-size: 12px; font-weight: 700; color: #032D60; margin-bottom: 5px;">Brand Website URL</label>
+            <input id="new-brand-url" type="url" placeholder="e.g. https://www.acmecorp.com" style="width: 100%; padding: 10px 12px; border: 1px solid #d1d5db; border-radius: 8px; font-size: 14px; box-sizing: border-box;">
+          </div>
+          <div style="margin-bottom: 14px;">
             <label style="display: block; font-size: 12px; font-weight: 700; color: #032D60; margin-bottom: 5px;">Industry <span style="color: #e5534b;">*</span></label>
             <select id="new-industry" style="width: 100%; padding: 10px 12px; border: 1px solid #d1d5db; border-radius: 8px; font-size: 14px; background: white; box-sizing: border-box;">
               <option value="">Select industry...</option>
@@ -286,6 +298,18 @@
           <div style="margin-bottom: 14px;">
             <label style="display: block; font-size: 12px; font-weight: 700; color: #032D60; margin-bottom: 5px;">View Name <span style="color: #e5534b;">*</span></label>
             <input id="upload-name" type="text" placeholder="e.g. Q4 Enterprise Demo" style="width: 100%; padding: 10px 12px; border: 1px solid #d1d5db; border-radius: 8px; font-size: 14px; box-sizing: border-box;">
+          </div>
+          <div style="margin-bottom: 14px;">
+            <label style="display: block; font-size: 12px; font-weight: 700; color: #032D60; margin-bottom: 5px;">Brand <span style="color: #e5534b;">*</span></label>
+            <input id="upload-brand" type="text" placeholder="e.g. Acme Corp" style="width: 100%; padding: 10px 12px; border: 1px solid #d1d5db; border-radius: 8px; font-size: 14px; box-sizing: border-box;">
+          </div>
+          <div style="margin-bottom: 14px;">
+            <label style="display: block; font-size: 12px; font-weight: 700; color: #032D60; margin-bottom: 5px;">Brand Description</label>
+            <input id="upload-brand-desc" type="text" placeholder="e.g. Global retailer specializing in outdoor gear" style="width: 100%; padding: 10px 12px; border: 1px solid #d1d5db; border-radius: 8px; font-size: 14px; box-sizing: border-box;">
+          </div>
+          <div style="margin-bottom: 14px;">
+            <label style="display: block; font-size: 12px; font-weight: 700; color: #032D60; margin-bottom: 5px;">Brand Website URL</label>
+            <input id="upload-brand-url" type="url" placeholder="e.g. https://www.acmecorp.com" style="width: 100%; padding: 10px 12px; border: 1px solid #d1d5db; border-radius: 8px; font-size: 14px; box-sizing: border-box;">
           </div>
           <div style="margin-bottom: 14px;">
             <label style="display: block; font-size: 12px; font-weight: 700; color: #032D60; margin-bottom: 5px;">Industry <span style="color: #e5534b;">*</span></label>
@@ -1321,7 +1345,7 @@ async function confirmDeleteItem() {
 // --- System prompt for Saleo view generation ---
 const SALEO_SYSTEM_PROMPT = `You are Saleo Builder, an AI that creates ready-to-paste prompts for the Saleo demo personalization platform.
 
-Given information about a demo (description and industry), generate a JSON response with this exact structure:
+Given information about a demo (brand, industry, and description), generate a JSON response with this exact structure:
 {
   "prompt": "The complete Saleo prompt text...",
   "summary": "A 1-2 sentence summary of what this view does"
@@ -1558,10 +1582,16 @@ async function refineView() {
 function openNewItemDialog() {
   // Reset all fields
   document.getElementById('new-name').value = '';
+  document.getElementById('new-brand').value = '';
+  document.getElementById('new-brand-desc').value = '';
+  document.getElementById('new-brand-url').value = '';
   document.getElementById('new-industry').value = '';
   document.getElementById('new-description').value = '';
   document.getElementById('new-error').classList.add('hidden');
   document.getElementById('upload-name').value = '';
+  document.getElementById('upload-brand').value = '';
+  document.getElementById('upload-brand-desc').value = '';
+  document.getElementById('upload-brand-url').value = '';
   document.getElementById('upload-industry').value = '';
   document.getElementById('upload-instructions').value = '';
   document.getElementById('upload-error').classList.add('hidden');
@@ -1645,11 +1675,14 @@ function clearFile() {
 // --- Generate from prompt ---
 async function generateFromPrompt() {
   const name = document.getElementById('new-name').value.trim();
+  const brand = document.getElementById('new-brand').value.trim();
+  const brandDesc = document.getElementById('new-brand-desc').value.trim();
+  const brandUrl = document.getElementById('new-brand-url').value.trim();
   const industry = document.getElementById('new-industry').value;
   const description = document.getElementById('new-description').value.trim();
   const errorEl = document.getElementById('new-error');
 
-  if (!name || !industry || !description) {
+  if (!name || !brand || !industry || !description) {
     errorEl.textContent = 'Please fill in all required fields.';
     errorEl.classList.remove('hidden');
     return;
@@ -1663,7 +1696,9 @@ async function generateFromPrompt() {
   const statusEl = document.getElementById('create-status');
 
   try {
-    let userMsg = `Create a Saleo prompt for:\n- Industry: ${industry}\n- Description: ${description}`;
+    let userMsg = `Create a Saleo prompt for:\n- Brand: ${brand}\n- Industry: ${industry}\n- Description: ${description}`;
+    if (brandDesc) userMsg += `\n- Brand Description: ${brandDesc}`;
+    if (brandUrl) userMsg += `\n- Brand Website: ${brandUrl}`;
 
     const result = await callGeminiSSE({
       contents: [
@@ -1683,7 +1718,7 @@ async function generateFromPrompt() {
       summary: result.summary || '',
       source_type: 'prompt',
       source_text: description,
-      metadata: { industry: industry }
+      metadata: { industry: industry, brand: brand, brand_desc: brandDesc || null, brand_url: brandUrl || null }
     };
 
     const saveResp = await fetch('/api/items', {
@@ -1709,13 +1744,16 @@ async function generateFromPrompt() {
 // --- Generate from upload ---
 async function generateFromUpload() {
   const name = document.getElementById('upload-name').value.trim();
+  const brand = document.getElementById('upload-brand').value.trim();
+  const brandDesc = document.getElementById('upload-brand-desc').value.trim();
+  const brandUrl = document.getElementById('upload-brand-url').value.trim();
   const industry = document.getElementById('upload-industry').value;
   const fileInput = document.getElementById('file-input');
   const instructions = document.getElementById('upload-instructions').value.trim();
   const errorEl = document.getElementById('upload-error');
 
-  if (!name || !industry) {
-    errorEl.textContent = 'Please fill in the view name and industry.';
+  if (!name || !brand || !industry) {
+    errorEl.textContent = 'Please fill in the view name, brand, and industry.';
     errorEl.classList.remove('hidden');
     return;
   }
@@ -1748,7 +1786,10 @@ async function generateFromUpload() {
     statusEl.textContent = 'Generating Saleo prompt from document...';
 
     // Step 2: Generate prompt from extracted text
-    let userMsg = `Convert this demo script into a Saleo prompt.\n\nIndustry: ${industry}\nDocument: "${uploadResult.filename}" (${uploadResult.charCount} characters extracted)\n\n--- DOCUMENT TEXT ---\n${uploadResult.text}\n--- END ---`;
+    let userMsg = `Convert this demo script into a Saleo prompt.\n\nBrand: ${brand}\nIndustry: ${industry}`;
+    if (brandDesc) userMsg += `\nBrand Description: ${brandDesc}`;
+    if (brandUrl) userMsg += `\nBrand Website: ${brandUrl}`;
+    userMsg += `\nDocument: "${uploadResult.filename}" (${uploadResult.charCount} characters extracted)\n\n--- DOCUMENT TEXT ---\n${uploadResult.text}\n--- END ---`;
     if (instructions) userMsg += `\n\nAdditional instructions: ${instructions}`;
 
     const result = await callGeminiSSE({
@@ -1769,7 +1810,7 @@ async function generateFromUpload() {
       summary: result.summary || '',
       source_type: 'upload',
       source_text: uploadResult.text.substring(0, 5000), // store first 5k chars of source
-      metadata: { industry: industry, source_filename: uploadResult.filename }
+      metadata: { industry: industry, brand: brand, brand_desc: brandDesc || null, brand_url: brandUrl || null, source_filename: uploadResult.filename }
     };
 
     const saveResp = await fetch('/api/items', {
