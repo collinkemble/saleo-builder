@@ -1531,9 +1531,9 @@ async function generateFromPrompt() {
 
   try {
     // Build prompt directly from brand info
-    let prompt = `Create a new view for the brand ${brand}`;
+    let prompt = `Create a new demo view for the brand ${brand}`;
     if (brandDesc) prompt += `, ${brandDesc}`;
-    prompt += `. Replace all token values to be relevant to this brand.`;
+    prompt += `. Update all replacement values to match the context of ${brand}.`;
 
     // Save to DB
     const email = document.getElementById('user-email').textContent;
