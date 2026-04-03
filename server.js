@@ -7,6 +7,8 @@ const crypto = require('crypto');
 const multer = require('multer');
 const { query } = require('./src/db/connection');
 const { migrate } = require('./src/db/migrate');
+const { uploadImage, deleteByUrl, deleteByUrls, extractAssetUrls } = require('./src/utils/r2');
+const { fetchBrandLogo } = require('./src/utils/logoFetcher');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -503,6 +505,95 @@ app.post('/api/upload', upload.single('file'), async (req, res) => {
 });
 
 // ═══════════════════════════════════════════════
+// IMAGE GENERATION & LOGO ROUTES
+// ═══════════════════════════════════════════════
+
+// POST /api/images/logo — Fetch brand logo from Clearbit/Google
+app.post('/api/images/logo', async (req, res) => {
+  try {
+    const { brand, websiteUrl } = req.body;
+    if (!brand) return res.status(400).json({ error: 'brand is required' });
+
+    const result = await fetchBrandLogo(brand, websiteUrl);
+    res.json(result);
+  } catch (err) {
+    console.error('Logo fetch failed:', err);
+    res.status(500).json({ error: 'Logo fetch failed: ' + err.message });
+  }
+});
+
+// POST /api/images/generate — Generate AI image via Gemini and upload to R2
+app.post('/api/images/generate', async (req, res) => {
+  try {
+    const { brand, brandDesc, industry, imageType, viewId } = req.body;
+    if (!brand) return res.status(400).json({ error: 'brand is required' });
+
+    const { GoogleGenAI } = require('@google/genai');
+    const apiKey = process.env.GEMINI_API_KEY;
+    if (!apiKey) return res.status(500).json({ error: 'GEMINI_API_KEY not configured' });
+
+    const ai = new GoogleGenAI({ apiKey });
+
+    // Build image prompt based on type
+    let prompt;
+    if (imageType === 'hero') {
+      prompt = `Create a professional, clean hero image for a ${industry || 'business'} brand called "${brand}"`;
+      if (brandDesc) prompt += ` which is ${brandDesc}`;
+      prompt += `. The image should be a wide banner-style photo suitable for a demo presentation. Modern, polished, aspirational. No text or logos in the image. Photorealistic style.`;
+    } else {
+      prompt = `Create a professional product or lifestyle image for the brand "${brand}"`;
+      if (brandDesc) prompt += `, ${brandDesc}`;
+      prompt += `. Clean, modern, photorealistic. No text or logos.`;
+    }
+
+    const response = await ai.models.generateContent({
+      model: 'gemini-2.5-flash-preview-image-generation',
+      contents: [{ text: prompt }],
+      config: {
+        responseModalities: ['TEXT', 'IMAGE'],
+      },
+    });
+
+    // Extract image from response
+    let imageBase64 = null;
+    let mimeType = 'image/png';
+    for (const part of response.candidates?.[0]?.content?.parts || []) {
+      if (part.inlineData) {
+        imageBase64 = part.inlineData.data;
+        mimeType = part.inlineData.mimeType || 'image/png';
+        break;
+      }
+    }
+
+    if (!imageBase64) {
+      return res.status(500).json({ error: 'Gemini did not return an image. Try again.' });
+    }
+
+    // Upload to R2
+    const folder = `views/${viewId || 'tmp'}/generated`;
+    const url = await uploadImage(imageBase64, mimeType, folder);
+
+    res.json({ url, mimeType, imageType: imageType || 'hero' });
+  } catch (err) {
+    console.error('Image generation failed:', err);
+    res.status(500).json({ error: 'Image generation failed: ' + err.message });
+  }
+});
+
+// POST /api/images/delete — Delete an R2 image by URL
+app.post('/api/images/delete', async (req, res) => {
+  try {
+    const { url } = req.body;
+    if (!url) return res.status(400).json({ error: 'url is required' });
+    await deleteByUrl(url);
+    res.json({ success: true });
+  } catch (err) {
+    console.error('Image delete failed:', err);
+    res.status(500).json({ error: 'Image delete failed: ' + err.message });
+  }
+});
+
+// ═══════════════════════════════════════════════
 // APP-SPECIFIC ROUTES
 // ═══════════════════════════════════════════════
 //
@@ -617,21 +708,33 @@ app.put('/api/items/:id', async (req, res) => {
   }
 });
 
-// DELETE /api/items/:id — delete an item
+// DELETE /api/items/:id — delete an item (with R2 image cleanup)
 app.delete('/api/items/:id', async (req, res) => {
   try {
     const email = req.query.email;
     if (!email) return res.status(400).json({ error: 'Email required' });
 
     const user = await getOrCreateUser(email);
+
+    // Fetch item data first to find R2 images for cleanup
+    const items = await query('SELECT * FROM items WHERE id = ? AND user_id = ?', [req.params.id, user.id]);
+    if (items.length === 0) {
+      return res.status(404).json({ error: 'Item not found' });
+    }
+
+    // Extract and delete R2 assets from item data
+    const itemData = typeof items[0].data === 'string' ? JSON.parse(items[0].data) : items[0].data;
+    if (itemData) {
+      const assetUrls = extractAssetUrls(itemData);
+      if (assetUrls.length > 0) {
+        deleteByUrls(assetUrls).catch(err => console.warn('[R2] Item cleanup error:', err.message));
+      }
+    }
+
     const result = await query(
       'DELETE FROM items WHERE id = ? AND user_id = ?',
       [req.params.id, user.id]
     );
-
-    if (result.affectedRows === 0) {
-      return res.status(404).json({ error: 'Item not found' });
-    }
 
     res.json({ success: true });
   } catch (err) {

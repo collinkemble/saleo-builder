@@ -32,6 +32,9 @@
       0%, 80%, 100% { transform: scale(0); opacity: 0; }
       40% { transform: scale(1); opacity: 1; }
     }
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
   </style>
 </head>
 <body class="bg-surface min-h-screen font-sans">
@@ -202,6 +205,59 @@
           <div class="flex justify-end gap-2" style="margin-top: 10px;">
             <button onclick="toggleEditPrompt()" class="cursor-pointer" style="padding: 6px 14px; font-size: 13px; font-weight: 500; color: #666; background: #f3f4f6; border: none; border-radius: 6px;">Cancel</button>
             <button onclick="savePrompt()" class="cursor-pointer" style="padding: 6px 14px; font-size: 13px; font-weight: 700; color: white; background: #0176D3; border: none; border-radius: 6px;">Save</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Images -->
+      <div style="background: white; border-radius: 12px; border: 1px solid #e5e7eb; box-shadow: 0 1px 3px rgba(0,0,0,0.06); margin-bottom: 20px;">
+        <div style="padding: 14px 20px; border-bottom: 1px solid #f0f0f0;">
+          <span style="font-size: 13px; font-weight: 700; color: #032D60; text-transform: uppercase; letter-spacing: 0.04em;">Images</span>
+        </div>
+        <div style="padding: 20px; display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
+          <!-- Logo -->
+          <div>
+            <div class="flex items-center justify-between" style="margin-bottom: 8px;">
+              <span style="font-size: 12px; font-weight: 700; color: #032D60;">Brand Logo</span>
+              <div class="flex items-center gap-2">
+                <button onclick="overrideImage('logo')" class="cursor-pointer" style="font-size: 11px; color: #0176D3; background: none; border: none; padding: 2px 6px;" title="Use custom URL">🔗</button>
+              </div>
+            </div>
+            <div id="img-logo-container" style="width: 100%; aspect-ratio: 1; background: #f8f9fa; border: 1px solid #e5e7eb; border-radius: 10px; display: flex; align-items: center; justify-content: center; overflow: hidden; position: relative;">
+              <div id="img-logo-loading" class="hidden" style="text-align: center;">
+                <div style="width: 28px; height: 28px; border: 3px solid #e5e7eb; border-top-color: #0176D3; border-radius: 50%; animation: spin 0.8s linear infinite; margin: 0 auto 6px;"></div>
+                <span style="font-size: 11px; color: #888;">Finding logo...</span>
+              </div>
+              <img id="img-logo" class="hidden" style="max-width: 80%; max-height: 80%; object-fit: contain;" alt="Brand logo">
+              <span id="img-logo-empty" style="font-size: 12px; color: #ccc;">No logo</span>
+            </div>
+          </div>
+          <!-- Hero Image -->
+          <div>
+            <div class="flex items-center justify-between" style="margin-bottom: 8px;">
+              <span style="font-size: 12px; font-weight: 700; color: #032D60;">Hero Image</span>
+              <div class="flex items-center gap-2">
+                <button onclick="regenerateImage('hero')" class="cursor-pointer" style="font-size: 11px; color: #0176D3; background: none; border: none; padding: 2px 6px;" title="Regenerate">🔄</button>
+                <button onclick="overrideImage('hero')" class="cursor-pointer" style="font-size: 11px; color: #0176D3; background: none; border: none; padding: 2px 6px;" title="Use custom URL">🔗</button>
+              </div>
+            </div>
+            <div id="img-hero-container" style="width: 100%; aspect-ratio: 16/9; background: #f8f9fa; border: 1px solid #e5e7eb; border-radius: 10px; display: flex; align-items: center; justify-content: center; overflow: hidden; position: relative;">
+              <div id="img-hero-loading" class="hidden" style="text-align: center;">
+                <div style="width: 28px; height: 28px; border: 3px solid #e5e7eb; border-top-color: #0176D3; border-radius: 50%; animation: spin 0.8s linear infinite; margin: 0 auto 6px;"></div>
+                <span style="font-size: 11px; color: #888;">Generating image...</span>
+              </div>
+              <img id="img-hero" class="hidden" style="width: 100%; height: 100%; object-fit: cover;" alt="Hero image">
+              <span id="img-hero-empty" style="font-size: 12px; color: #ccc;">No image</span>
+            </div>
+          </div>
+        </div>
+        <!-- Override URL input (hidden by default) -->
+        <div id="image-override-bar" class="hidden" style="padding: 0 20px 16px;">
+          <div class="flex items-center gap-2">
+            <span id="override-label" style="font-size: 12px; font-weight: 600; color: #032D60; white-space: nowrap;"></span>
+            <input id="override-url-input" type="url" placeholder="Paste image URL..." style="flex: 1; padding: 8px 12px; border: 1px solid #d1d5db; border-radius: 8px; font-size: 13px; box-sizing: border-box;">
+            <button onclick="saveOverrideUrl()" class="cursor-pointer" style="padding: 6px 14px; font-size: 12px; font-weight: 700; color: white; background: #0176D3; border: none; border-radius: 6px;">Save</button>
+            <button onclick="cancelOverride()" class="cursor-pointer" style="padding: 6px 10px; font-size: 12px; color: #666; background: #f3f4f6; border: none; border-radius: 6px;">Cancel</button>
           </div>
         </div>
       </div>
@@ -1429,6 +1485,10 @@ function renderDetail(item) {
   document.getElementById('detail-meta-created').textContent = 'Created: ' + new Date(item.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
   document.getElementById('detail-meta-updated').textContent = item.updated_at ? 'Updated: ' + new Date(item.updated_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : '';
 
+  // Images
+  renderImages(data);
+  autoGenerateImages(); // fire-and-forget — fetches missing images
+
   // Reset refine
   document.getElementById('refine-input').value = '';
   document.getElementById('refine-status').textContent = '';
@@ -1680,6 +1740,233 @@ async function generateFromPrompt() {
     document.getElementById('generate-btn').style.opacity = '1';
     errorEl.textContent = 'Failed to create view: ' + err.message;
     errorEl.classList.remove('hidden');
+  }
+}
+
+// --- Images: auto-generate, override, regenerate ---
+let _overrideType = null; // 'logo' or 'hero'
+
+function showImageState(type, state) {
+  // state: 'loading' | 'loaded' | 'empty'
+  const loading = document.getElementById(`img-${type}-loading`);
+  const img = document.getElementById(`img-${type}`);
+  const empty = document.getElementById(`img-${type}-empty`);
+  loading.classList.add('hidden');
+  img.classList.add('hidden');
+  empty.classList.add('hidden');
+  if (state === 'loading') loading.classList.remove('hidden');
+  else if (state === 'loaded') img.classList.remove('hidden');
+  else empty.classList.remove('hidden');
+}
+
+function renderImages(data) {
+  const images = data.images || {};
+  // Logo
+  if (images.logo) {
+    document.getElementById('img-logo').src = images.logo;
+    showImageState('logo', 'loaded');
+  } else {
+    showImageState('logo', 'empty');
+  }
+  // Hero
+  if (images.hero) {
+    document.getElementById('img-hero').src = images.hero;
+    showImageState('hero', 'loaded');
+  } else {
+    showImageState('hero', 'empty');
+  }
+  // Hide override bar
+  document.getElementById('image-override-bar').classList.add('hidden');
+  _overrideType = null;
+}
+
+async function autoGenerateImages() {
+  const data = currentItemData;
+  if (!data) return;
+  const images = data.images || {};
+  const meta = data.metadata || {};
+  const brand = meta.brand || '';
+  const brandDesc = meta.brand_desc || '';
+  const brandUrl = meta.brand_url || '';
+  const industry = meta.industry || '';
+
+  if (!brand) return;
+
+  // Auto-fetch logo if missing
+  if (!images.logo) {
+    showImageState('logo', 'loading');
+    try {
+      const resp = await fetch('/api/images/logo', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ brand, websiteUrl: brandUrl })
+      });
+      const result = await resp.json();
+      if (result.found && result.url) {
+        if (!currentItemData.images) currentItemData.images = {};
+        currentItemData.images.logo = result.url;
+        document.getElementById('img-logo').src = result.url;
+        showImageState('logo', 'loaded');
+        await saveItemData();
+      } else {
+        showImageState('logo', 'empty');
+      }
+    } catch (e) {
+      console.error('Logo fetch error:', e);
+      showImageState('logo', 'empty');
+    }
+  }
+
+  // Auto-generate hero if missing
+  if (!images.hero) {
+    showImageState('hero', 'loading');
+    try {
+      const resp = await fetch('/api/images/generate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ brand, brandDesc, industry, imageType: 'hero', viewId: currentItemId })
+      });
+      const result = await resp.json();
+      if (result.url) {
+        if (!currentItemData.images) currentItemData.images = {};
+        currentItemData.images.hero = result.url;
+        document.getElementById('img-hero').src = result.url;
+        showImageState('hero', 'loaded');
+        await saveItemData();
+      } else {
+        showImageState('hero', 'empty');
+        if (result.error) showToast('Hero image: ' + result.error);
+      }
+    } catch (e) {
+      console.error('Hero generation error:', e);
+      showImageState('hero', 'empty');
+    }
+  }
+}
+
+async function regenerateImage(type) {
+  const data = currentItemData;
+  if (!data) return;
+  const meta = data.metadata || {};
+  const brand = meta.brand || '';
+  if (!brand) { showToast('No brand set'); return; }
+
+  // Delete old image from R2 if it exists
+  const oldUrl = (data.images || {})[type];
+  if (oldUrl) {
+    fetch('/api/images/delete', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ url: oldUrl })
+    }).catch(() => {});
+  }
+
+  showImageState(type, 'loading');
+
+  try {
+    if (type === 'logo') {
+      const resp = await fetch('/api/images/logo', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ brand, websiteUrl: meta.brand_url || '' })
+      });
+      const result = await resp.json();
+      if (result.found && result.url) {
+        if (!currentItemData.images) currentItemData.images = {};
+        currentItemData.images.logo = result.url;
+        document.getElementById('img-logo').src = result.url;
+        showImageState('logo', 'loaded');
+        await saveItemData();
+        showToast('Logo updated!');
+      } else {
+        showImageState('logo', 'empty');
+        showToast('No logo found');
+      }
+    } else {
+      const resp = await fetch('/api/images/generate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          brand,
+          brandDesc: meta.brand_desc || '',
+          industry: meta.industry || '',
+          imageType: 'hero',
+          viewId: currentItemId
+        })
+      });
+      const result = await resp.json();
+      if (result.url) {
+        if (!currentItemData.images) currentItemData.images = {};
+        currentItemData.images.hero = result.url;
+        document.getElementById('img-hero').src = result.url;
+        showImageState('hero', 'loaded');
+        await saveItemData();
+        showToast('Hero image regenerated!');
+      } else {
+        showImageState('hero', 'empty');
+        showToast(result.error || 'Generation failed');
+      }
+    }
+  } catch (e) {
+    console.error('Regenerate error:', e);
+    showImageState(type, 'empty');
+    showToast('Regeneration failed');
+  }
+}
+
+function overrideImage(type) {
+  _overrideType = type;
+  const bar = document.getElementById('image-override-bar');
+  const label = document.getElementById('override-label');
+  const input = document.getElementById('override-url-input');
+  label.textContent = type === 'logo' ? 'Logo URL:' : 'Hero URL:';
+  input.value = '';
+  bar.classList.remove('hidden');
+  input.focus();
+}
+
+function cancelOverride() {
+  document.getElementById('image-override-bar').classList.add('hidden');
+  _overrideType = null;
+}
+
+async function saveOverrideUrl() {
+  const url = document.getElementById('override-url-input').value.trim();
+  if (!url) { showToast('Please enter an image URL'); return; }
+  const type = _overrideType;
+  if (!type) return;
+
+  // Delete old R2 image if present
+  const oldUrl = (currentItemData.images || {})[type];
+  if (oldUrl) {
+    fetch('/api/images/delete', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ url: oldUrl })
+    }).catch(() => {});
+  }
+
+  // Set new URL
+  if (!currentItemData.images) currentItemData.images = {};
+  currentItemData.images[type] = url;
+  document.getElementById(`img-${type}`).src = url;
+  showImageState(type, 'loaded');
+
+  cancelOverride();
+  await saveItemData();
+  showToast(`${type === 'logo' ? 'Logo' : 'Hero image'} updated!`);
+}
+
+async function saveItemData() {
+  const email = document.getElementById('user-email').textContent;
+  try {
+    await fetch(`/api/items/${currentItemId}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email, data: currentItemData })
+    });
+  } catch (e) {
+    console.error('Failed to save item data:', e);
   }
 }
 
