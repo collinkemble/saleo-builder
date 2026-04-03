@@ -209,85 +209,79 @@
         </div>
       </div>
 
-      <!-- Logo URL (PocketSIC style) -->
+      <!-- Images -->
       <div style="background: white; border-radius: 12px; border: 1px solid #e5e7eb; box-shadow: 0 1px 3px rgba(0,0,0,0.06); margin-bottom: 20px;">
         <div style="padding: 14px 20px; border-bottom: 1px solid #f0f0f0;">
-          <span style="font-size: 13px; font-weight: 700; color: #032D60; text-transform: uppercase; letter-spacing: 0.04em;">Logo URL</span>
+          <span style="font-size: 13px; font-weight: 700; color: #032D60; text-transform: uppercase; letter-spacing: 0.04em;">Images</span>
         </div>
         <div style="padding: 16px 20px;">
-          <!-- URL input row -->
-          <div class="flex items-center gap-2">
-            <input id="logo-url-input" type="text" placeholder="https://… or paste an image URL"
-              style="flex: 1; padding: 8px 12px; border: 1px solid #d1d5db; border-radius: 8px; font-size: 13px; box-sizing: border-box; color: #1C2024;"
-              oninput="handleLogoUrlInput(this.value)">
-            <button id="logo-upload-btn" onclick="document.getElementById('logo-file-input').click()" class="cursor-pointer"
-              style="padding: 6px 14px; font-size: 13px; font-weight: 600; color: #0176D3; background: #E8F4FD; border: 1px solid #B4D6F0; border-radius: 8px; white-space: nowrap;">
-              ↑ Upload
-            </button>
-            <button id="logo-paste-btn" onclick="pasteLogoFromClipboard()" class="cursor-pointer"
-              style="padding: 6px 10px; font-size: 15px; color: #666; background: #f3f4f6; border: 1px solid #e5e7eb; border-radius: 8px;" title="Paste from clipboard">
-              📋
-            </button>
-            <button id="logo-clear-btn" onclick="clearLogoUrl()" class="hidden cursor-pointer"
-              style="padding: 6px 10px; font-size: 15px; color: #C23934; background: none; border: none;" title="Clear">
-              ✕
-            </button>
+          <!-- Logo URL -->
+          <div style="margin-bottom: 18px;">
+            <span style="font-size: 12px; font-weight: 700; color: #032D60; display: block; margin-bottom: 6px;">Logo URL</span>
+            <div class="flex items-center gap-2">
+              <input id="logo-url-input" type="text" placeholder="https://… or paste an image URL"
+                style="flex: 1; padding: 8px 12px; border: 1px solid #d1d5db; border-radius: 8px; font-size: 13px; box-sizing: border-box; color: #1C2024;"
+                oninput="handleLogoUrlInput(this.value)">
+              <button id="logo-upload-btn" onclick="document.getElementById('logo-file-input').click()" class="cursor-pointer"
+                style="padding: 6px 14px; font-size: 13px; font-weight: 600; color: #0176D3; background: #E8F4FD; border: 1px solid #B4D6F0; border-radius: 8px; white-space: nowrap;">
+                ↑ Upload
+              </button>
+              <button id="logo-paste-btn" onclick="pasteLogoFromClipboard()" class="cursor-pointer"
+                style="padding: 6px 10px; font-size: 15px; color: #666; background: #f3f4f6; border: 1px solid #e5e7eb; border-radius: 8px;" title="Paste from clipboard">
+                📋
+              </button>
+              <button id="logo-clear-btn" onclick="clearLogoUrl()" class="hidden cursor-pointer"
+                style="padding: 6px 10px; font-size: 15px; color: #C23934; background: none; border: none;" title="Clear">
+                ✕
+              </button>
+            </div>
+            <input id="logo-file-input" type="file" accept="image/*" onchange="handleLogoFileUpload(this)" style="display: none;">
+            <div id="logo-loading" class="hidden" style="margin-top: 8px; font-size: 12px; color: #888;">
+              <span style="display: inline-block; width: 14px; height: 14px; border: 2px solid #e5e7eb; border-top-color: #0176D3; border-radius: 50%; animation: spin 0.8s linear infinite; vertical-align: middle; margin-right: 6px;"></span>
+              Finding logo...
+            </div>
+            <div id="logo-preview" class="hidden" style="margin-top: 10px;">
+              <img id="logo-preview-img" alt="Brand logo"
+                style="max-width: 56px; max-height: 56px; object-fit: contain; border-radius: 6px; border: 1px solid #e5e7eb;"
+                onerror="this.parentElement.classList.add('hidden')">
+            </div>
           </div>
-          <input id="logo-file-input" type="file" accept="image/*" onchange="handleLogoFileUpload(this)" style="display: none;">
-          <!-- Loading indicator -->
-          <div id="logo-loading" class="hidden" style="margin-top: 8px; font-size: 12px; color: #888;">
-            <span style="display: inline-block; width: 14px; height: 14px; border: 2px solid #e5e7eb; border-top-color: #0176D3; border-radius: 50%; animation: spin 0.8s linear infinite; vertical-align: middle; margin-right: 6px;"></span>
-            Finding logo...
-          </div>
-          <!-- Thumbnail preview -->
-          <div id="logo-preview" class="hidden" style="margin-top: 10px;">
-            <img id="logo-preview-img" alt="Brand logo"
-              style="max-width: 56px; max-height: 56px; object-fit: contain; border-radius: 6px; border: 1px solid #e5e7eb;"
-              onerror="this.parentElement.classList.add('hidden')">
-          </div>
-        </div>
-      </div>
 
-      <!-- Persona Image URL (PocketSIC style) -->
-      <div style="background: white; border-radius: 12px; border: 1px solid #e5e7eb; box-shadow: 0 1px 3px rgba(0,0,0,0.06); margin-bottom: 20px;">
-        <div style="padding: 14px 20px; border-bottom: 1px solid #f0f0f0;">
-          <span style="font-size: 13px; font-weight: 700; color: #032D60; text-transform: uppercase; letter-spacing: 0.04em;">Persona Image URL</span>
-        </div>
-        <div style="padding: 16px 20px;">
-          <!-- URL input row -->
-          <div class="flex items-center gap-2">
-            <input id="persona-url-input" type="text" placeholder="https://… or auto-generate from synopsis"
-              style="flex: 1; padding: 8px 12px; border: 1px solid #d1d5db; border-radius: 8px; font-size: 13px; box-sizing: border-box; color: #1C2024;"
-              oninput="handlePersonaUrlInput(this.value)">
-            <button id="persona-generate-btn" onclick="generatePersonaImage()" class="cursor-pointer"
-              style="padding: 6px 14px; font-size: 13px; font-weight: 600; color: white; background: #7C3AED; border: none; border-radius: 8px; white-space: nowrap; display: flex; align-items: center; gap: 4px;">
-              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg>
-              Generate
-            </button>
-            <button id="persona-upload-btn" onclick="document.getElementById('persona-file-input').click()" class="cursor-pointer"
-              style="padding: 6px 14px; font-size: 13px; font-weight: 600; color: #0176D3; background: #E8F4FD; border: 1px solid #B4D6F0; border-radius: 8px; white-space: nowrap;">
-              ↑ Upload
-            </button>
-            <button id="persona-paste-btn" onclick="pastePersonaFromClipboard()" class="cursor-pointer"
-              style="padding: 6px 10px; font-size: 15px; color: #666; background: #f3f4f6; border: 1px solid #e5e7eb; border-radius: 8px;" title="Paste from clipboard">
-              📋
-            </button>
-            <button id="persona-clear-btn" onclick="clearPersonaUrl()" class="hidden cursor-pointer"
-              style="padding: 6px 10px; font-size: 15px; color: #C23934; background: none; border: none;" title="Clear">
-              ✕
-            </button>
-          </div>
-          <input id="persona-file-input" type="file" accept="image/*" onchange="handlePersonaFileUpload(this)" style="display: none;">
-          <!-- Loading indicator -->
-          <div id="persona-loading" class="hidden" style="margin-top: 8px; font-size: 12px; color: #7C3AED;">
-            <span style="display: inline-block; width: 14px; height: 14px; border: 2px solid #e5e7eb; border-top-color: #7C3AED; border-radius: 50%; animation: spin 0.8s linear infinite; vertical-align: middle; margin-right: 6px;"></span>
-            Generating persona image...
-          </div>
-          <!-- Thumbnail preview -->
-          <div id="persona-preview" class="hidden" style="margin-top: 10px;">
-            <img id="persona-preview-img" alt="Persona image"
-              style="max-width: 56px; max-height: 56px; object-fit: cover; border-radius: 50%; border: 2px solid #e5e7eb;"
-              onerror="this.parentElement.classList.add('hidden')">
+          <!-- Persona Image URL -->
+          <div>
+            <span style="font-size: 12px; font-weight: 700; color: #032D60; display: block; margin-bottom: 6px;">Persona Image URL</span>
+            <div class="flex items-center gap-2">
+              <input id="persona-url-input" type="text" placeholder="https://… or auto-generate from synopsis"
+                style="flex: 1; padding: 8px 12px; border: 1px solid #d1d5db; border-radius: 8px; font-size: 13px; box-sizing: border-box; color: #1C2024;"
+                oninput="handlePersonaUrlInput(this.value)">
+              <button id="persona-generate-btn" onclick="generatePersonaImage()" class="cursor-pointer"
+                style="padding: 6px 14px; font-size: 13px; font-weight: 600; color: white; background: #7C3AED; border: none; border-radius: 8px; white-space: nowrap; display: flex; align-items: center; gap: 4px;">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg>
+                Generate
+              </button>
+              <button id="persona-upload-btn" onclick="document.getElementById('persona-file-input').click()" class="cursor-pointer"
+                style="padding: 6px 14px; font-size: 13px; font-weight: 600; color: #0176D3; background: #E8F4FD; border: 1px solid #B4D6F0; border-radius: 8px; white-space: nowrap;">
+                ↑ Upload
+              </button>
+              <button id="persona-paste-btn" onclick="pastePersonaFromClipboard()" class="cursor-pointer"
+                style="padding: 6px 10px; font-size: 15px; color: #666; background: #f3f4f6; border: 1px solid #e5e7eb; border-radius: 8px;" title="Paste from clipboard">
+                📋
+              </button>
+              <button id="persona-clear-btn" onclick="clearPersonaUrl()" class="hidden cursor-pointer"
+                style="padding: 6px 10px; font-size: 15px; color: #C23934; background: none; border: none;" title="Clear">
+                ✕
+              </button>
+            </div>
+            <input id="persona-file-input" type="file" accept="image/*" onchange="handlePersonaFileUpload(this)" style="display: none;">
+            <div id="persona-loading" class="hidden" style="margin-top: 8px; font-size: 12px; color: #7C3AED;">
+              <span style="display: inline-block; width: 14px; height: 14px; border: 2px solid #e5e7eb; border-top-color: #7C3AED; border-radius: 50%; animation: spin 0.8s linear infinite; vertical-align: middle; margin-right: 6px;"></span>
+              Generating persona image...
+            </div>
+            <div id="persona-preview" class="hidden" style="margin-top: 10px;">
+              <img id="persona-preview-img" alt="Persona image"
+                style="max-width: 56px; max-height: 56px; object-fit: cover; border-radius: 50%; border: 2px solid #e5e7eb;"
+                onerror="this.parentElement.classList.add('hidden')">
+            </div>
           </div>
         </div>
       </div>
