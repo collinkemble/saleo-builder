@@ -1640,7 +1640,10 @@ async function generateFromPrompt() {
     if (brandDesc) prompt += ` who is a ${brandDesc}`;
     if (brandUrl) prompt += ` and their website is ${brandUrl}`;
     prompt += `.`;
-    if (synopsisText) prompt += ` The synopsis of my demo story is ${synopsisText}.`;
+    if (synopsisText) {
+      const cleanSynopsis = synopsisText.replace(/\.+$/, '');
+      prompt += ` The synopsis of my demo story is ${cleanSynopsis}.`;
+    }
     prompt += ` Update all of the replacement values for this scenario.`;
 
     // Save to DB
