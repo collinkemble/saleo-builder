@@ -4,6 +4,7 @@ const express = require('express');
 const cors = require('cors');
 const path = require('path');
 const crypto = require('crypto');
+const multer = require('multer');
 const { query } = require('./src/db/connection');
 const { migrate } = require('./src/db/migrate');
 
@@ -13,6 +14,9 @@ const PORT = process.env.PORT || 3000;
 // ─── Middleware ───
 app.use(cors());
 app.use(express.json({ limit: '1mb' }));
+
+// File upload config (in-memory, 10MB max)
+const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 10 * 1024 * 1024 } });
 
 // Serve static files (index.html, etc.)
 app.use(express.static(path.join(__dirname)));
@@ -363,10 +367,64 @@ app.post('/api/generate', async (req, res) => {
 });
 
 // ═══════════════════════════════════════════════
-// APP-SPECIFIC ROUTES — Replace this section
+// APP-SPECIFIC: File Upload & Document Extraction
 // ═══════════════════════════════════════════════
-// Below are example CRUD + sharing routes for "items".
-// Rename "items" to your asset type and customize the logic.
+
+// POST /api/upload — Upload PDF/DOCX, extract text
+app.post('/api/upload', upload.single('file'), async (req, res) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({ error: 'No file uploaded' });
+    }
+
+    const { originalname, mimetype, buffer } = req.file;
+    const ext = path.extname(originalname).toLowerCase();
+    let extractedText = '';
+
+    if (ext === '.pdf' || mimetype === 'application/pdf') {
+      const pdfParse = require('pdf-parse');
+      const data = await pdfParse(buffer);
+      extractedText = data.text;
+    } else if (ext === '.docx' || mimetype === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document') {
+      const mammoth = require('mammoth');
+      const result = await mammoth.extractRawText({ buffer });
+      extractedText = result.value;
+    } else if (ext === '.doc') {
+      // .doc is legacy — try mammoth, it handles some .doc files
+      const mammoth = require('mammoth');
+      try {
+        const result = await mammoth.extractRawText({ buffer });
+        extractedText = result.value;
+      } catch (e) {
+        return res.status(400).json({ error: 'Legacy .doc format not supported. Please convert to .docx or PDF.' });
+      }
+    } else {
+      return res.status(400).json({ error: 'Unsupported file type. Please upload a PDF or DOCX file.' });
+    }
+
+    if (!extractedText || extractedText.trim().length === 0) {
+      return res.status(400).json({ error: 'Could not extract any text from the file. The file may be empty or contain only images.' });
+    }
+
+    // Truncate to ~50k chars to stay within Gemini context limits
+    if (extractedText.length > 50000) {
+      extractedText = extractedText.substring(0, 50000) + '\n\n[Document truncated — first 50,000 characters shown]';
+    }
+
+    res.json({
+      text: extractedText.trim(),
+      filename: originalname,
+      charCount: extractedText.trim().length
+    });
+  } catch (err) {
+    console.error('File upload failed:', err);
+    res.status(500).json({ error: 'Failed to process file: ' + (err.message || 'Unknown error') });
+  }
+});
+
+// ═══════════════════════════════════════════════
+// APP-SPECIFIC ROUTES
+// ═══════════════════════════════════════════════
 //
 // GET  /api/items              — list items for user
 // GET  /api/items/:id          — get single item
