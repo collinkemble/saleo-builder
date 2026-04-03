@@ -278,10 +278,6 @@
               <option value="Other">Other</option>
             </select>
           </div>
-          <div style="margin-bottom: 18px;">
-            <label style="display: block; font-size: 12px; font-weight: 700; color: #032D60; margin-bottom: 5px;">Description <span style="color: #e5534b;">*</span></label>
-            <textarea id="new-description" rows="4" placeholder="Describe what this Saleo view should show... e.g. 'A personalized pipeline dashboard for a healthcare company showing their logo, realistic opportunity data, and Einstein AI recommendations'" style="width: 100%; padding: 10px 12px; border: 1px solid #d1d5db; border-radius: 8px; font-size: 14px; line-height: 1.5; font-family: inherit; resize: vertical; box-sizing: border-box;"></textarea>
-          </div>
           <p id="new-error" class="hidden" style="font-size: 13px; color: #e5534b; margin-bottom: 12px; padding: 8px 12px; background: #FEF2F2; border-radius: 6px;"></p>
           <div class="flex justify-end gap-3">
             <button onclick="closeNewItemDialog()" class="cursor-pointer" style="padding: 8px 16px; font-size: 13px; font-weight: 500; color: #666; background: #f3f4f6; border: none; border-radius: 8px;">Cancel</button>
@@ -1585,7 +1581,6 @@ function openNewItemDialog() {
   document.getElementById('new-brand-desc').value = '';
   document.getElementById('new-brand-url').value = '';
   document.getElementById('new-industry').value = '';
-  document.getElementById('new-description').value = '';
   document.getElementById('new-error').classList.add('hidden');
   document.getElementById('upload-name').value = '';
   document.getElementById('upload-brand').value = '';
@@ -1678,45 +1673,27 @@ async function generateFromPrompt() {
   const brandDesc = document.getElementById('new-brand-desc').value.trim();
   const brandUrl = document.getElementById('new-brand-url').value.trim();
   const industry = document.getElementById('new-industry').value;
-  const description = document.getElementById('new-description').value.trim();
   const errorEl = document.getElementById('new-error');
 
-  if (!name || !brand || !industry || !description) {
+  if (!name || !brand || !industry) {
     errorEl.textContent = 'Please fill in all required fields.';
     errorEl.classList.remove('hidden');
     return;
   }
   errorEl.classList.add('hidden');
 
-  // Show generating state
-  document.getElementById('create-tab-prompt').classList.add('hidden');
-  document.getElementById('create-tab-upload').classList.add('hidden');
-  document.getElementById('create-generating').classList.remove('hidden');
-  const statusEl = document.getElementById('create-status');
-
   try {
-    let userMsg = `Create a Saleo prompt for:\n- Brand: ${brand}\n- Industry: ${industry}\n- Description: ${description}`;
-    if (brandDesc) userMsg += `\n- Brand Description: ${brandDesc}`;
-    if (brandUrl) userMsg += `\n- Brand Website: ${brandUrl}`;
-
-    const result = await callGeminiSSE({
-      contents: [
-        { role: 'user', parts: [{ text: SALEO_SYSTEM_PROMPT }] },
-        { role: 'model', parts: [{ text: 'I understand. I will generate Saleo prompts in the requested JSON format.' }] },
-        { role: 'user', parts: [{ text: userMsg }] }
-      ],
-      generationConfig: { temperature: 0.7, maxOutputTokens: 8192, responseMimeType: 'application/json' }
-    }, statusEl);
-
-    if (!result.prompt) throw new Error('AI did not return a valid prompt');
+    // Build prompt directly from brand info
+    let prompt = `Create a new view for the brand ${brand}`;
+    if (brandDesc) prompt += `, ${brandDesc}`;
+    prompt += `. Replace all token values to be relevant to this brand.`;
 
     // Save to DB
     const email = document.getElementById('user-email').textContent;
     const itemData = {
-      prompt: result.prompt,
-      summary: result.summary || '',
+      prompt: prompt,
+      summary: `Saleo view for ${brand}`,
       source_type: 'prompt',
-      source_text: description,
       metadata: { industry: industry, brand: brand, brand_desc: brandDesc || null, brand_url: brandUrl || null }
     };
 
@@ -1733,9 +1710,7 @@ async function generateFromPrompt() {
     showToast('Saleo View created!');
     viewItem(saved.item.id);
   } catch (err) {
-    document.getElementById('create-generating').classList.add('hidden');
-    document.getElementById('create-tab-prompt').classList.remove('hidden');
-    errorEl.textContent = 'Generation failed: ' + err.message;
+    errorEl.textContent = 'Failed to create view: ' + err.message;
     errorEl.classList.remove('hidden');
   }
 }
@@ -1747,8 +1722,6 @@ async function generateFromUpload() {
   const brandDesc = document.getElementById('upload-brand-desc').value.trim();
   const brandUrl = document.getElementById('upload-brand-url').value.trim();
   const industry = document.getElementById('upload-industry').value;
-  const fileInput = document.getElementById('file-input');
-  const instructions = document.getElementById('upload-instructions').value.trim();
   const errorEl = document.getElementById('upload-error');
 
   if (!name || !brand || !industry) {
@@ -1756,60 +1729,21 @@ async function generateFromUpload() {
     errorEl.classList.remove('hidden');
     return;
   }
-  if (!fileInput.files || !fileInput.files[0]) {
-    errorEl.textContent = 'Please upload a demo script file.';
-    errorEl.classList.remove('hidden');
-    return;
-  }
   errorEl.classList.add('hidden');
 
-  // Show generating state
-  document.getElementById('create-tab-prompt').classList.add('hidden');
-  document.getElementById('create-tab-upload').classList.add('hidden');
-  document.getElementById('create-generating').classList.remove('hidden');
-  const statusEl = document.getElementById('create-status');
-  statusEl.textContent = 'Extracting text from document...';
-
   try {
-    // Step 1: Upload and extract text
-    const formData = new FormData();
-    formData.append('file', fileInput.files[0]);
-
-    const uploadResp = await fetch('/api/upload', { method: 'POST', body: formData });
-    if (!uploadResp.ok) {
-      const err = await uploadResp.json();
-      throw new Error(err.error || 'Upload failed');
-    }
-    const uploadResult = await uploadResp.json();
-
-    statusEl.textContent = 'Generating Saleo prompt from document...';
-
-    // Step 2: Generate prompt from extracted text
-    let userMsg = `Convert this demo script into a Saleo prompt.\n\nBrand: ${brand}\nIndustry: ${industry}`;
-    if (brandDesc) userMsg += `\nBrand Description: ${brandDesc}`;
-    if (brandUrl) userMsg += `\nBrand Website: ${brandUrl}`;
-    userMsg += `\nDocument: "${uploadResult.filename}" (${uploadResult.charCount} characters extracted)\n\n--- DOCUMENT TEXT ---\n${uploadResult.text}\n--- END ---`;
-    if (instructions) userMsg += `\n\nAdditional instructions: ${instructions}`;
-
-    const result = await callGeminiSSE({
-      contents: [
-        { role: 'user', parts: [{ text: SALEO_SYSTEM_PROMPT }] },
-        { role: 'model', parts: [{ text: 'I understand. I will generate Saleo prompts in the requested JSON format.' }] },
-        { role: 'user', parts: [{ text: userMsg }] }
-      ],
-      generationConfig: { temperature: 0.7, maxOutputTokens: 8192, responseMimeType: 'application/json' }
-    }, statusEl);
-
-    if (!result.prompt) throw new Error('AI did not return a valid prompt');
+    // Build prompt directly from brand info
+    let prompt = `Create a new view for the brand ${brand}`;
+    if (brandDesc) prompt += `, ${brandDesc}`;
+    prompt += `. Replace all token values to be relevant to this brand.`;
 
     // Save to DB
     const email = document.getElementById('user-email').textContent;
     const itemData = {
-      prompt: result.prompt,
-      summary: result.summary || '',
+      prompt: prompt,
+      summary: `Saleo view for ${brand}`,
       source_type: 'upload',
-      source_text: uploadResult.text.substring(0, 5000), // store first 5k chars of source
-      metadata: { industry: industry, brand: brand, brand_desc: brandDesc || null, brand_url: brandUrl || null, source_filename: uploadResult.filename }
+      metadata: { industry: industry, brand: brand, brand_desc: brandDesc || null, brand_url: brandUrl || null }
     };
 
     const saveResp = await fetch('/api/items', {
@@ -1822,12 +1756,10 @@ async function generateFromUpload() {
     const saved = await saveResp.json();
 
     closeNewItemDialog();
-    showToast('Saleo View created from document!');
+    showToast('Saleo View created!');
     viewItem(saved.item.id);
   } catch (err) {
-    document.getElementById('create-generating').classList.add('hidden');
-    document.getElementById('create-tab-upload').classList.remove('hidden');
-    errorEl.textContent = 'Failed: ' + err.message;
+    errorEl.textContent = 'Failed to create view: ' + err.message;
     errorEl.classList.remove('hidden');
   }
 }
