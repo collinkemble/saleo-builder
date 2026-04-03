@@ -273,12 +273,37 @@
               <option value="Other">Other</option>
             </select>
           </div>
+          <!-- Upload Demo Script (optional) -->
+          <div style="margin-bottom: 14px;">
+            <label style="display: block; font-size: 12px; font-weight: 700; color: #032D60; margin-bottom: 5px;">Upload Demo Script</label>
+            <div id="drop-zone" onclick="document.getElementById('file-input').click()"
+              style="border: 2px dashed #d1d5db; border-radius: 10px; padding: 24px 20px; text-align: center; cursor: pointer; transition: border-color 0.2s, background 0.2s;"
+              onmouseenter="this.style.borderColor='#0176D3'; this.style.background='#F8FBFF';"
+              onmouseleave="this.style.borderColor='#d1d5db'; this.style.background='transparent';"
+              ondragover="event.preventDefault(); this.style.borderColor='#0176D3'; this.style.background='#F8FBFF';"
+              ondragleave="this.style.borderColor='#d1d5db'; this.style.background='transparent';"
+              ondrop="event.preventDefault(); this.style.borderColor='#d1d5db'; this.style.background='transparent'; handleFileDrop(event);">
+              <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#9ca3af" stroke-width="1.5" style="margin: 0 auto 6px; display: block;"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+              <p style="font-size: 13px; color: #666; margin: 0 0 2px;">Drop a PDF or Word doc here, or click to browse</p>
+              <p style="font-size: 11px; color: #aaa; margin: 0;">Optional — we'll extract the synopsis from it</p>
+            </div>
+            <input id="file-input" type="file" accept=".pdf,.doc,.docx" style="display: none;" onchange="handleFileSelect(this)">
+            <div id="file-selected" class="hidden" style="margin-top: 8px; padding: 10px 12px; background: #F0FDF4; border: 1px solid #BBF7D0; border-radius: 8px; display: flex; align-items: center; justify-content: space-between;">
+              <span id="file-selected-name" style="font-size: 13px; font-weight: 600; color: #166534;"></span>
+              <button onclick="clearFile()" class="cursor-pointer" style="font-size: 12px; color: #e5534b; background: none; border: none;">Remove</button>
+            </div>
+          </div>
+          <!-- Synopsis (shown when no file uploaded) -->
+          <div id="synopsis-field" style="margin-bottom: 14px;">
+            <label style="display: block; font-size: 12px; font-weight: 700; color: #032D60; margin-bottom: 5px;">Synopsis of Demo Story</label>
+            <textarea id="new-synopsis" rows="3" placeholder="Briefly describe the demo story or narrative you want to convey..." style="width: 100%; padding: 10px 12px; border: 1px solid #d1d5db; border-radius: 8px; font-size: 14px; line-height: 1.5; font-family: inherit; resize: vertical; box-sizing: border-box;"></textarea>
+          </div>
           <p id="new-error" class="hidden" style="font-size: 13px; color: #e5534b; margin-bottom: 12px; padding: 8px 12px; background: #FEF2F2; border-radius: 6px;"></p>
           <div class="flex justify-end gap-3">
             <button onclick="closeNewItemDialog()" class="cursor-pointer" style="padding: 8px 16px; font-size: 13px; font-weight: 500; color: #666; background: #f3f4f6; border: none; border-radius: 8px;">Cancel</button>
             <button id="generate-btn" onclick="generateFromPrompt()" class="cursor-pointer" style="padding: 8px 20px; font-size: 13px; font-weight: 700; color: white; background: #0176D3; border: none; border-radius: 8px; display: flex; align-items: center; gap: 6px;">
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg>
-              Generate
+              Create
             </button>
           </div>
         </div>
@@ -1504,7 +1529,9 @@ function openNewItemDialog() {
   document.getElementById('new-brand-desc').value = '';
   document.getElementById('new-brand-url').value = '';
   document.getElementById('new-industry').value = '';
+  document.getElementById('new-synopsis').value = '';
   document.getElementById('new-error').classList.add('hidden');
+  clearFile();
   document.getElementById('new-item-dialog').classList.remove('hidden');
 }
 
@@ -1512,14 +1539,47 @@ function closeNewItemDialog() {
   document.getElementById('new-item-dialog').classList.add('hidden');
 }
 
+// --- File handling ---
+function handleFileSelect(input) {
+  if (input.files && input.files[0]) setSelectedFile(input.files[0]);
+}
 
-// --- Generate from prompt ---
+function handleFileDrop(event) {
+  const files = event.dataTransfer.files;
+  if (files && files[0]) setSelectedFile(files[0]);
+}
+
+function setSelectedFile(file) {
+  const ext = file.name.split('.').pop().toLowerCase();
+  if (!['pdf', 'doc', 'docx'].includes(ext)) { showToast('Please upload a PDF or Word document'); return; }
+  if (file.size > 10 * 1024 * 1024) { showToast('File is too large (max 10MB)'); return; }
+  const dt = new DataTransfer(); dt.items.add(file);
+  document.getElementById('file-input').files = dt.files;
+  document.getElementById('drop-zone').classList.add('hidden');
+  document.getElementById('file-selected').classList.remove('hidden');
+  document.getElementById('file-selected-name').textContent = file.name;
+  // Hide synopsis field when a file is provided
+  document.getElementById('synopsis-field').classList.add('hidden');
+}
+
+function clearFile() {
+  document.getElementById('file-input').value = '';
+  document.getElementById('drop-zone').classList.remove('hidden');
+  document.getElementById('file-selected').classList.add('hidden');
+  // Show synopsis field again
+  document.getElementById('synopsis-field').classList.remove('hidden');
+}
+
+// --- Generate view ---
 async function generateFromPrompt() {
   const name = document.getElementById('new-name').value.trim();
   const brand = document.getElementById('new-brand').value.trim();
   const brandDesc = document.getElementById('new-brand-desc').value.trim();
   const brandUrl = document.getElementById('new-brand-url').value.trim();
   const industry = document.getElementById('new-industry').value;
+  const synopsis = document.getElementById('new-synopsis').value.trim();
+  const fileInput = document.getElementById('file-input');
+  const hasFile = fileInput.files && fileInput.files[0];
   const errorEl = document.getElementById('new-error');
 
   if (!name || !brand || !industry) {
@@ -1530,18 +1590,43 @@ async function generateFromPrompt() {
   errorEl.classList.add('hidden');
 
   try {
-    // Build prompt directly from brand info
+    let synopsisText = synopsis;
+    let sourceFilename = null;
+
+    // If a file was uploaded, extract text from it as the synopsis
+    if (hasFile) {
+      errorEl.classList.add('hidden');
+      document.getElementById('generate-btn').disabled = true;
+      document.getElementById('generate-btn').style.opacity = '0.6';
+
+      const formData = new FormData();
+      formData.append('file', fileInput.files[0]);
+      const uploadResp = await fetch('/api/upload', { method: 'POST', body: formData });
+      if (!uploadResp.ok) {
+        const err = await uploadResp.json();
+        throw new Error(err.error || 'Upload failed');
+      }
+      const uploadResult = await uploadResp.json();
+      synopsisText = uploadResult.text;
+      sourceFilename = uploadResult.filename;
+
+      document.getElementById('generate-btn').disabled = false;
+      document.getElementById('generate-btn').style.opacity = '1';
+    }
+
+    // Build prompt from brand info + synopsis
     let prompt = `Create a new demo view for the brand ${brand}`;
     if (brandDesc) prompt += `, ${brandDesc}`;
     prompt += `. Update all replacement values to match the context of ${brand}.`;
+    if (synopsisText) prompt += `\n\nDemo Story Synopsis:\n${synopsisText}`;
 
     // Save to DB
     const email = document.getElementById('user-email').textContent;
     const itemData = {
       prompt: prompt,
       summary: `Saleo view for ${brand}`,
-      source_type: 'prompt',
-      metadata: { industry: industry, brand: brand, brand_desc: brandDesc || null, brand_url: brandUrl || null }
+      source_type: hasFile ? 'upload' : 'prompt',
+      metadata: { industry: industry, brand: brand, brand_desc: brandDesc || null, brand_url: brandUrl || null, source_filename: sourceFilename }
     };
 
     const saveResp = await fetch('/api/items', {
@@ -1557,6 +1642,8 @@ async function generateFromPrompt() {
     showToast('Saleo View created!');
     viewItem(saved.item.id);
   } catch (err) {
+    document.getElementById('generate-btn').disabled = false;
+    document.getElementById('generate-btn').style.opacity = '1';
     errorEl.textContent = 'Failed to create view: ' + err.message;
     errorEl.classList.remove('hidden');
   }
