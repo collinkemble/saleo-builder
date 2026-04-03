@@ -1280,8 +1280,7 @@ async function confirmDeleteItem() {
     const resp = await fetch(`/api/items/${deleteTargetId}?email=${encodeURIComponent(email)}`, { method: 'DELETE' });
     if (!resp.ok) throw new Error('Failed to delete');
     closeDeleteDialog();
-    showPage('items-home');
-    loadItems();
+    showPage('items');
     showToast(`"${deleteTargetName}" deleted`);
   } catch (err) {
     alert(err.message);
