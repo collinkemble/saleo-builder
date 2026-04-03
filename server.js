@@ -571,7 +571,9 @@ app.post('/api/images/generate', async (req, res) => {
 
     // Upload to R2
     const folder = `views/${viewId || 'tmp'}/generated`;
-    const url = await uploadImage(imageBase64, mimeType, folder);
+    const slug = brand.replace(/[^a-zA-Z0-9]/g, '-').toLowerCase();
+    const filename = `${slug}-${imageType || 'image'}`;
+    const url = await uploadImage(imageBase64, mimeType, folder, filename);
 
     res.json({ url, mimeType, imageType: imageType || 'hero' });
   } catch (err) {
@@ -642,7 +644,9 @@ app.post('/api/images/persona', async (req, res) => {
 
     // Upload to R2
     const folder = `views/${viewId || 'tmp'}/persona`;
-    const url = await uploadImage(imageBase64, mimeType, folder);
+    const slug = brand.replace(/[^a-zA-Z0-9]/g, '-').toLowerCase();
+    const filename = `${slug}-persona`;
+    const url = await uploadImage(imageBase64, mimeType, folder, filename);
 
     res.json({ url, mimeType, personaDesc });
   } catch (err) {
@@ -654,10 +658,10 @@ app.post('/api/images/persona', async (req, res) => {
 // POST /api/images/upload — Upload a base64 image to R2
 app.post('/api/images/upload', async (req, res) => {
   try {
-    const { imageBase64, mimeType, folder } = req.body;
+    const { imageBase64, mimeType, folder, filename } = req.body;
     if (!imageBase64) return res.status(400).json({ error: 'imageBase64 is required' });
 
-    const url = await uploadImage(imageBase64, mimeType || 'image/png', folder || 'views/tmp');
+    const url = await uploadImage(imageBase64, mimeType || 'image/png', folder || 'views/tmp', filename || null);
     res.json({ url });
   } catch (err) {
     console.error('Image upload failed:', err);

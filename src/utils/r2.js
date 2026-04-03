@@ -41,8 +41,12 @@ function urlToKey(url) {
 
 /**
  * Upload an image (base64) to R2 and return the public URL.
+ * @param {string} imageBase64
+ * @param {string} mimeType
+ * @param {string} folder - R2 folder path
+ * @param {string} [filename] - Optional custom filename (without extension). If omitted, uses timestamp-random.
  */
-async function uploadImage(imageBase64, mimeType, folder) {
+async function uploadImage(imageBase64, mimeType, folder, filename) {
   const client = getR2Client();
   if (!client) throw new Error('R2 not configured');
 
@@ -50,8 +54,10 @@ async function uploadImage(imageBase64, mimeType, folder) {
   const baseUrl = getPublicUrl();
 
   const ext = mimeType === 'image/png' ? '.png' : mimeType === 'image/webp' ? '.webp' : '.jpg';
-  const randomId = crypto.randomBytes(8).toString('hex');
-  const key = `${folder}/${Date.now()}-${randomId}${ext}`;
+  const name = filename
+    ? filename.replace(/[^a-zA-Z0-9_-]/g, '_').toLowerCase()
+    : `${Date.now()}-${crypto.randomBytes(8).toString('hex')}`;
+  const key = `${folder}/${name}${ext}`;
 
   await client.send(new PutObjectCommand({
     Bucket: bucket,
