@@ -580,6 +580,74 @@ app.post('/api/images/generate', async (req, res) => {
   }
 });
 
+// POST /api/images/persona — Generate a persona headshot via Gemini
+app.post('/api/images/persona', async (req, res) => {
+  try {
+    const { brand, brandDesc, industry, synopsis, viewId } = req.body;
+    if (!brand) return res.status(400).json({ error: 'brand is required' });
+
+    const { GoogleGenAI } = require('@google/genai');
+    const apiKey = process.env.GEMINI_API_KEY;
+    if (!apiKey) return res.status(500).json({ error: 'GEMINI_API_KEY not configured' });
+
+    const ai = new GoogleGenAI({ apiKey });
+
+    // Step 1: Try to extract a persona from the synopsis using Gemini text
+    let personaDesc = '';
+    if (synopsis && synopsis.trim()) {
+      try {
+        const extractResp = await ai.models.generateContent({
+          model: 'gemini-2.0-flash',
+          contents: [{ text: `From this demo synopsis, extract the main persona/character being described. Return ONLY a brief physical description suitable for generating a headshot photo (age range, gender, professional appearance). If no specific person is mentioned, infer a likely customer persona for a ${industry || 'business'} brand called "${brand}"${brandDesc ? ` (${brandDesc})` : ''}. Return just the description, nothing else.\n\nSynopsis: ${synopsis}` }],
+        });
+        personaDesc = extractResp.candidates?.[0]?.content?.parts?.[0]?.text?.trim() || '';
+      } catch (_) { /* continue with fallback */ }
+    }
+
+    // Fallback: generate a generic persona for the brand/industry
+    if (!personaDesc) {
+      personaDesc = `A professional-looking person who would be a typical customer of ${brand}`;
+      if (brandDesc) personaDesc += `, ${brandDesc}`;
+      if (industry && industry !== 'Other') personaDesc += `, in the ${industry} industry`;
+    }
+
+    // Step 2: Generate headshot image
+    const imagePrompt = `Generate a professional headshot photo of ${personaDesc}. The person should look friendly, confident, and approachable. Clean background, professional lighting, business casual attire. Photorealistic portrait style, shoulders-up framing. No text or watermarks.`;
+
+    const response = await ai.models.generateContent({
+      model: 'gemini-2.5-flash-preview-image-generation',
+      contents: [{ text: imagePrompt }],
+      config: {
+        responseModalities: ['TEXT', 'IMAGE'],
+      },
+    });
+
+    // Extract image
+    let imageBase64 = null;
+    let mimeType = 'image/png';
+    for (const part of response.candidates?.[0]?.content?.parts || []) {
+      if (part.inlineData) {
+        imageBase64 = part.inlineData.data;
+        mimeType = part.inlineData.mimeType || 'image/png';
+        break;
+      }
+    }
+
+    if (!imageBase64) {
+      return res.status(500).json({ error: 'Gemini did not return an image. Try again.' });
+    }
+
+    // Upload to R2
+    const folder = `views/${viewId || 'tmp'}/persona`;
+    const url = await uploadImage(imageBase64, mimeType, folder);
+
+    res.json({ url, mimeType, personaDesc });
+  } catch (err) {
+    console.error('Persona image generation failed:', err);
+    res.status(500).json({ error: 'Persona generation failed: ' + err.message });
+  }
+});
+
 // POST /api/images/upload — Upload a base64 image to R2
 app.post('/api/images/upload', async (req, res) => {
   try {

@@ -248,6 +248,50 @@
         </div>
       </div>
 
+      <!-- Persona Image URL (PocketSIC style) -->
+      <div style="background: white; border-radius: 12px; border: 1px solid #e5e7eb; box-shadow: 0 1px 3px rgba(0,0,0,0.06); margin-bottom: 20px;">
+        <div style="padding: 14px 20px; border-bottom: 1px solid #f0f0f0;">
+          <span style="font-size: 13px; font-weight: 700; color: #032D60; text-transform: uppercase; letter-spacing: 0.04em;">Persona Image URL</span>
+        </div>
+        <div style="padding: 16px 20px;">
+          <!-- URL input row -->
+          <div class="flex items-center gap-2">
+            <input id="persona-url-input" type="text" placeholder="https://… or auto-generate from synopsis"
+              style="flex: 1; padding: 8px 12px; border: 1px solid #d1d5db; border-radius: 8px; font-size: 13px; box-sizing: border-box; color: #1C2024;"
+              oninput="handlePersonaUrlInput(this.value)">
+            <button id="persona-generate-btn" onclick="generatePersonaImage()" class="cursor-pointer"
+              style="padding: 6px 14px; font-size: 13px; font-weight: 600; color: white; background: #7C3AED; border: none; border-radius: 8px; white-space: nowrap; display: flex; align-items: center; gap: 4px;">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg>
+              Generate
+            </button>
+            <button id="persona-upload-btn" onclick="document.getElementById('persona-file-input').click()" class="cursor-pointer"
+              style="padding: 6px 14px; font-size: 13px; font-weight: 600; color: #0176D3; background: #E8F4FD; border: 1px solid #B4D6F0; border-radius: 8px; white-space: nowrap;">
+              ↑ Upload
+            </button>
+            <button id="persona-paste-btn" onclick="pastePersonaFromClipboard()" class="cursor-pointer"
+              style="padding: 6px 10px; font-size: 15px; color: #666; background: #f3f4f6; border: 1px solid #e5e7eb; border-radius: 8px;" title="Paste from clipboard">
+              📋
+            </button>
+            <button id="persona-clear-btn" onclick="clearPersonaUrl()" class="hidden cursor-pointer"
+              style="padding: 6px 10px; font-size: 15px; color: #C23934; background: none; border: none;" title="Clear">
+              ✕
+            </button>
+          </div>
+          <input id="persona-file-input" type="file" accept="image/*" onchange="handlePersonaFileUpload(this)" style="display: none;">
+          <!-- Loading indicator -->
+          <div id="persona-loading" class="hidden" style="margin-top: 8px; font-size: 12px; color: #7C3AED;">
+            <span style="display: inline-block; width: 14px; height: 14px; border: 2px solid #e5e7eb; border-top-color: #7C3AED; border-radius: 50%; animation: spin 0.8s linear infinite; vertical-align: middle; margin-right: 6px;"></span>
+            Generating persona image...
+          </div>
+          <!-- Thumbnail preview -->
+          <div id="persona-preview" class="hidden" style="margin-top: 10px;">
+            <img id="persona-preview-img" alt="Persona image"
+              style="max-width: 56px; max-height: 56px; object-fit: cover; border-radius: 50%; border: 2px solid #e5e7eb;"
+              onerror="this.parentElement.classList.add('hidden')">
+          </div>
+        </div>
+      </div>
+
       <!-- AI Refine -->
       <div style="background: white; border-radius: 12px; border: 1px solid #e5e7eb; box-shadow: 0 1px 3px rgba(0,0,0,0.06); margin-bottom: 20px;">
         <div style="padding: 14px 20px; border-bottom: 1px solid #f0f0f0;">
@@ -1475,6 +1519,10 @@ function renderDetail(item) {
   renderLogoUrl(data);
   autoFetchLogo(); // fire-and-forget — fetches logo if missing
 
+  // Persona Image
+  renderPersonaUrl(data);
+  autoGeneratePersona(); // fire-and-forget — generates persona if missing
+
   // Reset refine
   document.getElementById('refine-input').value = '';
   document.getElementById('refine-status').textContent = '';
@@ -1704,7 +1752,7 @@ async function generateFromPrompt() {
       prompt: prompt,
       summary: `Saleo view for ${brand}`,
       source_type: hasFile ? 'upload' : 'prompt',
-      metadata: { industry: industry, brand: brand, brand_desc: brandDesc || null, brand_url: brandUrl || null, source_filename: sourceFilename }
+      metadata: { industry: industry, brand: brand, brand_desc: brandDesc || null, brand_url: brandUrl || null, synopsis: synopsisText || null, source_filename: sourceFilename }
     };
 
     const saveResp = await fetch('/api/items', {
@@ -1909,6 +1957,221 @@ document.addEventListener('DOMContentLoaded', () => {
         saveLogoUrl(url);
       } else if (!url) {
         clearLogoUrl();
+      }
+    });
+  }
+});
+
+// --- Persona Image URL ---
+
+function renderPersonaUrl(data) {
+  const personaUrl = (data.images || {}).persona || '';
+  const input = document.getElementById('persona-url-input');
+  const preview = document.getElementById('persona-preview');
+  const previewImg = document.getElementById('persona-preview-img');
+  const clearBtn = document.getElementById('persona-clear-btn');
+  const loading = document.getElementById('persona-loading');
+
+  input.value = personaUrl;
+  loading.classList.add('hidden');
+
+  if (personaUrl) {
+    previewImg.src = personaUrl;
+    preview.classList.remove('hidden');
+    clearBtn.classList.remove('hidden');
+  } else {
+    preview.classList.add('hidden');
+    clearBtn.classList.add('hidden');
+  }
+}
+
+async function autoGeneratePersona() {
+  const data = currentItemData;
+  if (!data) return;
+  const images = data.images || {};
+  if (images.persona) return; // already have one
+
+  const meta = data.metadata || {};
+  const brand = meta.brand || '';
+  if (!brand) return;
+
+  // Auto-generate persona image
+  await generatePersonaImage();
+}
+
+async function generatePersonaImage() {
+  const data = currentItemData;
+  if (!data) return;
+  const meta = data.metadata || {};
+  const brand = meta.brand || '';
+  if (!brand) { showToast('No brand set'); return; }
+
+  // Delete old R2 persona image if it exists
+  const oldUrl = (data.images || {}).persona;
+  if (oldUrl) {
+    fetch('/api/images/delete', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ url: oldUrl })
+    }).catch(() => {});
+  }
+
+  const genBtn = document.getElementById('persona-generate-btn');
+  genBtn.disabled = true;
+  genBtn.style.opacity = '0.6';
+  document.getElementById('persona-loading').classList.remove('hidden');
+
+  try {
+    const resp = await fetch('/api/images/persona', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        brand,
+        brandDesc: meta.brand_desc || '',
+        industry: meta.industry || '',
+        synopsis: meta.synopsis || '',
+        viewId: currentItemId
+      })
+    });
+    const result = await resp.json();
+    if (result.url) {
+      if (!currentItemData.images) currentItemData.images = {};
+      currentItemData.images.persona = result.url;
+      renderPersonaUrl(currentItemData);
+      await saveItemData();
+      showToast('Persona image generated!');
+    } else {
+      showToast(result.error || 'Generation failed');
+    }
+  } catch (e) {
+    console.error('Persona generation error:', e);
+    showToast('Persona generation failed');
+  } finally {
+    genBtn.disabled = false;
+    genBtn.style.opacity = '1';
+    document.getElementById('persona-loading').classList.add('hidden');
+  }
+}
+
+function handlePersonaUrlInput(value) {
+  const clearBtn = document.getElementById('persona-clear-btn');
+  const preview = document.getElementById('persona-preview');
+  const previewImg = document.getElementById('persona-preview-img');
+  const url = value.trim();
+
+  if (url) {
+    clearBtn.classList.remove('hidden');
+    if (url.startsWith('http://') || url.startsWith('https://')) {
+      previewImg.src = url;
+      preview.classList.remove('hidden');
+    }
+  } else {
+    clearBtn.classList.add('hidden');
+    preview.classList.add('hidden');
+  }
+}
+
+async function savePersonaUrl(url) {
+  const oldUrl = (currentItemData.images || {}).persona;
+  if (oldUrl && oldUrl !== url) {
+    fetch('/api/images/delete', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ url: oldUrl })
+    }).catch(() => {});
+  }
+
+  if (!currentItemData.images) currentItemData.images = {};
+  currentItemData.images.persona = url;
+  renderPersonaUrl(currentItemData);
+  await saveItemData();
+  showToast('Persona image URL saved!');
+}
+
+function clearPersonaUrl() {
+  const oldUrl = (currentItemData.images || {}).persona;
+  if (oldUrl) {
+    fetch('/api/images/delete', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ url: oldUrl })
+    }).catch(() => {});
+  }
+
+  if (!currentItemData.images) currentItemData.images = {};
+  currentItemData.images.persona = '';
+  renderPersonaUrl(currentItemData);
+  saveItemData();
+  showToast('Persona image cleared');
+}
+
+async function pastePersonaFromClipboard() {
+  try {
+    const text = await navigator.clipboard.readText();
+    if (text && (text.startsWith('http://') || text.startsWith('https://'))) {
+      document.getElementById('persona-url-input').value = text;
+      handlePersonaUrlInput(text);
+      await savePersonaUrl(text);
+    } else {
+      showToast('No URL found in clipboard');
+    }
+  } catch (e) {
+    showToast('Unable to read clipboard');
+  }
+}
+
+async function handlePersonaFileUpload(input) {
+  const file = input.files && input.files[0];
+  if (!file) return;
+  if (!file.type.startsWith('image/')) { showToast('Please select an image file'); return; }
+  if (file.size > 5 * 1024 * 1024) { showToast('Image too large (max 5MB)'); return; }
+
+  const uploadBtn = document.getElementById('persona-upload-btn');
+  uploadBtn.textContent = '↑…';
+  uploadBtn.disabled = true;
+
+  try {
+    const reader = new FileReader();
+    const base64 = await new Promise((resolve, reject) => {
+      reader.onload = () => resolve(reader.result.split(',')[1]);
+      reader.onerror = reject;
+      reader.readAsDataURL(file);
+    });
+
+    const resp = await fetch('/api/images/upload', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        imageBase64: base64,
+        mimeType: file.type,
+        folder: `views/${currentItemId}/persona`
+      })
+    });
+    const result = await resp.json();
+    if (result.url) {
+      await savePersonaUrl(result.url);
+    } else {
+      showToast(result.error || 'Upload failed');
+    }
+  } catch (e) {
+    showToast('Upload failed: ' + e.message);
+  } finally {
+    uploadBtn.textContent = '↑ Upload';
+    uploadBtn.disabled = false;
+    input.value = '';
+  }
+}
+
+// Save on blur/change for persona URL input
+document.addEventListener('DOMContentLoaded', () => {
+  const inp = document.getElementById('persona-url-input');
+  if (inp) {
+    inp.addEventListener('change', () => {
+      const url = inp.value.trim();
+      if (url && (url.startsWith('http://') || url.startsWith('https://'))) {
+        savePersonaUrl(url);
+      } else if (!url) {
+        clearPersonaUrl();
       }
     });
   }
