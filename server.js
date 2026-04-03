@@ -547,7 +547,7 @@ app.post('/api/images/generate', async (req, res) => {
     }
 
     const response = await ai.models.generateContent({
-      model: 'gemini-2.5-flash-preview-image-generation',
+      model: 'gemini-2.5-flash-image',
       contents: [{ text: prompt }],
       config: {
         responseModalities: ['TEXT', 'IMAGE'],
@@ -615,7 +615,7 @@ app.post('/api/images/persona', async (req, res) => {
     const imagePrompt = `Generate a professional headshot photo of ${personaDesc}. The person should look friendly, confident, and approachable. Clean background, professional lighting, business casual attire. Photorealistic portrait style, shoulders-up framing. No text or watermarks.`;
 
     const response = await ai.models.generateContent({
-      model: 'gemini-2.5-flash-preview-image-generation',
+      model: 'gemini-2.5-flash-image',
       contents: [{ text: imagePrompt }],
       config: {
         responseModalities: ['TEXT', 'IMAGE'],
