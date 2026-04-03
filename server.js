@@ -597,11 +597,14 @@ app.post('/api/images/persona', async (req, res) => {
     if (synopsis && synopsis.trim()) {
       try {
         const extractResp = await ai.models.generateContent({
-          model: 'gemini-2.0-flash',
+          model: 'gemini-2.5-flash',
           contents: [{ text: `From this demo synopsis, extract the main persona/character being described. Return ONLY a brief physical description suitable for generating a headshot photo (age range, gender, professional appearance). If no specific person is mentioned, infer a likely customer persona for a ${industry || 'business'} brand called "${brand}"${brandDesc ? ` (${brandDesc})` : ''}. Return just the description, nothing else.\n\nSynopsis: ${synopsis}` }],
         });
         personaDesc = extractResp.candidates?.[0]?.content?.parts?.[0]?.text?.trim() || '';
-      } catch (_) { /* continue with fallback */ }
+        console.log(`[Persona] Extracted persona desc: "${personaDesc}"`);
+      } catch (extractErr) {
+        console.warn('[Persona] Extraction failed, using fallback:', extractErr.message);
+      }
     }
 
     // Fallback: generate a generic persona for the brand/industry
