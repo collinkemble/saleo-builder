@@ -1813,7 +1813,7 @@ async function autoFetchLogo() {
     const resp = await fetch('/api/images/logo', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ brand, websiteUrl: brandUrl })
+      body: JSON.stringify({ brand, websiteUrl: brandUrl, viewId: currentItemId })
     });
     const result = await resp.json();
     if (result.found && result.url) {
