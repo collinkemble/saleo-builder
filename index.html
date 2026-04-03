@@ -188,7 +188,13 @@
       <div style="background: white; border-radius: 12px; border: 1px solid #e5e7eb; box-shadow: 0 1px 3px rgba(0,0,0,0.06); margin-bottom: 20px;">
         <div class="flex items-center justify-between" style="padding: 14px 20px; border-bottom: 1px solid #f0f0f0;">
           <span style="font-size: 13px; font-weight: 700; color: #032D60; text-transform: uppercase; letter-spacing: 0.04em;">Saleo Prompt</span>
-          <button id="edit-toggle-btn" onclick="toggleEditPrompt()" class="cursor-pointer" style="font-size: 12px; font-weight: 600; color: #0176D3; background: none; border: none; padding: 4px 8px;">Edit</button>
+          <div class="flex items-center gap-2">
+            <button onclick="copyPrompt()" class="cursor-pointer flex items-center gap-1" style="font-size: 12px; font-weight: 600; color: #0176D3; background: none; border: none; padding: 4px 8px;">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>
+              Copy
+            </button>
+            <button id="edit-toggle-btn" onclick="toggleEditPrompt()" class="cursor-pointer" style="font-size: 12px; font-weight: 600; color: #0176D3; background: none; border: none; padding: 4px 8px;">Edit</button>
+          </div>
         </div>
         <div id="prompt-display" style="padding: 20px; font-size: 14px; line-height: 1.7; color: #1C2024; white-space: pre-wrap; word-break: break-word;"></div>
         <div id="prompt-edit" class="hidden" style="padding: 12px;">
