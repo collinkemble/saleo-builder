@@ -230,8 +230,6 @@
       <!-- Metadata -->
       <div id="detail-metadata" style="background: white; border-radius: 12px; border: 1px solid #e5e7eb; box-shadow: 0 1px 3px rgba(0,0,0,0.06); padding: 16px 20px; margin-bottom: 32px;">
         <div class="flex flex-wrap gap-x-8 gap-y-2" style="font-size: 13px; color: #666;">
-          <span id="detail-meta-product"></span>
-          <span id="detail-meta-persona"></span>
           <span id="detail-meta-created"></span>
           <span id="detail-meta-updated"></span>
         </div>
@@ -268,16 +266,6 @@
               <option value="Retail">Retail</option>
               <option value="Other">Other</option>
             </select>
-          </div>
-          <div class="flex gap-3" style="margin-bottom: 14px;">
-            <div style="flex: 1;">
-              <label style="display: block; font-size: 12px; font-weight: 700; color: #032D60; margin-bottom: 5px;">Product / Feature</label>
-              <input id="new-product" type="text" placeholder="e.g. Sales Cloud" style="width: 100%; padding: 10px 12px; border: 1px solid #d1d5db; border-radius: 8px; font-size: 14px; box-sizing: border-box;">
-            </div>
-            <div style="flex: 1;">
-              <label style="display: block; font-size: 12px; font-weight: 700; color: #032D60; margin-bottom: 5px;">Target Persona</label>
-              <input id="new-persona" type="text" placeholder="e.g. VP of Sales" style="width: 100%; padding: 10px 12px; border: 1px solid #d1d5db; border-radius: 8px; font-size: 14px; box-sizing: border-box;">
-            </div>
           </div>
           <div style="margin-bottom: 18px;">
             <label style="display: block; font-size: 12px; font-weight: 700; color: #032D60; margin-bottom: 5px;">Description <span style="color: #e5534b;">*</span></label>
@@ -1333,7 +1321,7 @@ async function confirmDeleteItem() {
 // --- System prompt for Saleo view generation ---
 const SALEO_SYSTEM_PROMPT = `You are Saleo Builder, an AI that creates ready-to-paste prompts for the Saleo demo personalization platform.
 
-Given information about a demo (description, product, persona, industry), generate a JSON response with this exact structure:
+Given information about a demo (description and industry), generate a JSON response with this exact structure:
 {
   "prompt": "The complete Saleo prompt text...",
   "summary": "A 1-2 sentence summary of what this view does"
@@ -1458,10 +1446,6 @@ function renderDetail(item) {
   document.getElementById('edit-toggle-btn').textContent = 'Edit';
 
   // Metadata
-  const product = data.metadata?.product;
-  const persona = data.metadata?.persona;
-  document.getElementById('detail-meta-product').textContent = product ? 'Product: ' + product : '';
-  document.getElementById('detail-meta-persona').textContent = persona ? 'Persona: ' + persona : '';
   document.getElementById('detail-meta-created').textContent = 'Created: ' + new Date(item.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
   document.getElementById('detail-meta-updated').textContent = item.updated_at ? 'Updated: ' + new Date(item.updated_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : '';
 
@@ -1575,8 +1559,6 @@ function openNewItemDialog() {
   // Reset all fields
   document.getElementById('new-name').value = '';
   document.getElementById('new-industry').value = '';
-  document.getElementById('new-product').value = '';
-  document.getElementById('new-persona').value = '';
   document.getElementById('new-description').value = '';
   document.getElementById('new-error').classList.add('hidden');
   document.getElementById('upload-name').value = '';
@@ -1664,8 +1646,6 @@ function clearFile() {
 async function generateFromPrompt() {
   const name = document.getElementById('new-name').value.trim();
   const industry = document.getElementById('new-industry').value;
-  const product = document.getElementById('new-product').value.trim();
-  const persona = document.getElementById('new-persona').value.trim();
   const description = document.getElementById('new-description').value.trim();
   const errorEl = document.getElementById('new-error');
 
@@ -1684,8 +1664,6 @@ async function generateFromPrompt() {
 
   try {
     let userMsg = `Create a Saleo prompt for:\n- Industry: ${industry}\n- Description: ${description}`;
-    if (product) userMsg += `\n- Product/Feature: ${product}`;
-    if (persona) userMsg += `\n- Target Persona: ${persona}`;
 
     const result = await callGeminiSSE({
       contents: [
@@ -1705,7 +1683,7 @@ async function generateFromPrompt() {
       summary: result.summary || '',
       source_type: 'prompt',
       source_text: description,
-      metadata: { industry: industry, product: product || null, persona: persona || null }
+      metadata: { industry: industry }
     };
 
     const saveResp = await fetch('/api/items', {
