@@ -700,6 +700,51 @@ app.post('/api/images/upload', async (req, res) => {
   }
 });
 
+// GET /api/images/proxy — Proxy-fetch an R2 image to avoid CORS issues
+app.get('/api/images/proxy', async (req, res) => {
+  try {
+    const url = req.query.url;
+    if (!url) return res.status(400).json({ error: 'url query param is required' });
+
+    // Only allow proxying our own R2 URLs for security
+    const { getPublicUrl } = require('./src/utils/r2');
+    const r2Base = getPublicUrl();
+    if (!r2Base || !url.startsWith(r2Base)) {
+      return res.status(403).json({ error: 'Only R2 asset URLs can be proxied' });
+    }
+
+    const https = require('https');
+    const http = require('http');
+
+    const imageBuffer = await new Promise((resolve, reject) => {
+      const doFetch = (fetchUrl, redirects = 3) => {
+        const protocol = fetchUrl.startsWith('https') ? https : http;
+        protocol.get(fetchUrl, { timeout: 15000 }, (resp) => {
+          if (resp.statusCode >= 300 && resp.statusCode < 400 && resp.headers.location && redirects > 0) {
+            const loc = resp.headers.location.startsWith('http') ? resp.headers.location : new URL(resp.headers.location, fetchUrl).href;
+            resp.resume();
+            return doFetch(loc, redirects - 1);
+          }
+          if (resp.statusCode !== 200) { resp.resume(); return reject(new Error(`HTTP ${resp.statusCode}`)); }
+          const chunks = [];
+          resp.on('data', c => chunks.push(c));
+          resp.on('end', () => resolve({ buffer: Buffer.concat(chunks), contentType: resp.headers['content-type'] || 'application/octet-stream' }));
+          resp.on('error', reject);
+        }).on('error', reject).on('timeout', function() { this.destroy(); reject(new Error('timeout')); });
+      };
+      doFetch(url);
+    });
+
+    res.setHeader('Content-Type', imageBuffer.contentType);
+    res.setHeader('Content-Length', imageBuffer.buffer.length);
+    res.setHeader('Cache-Control', 'public, max-age=3600');
+    res.send(imageBuffer.buffer);
+  } catch (err) {
+    console.error('Image proxy failed:', err);
+    res.status(500).json({ error: 'Image proxy failed: ' + err.message });
+  }
+});
+
 // POST /api/images/delete — Delete an R2 image by URL
 app.post('/api/images/delete', async (req, res) => {
   try {

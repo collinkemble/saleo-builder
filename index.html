@@ -2206,7 +2206,9 @@ async function downloadImagesZip() {
 
     for (const [type, url] of entries) {
       try {
-        const resp = await fetch(url);
+        // Proxy through our server to avoid CORS issues with R2
+        const proxyUrl = `/api/images/proxy?url=${encodeURIComponent(url)}`;
+        const resp = await fetch(proxyUrl);
         if (!resp.ok) continue;
         const blob = await resp.blob();
         const contentType = blob.type || 'image/png';
