@@ -580,6 +580,20 @@ app.post('/api/images/generate', async (req, res) => {
   }
 });
 
+// POST /api/images/upload — Upload a base64 image to R2
+app.post('/api/images/upload', async (req, res) => {
+  try {
+    const { imageBase64, mimeType, folder } = req.body;
+    if (!imageBase64) return res.status(400).json({ error: 'imageBase64 is required' });
+
+    const url = await uploadImage(imageBase64, mimeType || 'image/png', folder || 'views/tmp');
+    res.json({ url });
+  } catch (err) {
+    console.error('Image upload failed:', err);
+    res.status(500).json({ error: 'Image upload failed: ' + err.message });
+  }
+});
+
 // POST /api/images/delete — Delete an R2 image by URL
 app.post('/api/images/delete', async (req, res) => {
   try {

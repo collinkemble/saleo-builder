@@ -209,55 +209,41 @@
         </div>
       </div>
 
-      <!-- Images -->
+      <!-- Logo URL (PocketSIC style) -->
       <div style="background: white; border-radius: 12px; border: 1px solid #e5e7eb; box-shadow: 0 1px 3px rgba(0,0,0,0.06); margin-bottom: 20px;">
         <div style="padding: 14px 20px; border-bottom: 1px solid #f0f0f0;">
-          <span style="font-size: 13px; font-weight: 700; color: #032D60; text-transform: uppercase; letter-spacing: 0.04em;">Images</span>
+          <span style="font-size: 13px; font-weight: 700; color: #032D60; text-transform: uppercase; letter-spacing: 0.04em;">Logo URL</span>
         </div>
-        <div style="padding: 20px; display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
-          <!-- Logo -->
-          <div>
-            <div class="flex items-center justify-between" style="margin-bottom: 8px;">
-              <span style="font-size: 12px; font-weight: 700; color: #032D60;">Brand Logo</span>
-              <div class="flex items-center gap-2">
-                <button onclick="overrideImage('logo')" class="cursor-pointer" style="font-size: 11px; color: #0176D3; background: none; border: none; padding: 2px 6px;" title="Use custom URL">🔗</button>
-              </div>
-            </div>
-            <div id="img-logo-container" style="width: 100%; aspect-ratio: 1; background: #f8f9fa; border: 1px solid #e5e7eb; border-radius: 10px; display: flex; align-items: center; justify-content: center; overflow: hidden; position: relative;">
-              <div id="img-logo-loading" class="hidden" style="text-align: center;">
-                <div style="width: 28px; height: 28px; border: 3px solid #e5e7eb; border-top-color: #0176D3; border-radius: 50%; animation: spin 0.8s linear infinite; margin: 0 auto 6px;"></div>
-                <span style="font-size: 11px; color: #888;">Finding logo...</span>
-              </div>
-              <img id="img-logo" class="hidden" style="max-width: 80%; max-height: 80%; object-fit: contain;" alt="Brand logo">
-              <span id="img-logo-empty" style="font-size: 12px; color: #ccc;">No logo</span>
-            </div>
-          </div>
-          <!-- Hero Image -->
-          <div>
-            <div class="flex items-center justify-between" style="margin-bottom: 8px;">
-              <span style="font-size: 12px; font-weight: 700; color: #032D60;">Hero Image</span>
-              <div class="flex items-center gap-2">
-                <button onclick="regenerateImage('hero')" class="cursor-pointer" style="font-size: 11px; color: #0176D3; background: none; border: none; padding: 2px 6px;" title="Regenerate">🔄</button>
-                <button onclick="overrideImage('hero')" class="cursor-pointer" style="font-size: 11px; color: #0176D3; background: none; border: none; padding: 2px 6px;" title="Use custom URL">🔗</button>
-              </div>
-            </div>
-            <div id="img-hero-container" style="width: 100%; aspect-ratio: 16/9; background: #f8f9fa; border: 1px solid #e5e7eb; border-radius: 10px; display: flex; align-items: center; justify-content: center; overflow: hidden; position: relative;">
-              <div id="img-hero-loading" class="hidden" style="text-align: center;">
-                <div style="width: 28px; height: 28px; border: 3px solid #e5e7eb; border-top-color: #0176D3; border-radius: 50%; animation: spin 0.8s linear infinite; margin: 0 auto 6px;"></div>
-                <span style="font-size: 11px; color: #888;">Generating image...</span>
-              </div>
-              <img id="img-hero" class="hidden" style="width: 100%; height: 100%; object-fit: cover;" alt="Hero image">
-              <span id="img-hero-empty" style="font-size: 12px; color: #ccc;">No image</span>
-            </div>
-          </div>
-        </div>
-        <!-- Override URL input (hidden by default) -->
-        <div id="image-override-bar" class="hidden" style="padding: 0 20px 16px;">
+        <div style="padding: 16px 20px;">
+          <!-- URL input row -->
           <div class="flex items-center gap-2">
-            <span id="override-label" style="font-size: 12px; font-weight: 600; color: #032D60; white-space: nowrap;"></span>
-            <input id="override-url-input" type="url" placeholder="Paste image URL..." style="flex: 1; padding: 8px 12px; border: 1px solid #d1d5db; border-radius: 8px; font-size: 13px; box-sizing: border-box;">
-            <button onclick="saveOverrideUrl()" class="cursor-pointer" style="padding: 6px 14px; font-size: 12px; font-weight: 700; color: white; background: #0176D3; border: none; border-radius: 6px;">Save</button>
-            <button onclick="cancelOverride()" class="cursor-pointer" style="padding: 6px 10px; font-size: 12px; color: #666; background: #f3f4f6; border: none; border-radius: 6px;">Cancel</button>
+            <input id="logo-url-input" type="text" placeholder="https://… or paste an image URL"
+              style="flex: 1; padding: 8px 12px; border: 1px solid #d1d5db; border-radius: 8px; font-size: 13px; box-sizing: border-box; color: #1C2024;"
+              oninput="handleLogoUrlInput(this.value)">
+            <button id="logo-upload-btn" onclick="document.getElementById('logo-file-input').click()" class="cursor-pointer"
+              style="padding: 6px 14px; font-size: 13px; font-weight: 600; color: #0176D3; background: #E8F4FD; border: 1px solid #B4D6F0; border-radius: 8px; white-space: nowrap;">
+              ↑ Upload
+            </button>
+            <button id="logo-paste-btn" onclick="pasteLogoFromClipboard()" class="cursor-pointer"
+              style="padding: 6px 10px; font-size: 15px; color: #666; background: #f3f4f6; border: 1px solid #e5e7eb; border-radius: 8px;" title="Paste from clipboard">
+              📋
+            </button>
+            <button id="logo-clear-btn" onclick="clearLogoUrl()" class="hidden cursor-pointer"
+              style="padding: 6px 10px; font-size: 15px; color: #C23934; background: none; border: none;" title="Clear">
+              ✕
+            </button>
+          </div>
+          <input id="logo-file-input" type="file" accept="image/*" onchange="handleLogoFileUpload(this)" style="display: none;">
+          <!-- Loading indicator -->
+          <div id="logo-loading" class="hidden" style="margin-top: 8px; font-size: 12px; color: #888;">
+            <span style="display: inline-block; width: 14px; height: 14px; border: 2px solid #e5e7eb; border-top-color: #0176D3; border-radius: 50%; animation: spin 0.8s linear infinite; vertical-align: middle; margin-right: 6px;"></span>
+            Finding logo...
+          </div>
+          <!-- Thumbnail preview -->
+          <div id="logo-preview" class="hidden" style="margin-top: 10px;">
+            <img id="logo-preview-img" alt="Brand logo"
+              style="max-width: 56px; max-height: 56px; object-fit: contain; border-radius: 6px; border: 1px solid #e5e7eb;"
+              onerror="this.parentElement.classList.add('hidden')">
           </div>
         </div>
       </div>
@@ -1485,9 +1471,9 @@ function renderDetail(item) {
   document.getElementById('detail-meta-created').textContent = 'Created: ' + new Date(item.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
   document.getElementById('detail-meta-updated').textContent = item.updated_at ? 'Updated: ' + new Date(item.updated_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : '';
 
-  // Images
-  renderImages(data);
-  autoGenerateImages(); // fire-and-forget — fetches missing images
+  // Logo URL
+  renderLogoUrl(data);
+  autoFetchLogo(); // fire-and-forget — fetches logo if missing
 
   // Reset refine
   document.getElementById('refine-input').value = '';
@@ -1744,200 +1730,101 @@ async function generateFromPrompt() {
 }
 
 // --- Images: auto-generate, override, regenerate ---
-let _overrideType = null; // 'logo' or 'hero'
+// --- Logo URL (PocketSIC style) ---
 
-function showImageState(type, state) {
-  // state: 'loading' | 'loaded' | 'empty'
-  const loading = document.getElementById(`img-${type}-loading`);
-  const img = document.getElementById(`img-${type}`);
-  const empty = document.getElementById(`img-${type}-empty`);
+function renderLogoUrl(data) {
+  const logoUrl = (data.images || {}).logo || '';
+  const input = document.getElementById('logo-url-input');
+  const preview = document.getElementById('logo-preview');
+  const previewImg = document.getElementById('logo-preview-img');
+  const clearBtn = document.getElementById('logo-clear-btn');
+  const loading = document.getElementById('logo-loading');
+
+  input.value = logoUrl;
   loading.classList.add('hidden');
-  img.classList.add('hidden');
-  empty.classList.add('hidden');
-  if (state === 'loading') loading.classList.remove('hidden');
-  else if (state === 'loaded') img.classList.remove('hidden');
-  else empty.classList.remove('hidden');
+
+  if (logoUrl) {
+    previewImg.src = logoUrl;
+    preview.classList.remove('hidden');
+    clearBtn.classList.remove('hidden');
+  } else {
+    preview.classList.add('hidden');
+    clearBtn.classList.add('hidden');
+  }
 }
 
-function renderImages(data) {
-  const images = data.images || {};
-  // Logo
-  if (images.logo) {
-    document.getElementById('img-logo').src = images.logo;
-    showImageState('logo', 'loaded');
-  } else {
-    showImageState('logo', 'empty');
-  }
-  // Hero
-  if (images.hero) {
-    document.getElementById('img-hero').src = images.hero;
-    showImageState('hero', 'loaded');
-  } else {
-    showImageState('hero', 'empty');
-  }
-  // Hide override bar
-  document.getElementById('image-override-bar').classList.add('hidden');
-  _overrideType = null;
-}
-
-async function autoGenerateImages() {
+async function autoFetchLogo() {
   const data = currentItemData;
   if (!data) return;
   const images = data.images || {};
+  if (images.logo) return; // already have one
+
   const meta = data.metadata || {};
   const brand = meta.brand || '';
-  const brandDesc = meta.brand_desc || '';
   const brandUrl = meta.brand_url || '';
-  const industry = meta.industry || '';
-
   if (!brand) return;
 
-  // Auto-fetch logo if missing
-  if (!images.logo) {
-    showImageState('logo', 'loading');
-    try {
-      const resp = await fetch('/api/images/logo', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ brand, websiteUrl: brandUrl })
-      });
-      const result = await resp.json();
-      if (result.found && result.url) {
-        if (!currentItemData.images) currentItemData.images = {};
-        currentItemData.images.logo = result.url;
-        document.getElementById('img-logo').src = result.url;
-        showImageState('logo', 'loaded');
-        await saveItemData();
-      } else {
-        showImageState('logo', 'empty');
-      }
-    } catch (e) {
-      console.error('Logo fetch error:', e);
-      showImageState('logo', 'empty');
-    }
-  }
-
-  // Auto-generate hero if missing
-  if (!images.hero) {
-    showImageState('hero', 'loading');
-    try {
-      const resp = await fetch('/api/images/generate', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ brand, brandDesc, industry, imageType: 'hero', viewId: currentItemId })
-      });
-      const result = await resp.json();
-      if (result.url) {
-        if (!currentItemData.images) currentItemData.images = {};
-        currentItemData.images.hero = result.url;
-        document.getElementById('img-hero').src = result.url;
-        showImageState('hero', 'loaded');
-        await saveItemData();
-      } else {
-        showImageState('hero', 'empty');
-        if (result.error) showToast('Hero image: ' + result.error);
-      }
-    } catch (e) {
-      console.error('Hero generation error:', e);
-      showImageState('hero', 'empty');
-    }
-  }
-}
-
-async function regenerateImage(type) {
-  const data = currentItemData;
-  if (!data) return;
-  const meta = data.metadata || {};
-  const brand = meta.brand || '';
-  if (!brand) { showToast('No brand set'); return; }
-
-  // Delete old image from R2 if it exists
-  const oldUrl = (data.images || {})[type];
-  if (oldUrl) {
-    fetch('/api/images/delete', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ url: oldUrl })
-    }).catch(() => {});
-  }
-
-  showImageState(type, 'loading');
+  // Show loading
+  document.getElementById('logo-loading').classList.remove('hidden');
 
   try {
-    if (type === 'logo') {
-      const resp = await fetch('/api/images/logo', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ brand, websiteUrl: meta.brand_url || '' })
-      });
-      const result = await resp.json();
-      if (result.found && result.url) {
-        if (!currentItemData.images) currentItemData.images = {};
-        currentItemData.images.logo = result.url;
-        document.getElementById('img-logo').src = result.url;
-        showImageState('logo', 'loaded');
-        await saveItemData();
-        showToast('Logo updated!');
-      } else {
-        showImageState('logo', 'empty');
-        showToast('No logo found');
-      }
-    } else {
-      const resp = await fetch('/api/images/generate', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          brand,
-          brandDesc: meta.brand_desc || '',
-          industry: meta.industry || '',
-          imageType: 'hero',
-          viewId: currentItemId
-        })
-      });
-      const result = await resp.json();
-      if (result.url) {
-        if (!currentItemData.images) currentItemData.images = {};
-        currentItemData.images.hero = result.url;
-        document.getElementById('img-hero').src = result.url;
-        showImageState('hero', 'loaded');
-        await saveItemData();
-        showToast('Hero image regenerated!');
-      } else {
-        showImageState('hero', 'empty');
-        showToast(result.error || 'Generation failed');
-      }
+    const resp = await fetch('/api/images/logo', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ brand, websiteUrl: brandUrl })
+    });
+    const result = await resp.json();
+    if (result.found && result.url) {
+      if (!currentItemData.images) currentItemData.images = {};
+      currentItemData.images.logo = result.url;
+      renderLogoUrl(currentItemData);
+      await saveItemData();
     }
   } catch (e) {
-    console.error('Regenerate error:', e);
-    showImageState(type, 'empty');
-    showToast('Regeneration failed');
+    console.error('Logo fetch error:', e);
+  } finally {
+    document.getElementById('logo-loading').classList.add('hidden');
   }
 }
 
-function overrideImage(type) {
-  _overrideType = type;
-  const bar = document.getElementById('image-override-bar');
-  const label = document.getElementById('override-label');
-  const input = document.getElementById('override-url-input');
-  label.textContent = type === 'logo' ? 'Logo URL:' : 'Hero URL:';
-  input.value = '';
-  bar.classList.remove('hidden');
-  input.focus();
+function handleLogoUrlInput(value) {
+  const clearBtn = document.getElementById('logo-clear-btn');
+  const preview = document.getElementById('logo-preview');
+  const previewImg = document.getElementById('logo-preview-img');
+  const url = value.trim();
+
+  if (url) {
+    clearBtn.classList.remove('hidden');
+    if (url.startsWith('http://') || url.startsWith('https://')) {
+      previewImg.src = url;
+      preview.classList.remove('hidden');
+    }
+  } else {
+    clearBtn.classList.add('hidden');
+    preview.classList.add('hidden');
+  }
 }
 
-function cancelOverride() {
-  document.getElementById('image-override-bar').classList.add('hidden');
-  _overrideType = null;
-}
-
-async function saveOverrideUrl() {
-  const url = document.getElementById('override-url-input').value.trim();
-  if (!url) { showToast('Please enter an image URL'); return; }
-  const type = _overrideType;
-  if (!type) return;
-
+async function saveLogoUrl(url) {
   // Delete old R2 image if present
-  const oldUrl = (currentItemData.images || {})[type];
+  const oldUrl = (currentItemData.images || {}).logo;
+  if (oldUrl && oldUrl !== url) {
+    fetch('/api/images/delete', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ url: oldUrl })
+    }).catch(() => {});
+  }
+
+  if (!currentItemData.images) currentItemData.images = {};
+  currentItemData.images.logo = url;
+  renderLogoUrl(currentItemData);
+  await saveItemData();
+  showToast('Logo URL saved!');
+}
+
+function clearLogoUrl() {
+  const oldUrl = (currentItemData.images || {}).logo;
   if (oldUrl) {
     fetch('/api/images/delete', {
       method: 'POST',
@@ -1946,16 +1833,86 @@ async function saveOverrideUrl() {
     }).catch(() => {});
   }
 
-  // Set new URL
   if (!currentItemData.images) currentItemData.images = {};
-  currentItemData.images[type] = url;
-  document.getElementById(`img-${type}`).src = url;
-  showImageState(type, 'loaded');
-
-  cancelOverride();
-  await saveItemData();
-  showToast(`${type === 'logo' ? 'Logo' : 'Hero image'} updated!`);
+  currentItemData.images.logo = '';
+  renderLogoUrl(currentItemData);
+  saveItemData();
+  showToast('Logo cleared');
 }
+
+async function pasteLogoFromClipboard() {
+  try {
+    const text = await navigator.clipboard.readText();
+    if (text && (text.startsWith('http://') || text.startsWith('https://'))) {
+      document.getElementById('logo-url-input').value = text;
+      handleLogoUrlInput(text);
+      await saveLogoUrl(text);
+    } else {
+      showToast('No URL found in clipboard');
+    }
+  } catch (e) {
+    showToast('Unable to read clipboard');
+  }
+}
+
+async function handleLogoFileUpload(input) {
+  const file = input.files && input.files[0];
+  if (!file) return;
+  if (!file.type.startsWith('image/')) { showToast('Please select an image file'); return; }
+  if (file.size > 5 * 1024 * 1024) { showToast('Image too large (max 5MB)'); return; }
+
+  const uploadBtn = document.getElementById('logo-upload-btn');
+  uploadBtn.textContent = '↑…';
+  uploadBtn.disabled = true;
+
+  try {
+    // Convert to base64 and upload via server
+    const reader = new FileReader();
+    const base64 = await new Promise((resolve, reject) => {
+      reader.onload = () => resolve(reader.result.split(',')[1]);
+      reader.onerror = reject;
+      reader.readAsDataURL(file);
+    });
+
+    const resp = await fetch('/api/images/upload', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        imageBase64: base64,
+        mimeType: file.type,
+        folder: `views/${currentItemId}/logo`
+      })
+    });
+    const result = await resp.json();
+    if (result.url) {
+      await saveLogoUrl(result.url);
+    } else {
+      showToast(result.error || 'Upload failed');
+    }
+  } catch (e) {
+    showToast('Upload failed: ' + e.message);
+  } finally {
+    uploadBtn.textContent = '↑ Upload';
+    uploadBtn.disabled = false;
+    input.value = '';
+  }
+}
+
+// Debounced save when user manually types/edits the URL input
+let _logoUrlTimer = null;
+document.addEventListener('DOMContentLoaded', () => {
+  const inp = document.getElementById('logo-url-input');
+  if (inp) {
+    inp.addEventListener('change', () => {
+      const url = inp.value.trim();
+      if (url && (url.startsWith('http://') || url.startsWith('https://'))) {
+        saveLogoUrl(url);
+      } else if (!url) {
+        clearLogoUrl();
+      }
+    });
+  }
+});
 
 async function saveItemData() {
   const email = document.getElementById('user-email').textContent;
