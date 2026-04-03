@@ -20,6 +20,7 @@
   </style>
   <script src="https://assets.meshmesh.io/system/tailwindcss-browser-4.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/magic-sdk/dist/magic.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/jszip@3/dist/jszip.min.js"></script>
   <style type="text/tailwindcss">
     @theme {
       --color-brand: #0176D3;
@@ -211,8 +212,12 @@
 
       <!-- Images -->
       <div style="background: white; border-radius: 12px; border: 1px solid #e5e7eb; box-shadow: 0 1px 3px rgba(0,0,0,0.06); margin-bottom: 20px;">
-        <div style="padding: 14px 20px; border-bottom: 1px solid #f0f0f0;">
+        <div class="flex items-center justify-between" style="padding: 14px 20px; border-bottom: 1px solid #f0f0f0;">
           <span style="font-size: 13px; font-weight: 700; color: #032D60; text-transform: uppercase; letter-spacing: 0.04em;">Images</span>
+          <button id="download-images-btn" onclick="downloadImagesZip()" class="cursor-pointer" style="padding: 5px 12px; font-size: 12px; font-weight: 600; color: #0176D3; background: #E8F4FD; border: 1px solid #B4D6F0; border-radius: 6px; display: flex; align-items: center; gap: 5px;">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+            Download .zip
+          </button>
         </div>
         <div style="padding: 16px 20px;">
           <!-- Logo URL -->
@@ -2181,6 +2186,51 @@ async function saveItemData() {
     });
   } catch (e) {
     console.error('Failed to save item data:', e);
+  }
+}
+
+// --- Download images as .zip ---
+async function downloadImagesZip() {
+  const images = currentItemData?.images || {};
+  const entries = Object.entries(images).filter(([_, url]) => url && url.startsWith('http'));
+  if (entries.length === 0) { showToast('No images to download'); return; }
+
+  const btn = document.getElementById('download-images-btn');
+  const origText = btn.innerHTML;
+  btn.innerHTML = '<span style="display:inline-block;width:13px;height:13px;border:2px solid #B4D6F0;border-top-color:#0176D3;border-radius:50%;animation:spin 0.8s linear infinite;vertical-align:middle;"></span> Zipping...';
+  btn.disabled = true;
+
+  try {
+    const zip = new JSZip();
+    const brand = (currentItemData?.metadata?.brand || 'brand').replace(/[^a-zA-Z0-9]/g, '-').toLowerCase();
+
+    for (const [type, url] of entries) {
+      try {
+        const resp = await fetch(url);
+        if (!resp.ok) continue;
+        const blob = await resp.blob();
+        const contentType = blob.type || 'image/png';
+        const ext = contentType.includes('png') ? '.png' : contentType.includes('webp') ? '.webp' : contentType.includes('svg') ? '.svg' : '.jpg';
+        zip.file(`${brand}-${type}${ext}`, blob);
+      } catch (e) { console.warn(`Failed to fetch ${type} image:`, e); }
+    }
+
+    const zipBlob = await zip.generateAsync({ type: 'blob' });
+    const viewName = (currentItemName || 'view').replace(/[^a-zA-Z0-9 ]/g, '').replace(/\s+/g, '-').toLowerCase();
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(zipBlob);
+    a.download = `${viewName}-saleo-images.zip`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(a.href);
+    showToast('Images downloaded!');
+  } catch (e) {
+    console.error('Zip download failed:', e);
+    showToast('Download failed: ' + e.message);
+  } finally {
+    btn.innerHTML = origText;
+    btn.disabled = false;
   }
 }
 
