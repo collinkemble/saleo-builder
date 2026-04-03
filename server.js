@@ -413,13 +413,50 @@ app.post('/api/upload', upload.single('file'), async (req, res) => {
 
     const trimmedText = extractedText.trim();
 
-    // Try to find an existing synopsis at the top of the document
-    // Look for lines like "Synopsis:", "Synopsis -", "SYNOPSIS:", etc. in the first ~500 chars
+    // Try to find an existing synopsis in the document
+    // Strategy: find a "Synopsis" heading/label, then grab the paragraph(s) that follow it
     let synopsis = null;
-    const topSection = trimmedText.substring(0, 500);
-    const synopsisMatch = topSection.match(/(?:^|\n)\s*synopsis[:\s\-–—]+(.+?)(?:\n\n|\n[A-Z])/is);
-    if (synopsisMatch) {
-      synopsis = synopsisMatch[1].trim();
+    const topSection = trimmedText.substring(0, 3000);
+    const lines = topSection.split('\n');
+    let synopsisStartIdx = -1;
+
+    // Find the line that contains "Synopsis" as a heading or label
+    for (let i = 0; i < lines.length; i++) {
+      const line = lines[i].trim();
+      if (/^synopsis[\s:;\-–—]*$/i.test(line) || /^synopsis[\s:;\-–—]+/i.test(line)) {
+        // If the synopsis text is on the same line as the label (e.g. "Synopsis: blah blah")
+        const afterLabel = line.replace(/^synopsis[\s:;\-–—]*/i, '').trim();
+        if (afterLabel.length > 10) {
+          synopsis = afterLabel;
+          // Also grab following lines until a blank line or new heading
+          for (let j = i + 1; j < lines.length; j++) {
+            const nextLine = lines[j].trim();
+            if (!nextLine || /^[A-Z][a-z]*[\s:;\-–—]*$/.test(nextLine) || /^(scene|act|step|section|chapter)\s/i.test(nextLine)) break;
+            synopsis += ' ' + nextLine;
+          }
+          break;
+        }
+        // Synopsis is on the next line(s)
+        synopsisStartIdx = i + 1;
+        break;
+      }
+    }
+
+    // Collect synopsis paragraph lines after the heading
+    if (!synopsis && synopsisStartIdx >= 0) {
+      const synopsisLines = [];
+      for (let j = synopsisStartIdx; j < lines.length; j++) {
+        const line = lines[j].trim();
+        // Stop at blank line (after we have content), or at a new heading-like line
+        if (!line && synopsisLines.length > 0) break;
+        if (!line) continue; // skip blank lines before content starts
+        // Stop if this looks like a new section heading (short line, possibly followed by content)
+        if (synopsisLines.length > 0 && line.length < 40 && /^[A-Z]/.test(line) && !line.includes('.')) break;
+        synopsisLines.push(line);
+      }
+      if (synopsisLines.length > 0) {
+        synopsis = synopsisLines.join(' ');
+      }
     }
 
     // If no synopsis found, use Gemini to generate one
