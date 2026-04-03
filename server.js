@@ -140,8 +140,8 @@ app.delete('/api/feedback/:id', async (req, res) => {
 // SHARED ROUTES — API Keys
 // ═══════════════════════════════════════════════
 
-// {{API_KEY_PREFIX}} — Change this to your app's prefix (e.g. "dsw_", "dmb_")
-const API_KEY_PREFIX = '{{API_KEY_PREFIX}}';
+// sleo — Change this to your app's prefix (e.g. "dsw_", "dmb_")
+const API_KEY_PREFIX = 'sleo';
 
 function generateApiKeyToken() {
   const raw = crypto.randomBytes(32).toString('hex');
@@ -644,7 +644,7 @@ async function start() {
   }
 
   const server = app.listen(PORT, () => {
-    console.log(`{{APP_NAME}} running on http://localhost:${PORT}`);
+    console.log(`Saleo Builder running on http://localhost:${PORT}`);
     if (!process.env.GEMINI_API_KEY) {
       console.warn('⚠️  GEMINI_API_KEY not set — AI features will not work');
     }

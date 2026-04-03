@@ -1,6 +1,6 @@
-# {{APP_NAME}}
+# Saleo Builder
 
-> {{APP_TAGLINE}}
+> Build Instant Saleo Demos
 
 Part of the [aubreydemo.com](https://aubreydemo.com) family of tools.
 
@@ -23,12 +23,12 @@ Search the codebase and replace these tokens with your app's values:
 
 | Placeholder | Example | Where Used |
 |---|---|---|
-| `{{APP_NAME}}` | Demo Script Writer | Page titles, headers, footer |
-| `{{APP_SLUG}}` | demo-script-writer | package.json name, URLs |
-| `{{APP_TAGLINE}}` | AI-powered demo scripts | Header subtitle, meta description |
-| `{{APP_ASSET_NAME}}` | Scripts | Nav buttons, page titles (plural) |
-| `{{APP_ASSET_SINGULAR}}` | Script | Dialogs, labels (singular) |
-| `{{API_KEY_PREFIX}}` | dscr | API key prefix (4 chars) |
+| `Saleo Builder` | Demo Script Writer | Page titles, headers, footer |
+| `saleo-builder` | demo-script-writer | package.json name, URLs |
+| `Build Instant Saleo Demos` | AI-powered demo scripts | Header subtitle, meta description |
+| `Saleo Views` | Scripts | Nav buttons, page titles (plural) |
+| `Saleo View` | Script | Dialogs, labels (singular) |
+| `sleo` | dscr | API key prefix (4 chars) |
 
 **Tip:** Use your editor's find-and-replace across all files. Every placeholder uses the `{{DOUBLE_BRACE}}` format so they're easy to find.
 

@@ -1,7 +1,7 @@
 {
-  "name": "{{APP_SLUG}}",
+  "name": "saleo-builder",
   "version": "1.0.0",
-  "description": "{{APP_TAGLINE}}",
+  "description": "Build Instant Saleo Demos",
   "main": "server.js",
   "scripts": {
     "start": "node server.js",

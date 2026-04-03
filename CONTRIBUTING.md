@@ -23,12 +23,12 @@ This template is the foundation for all `aubreydemo.com` subdomain apps. Changes
 
 All app-specific values use `{{DOUBLE_BRACE}}` tokens:
 
-- `{{APP_NAME}}` — Display name
-- `{{APP_SLUG}}` — URL-safe identifier
-- `{{APP_TAGLINE}}` — Short description
-- `{{APP_ASSET_NAME}}` — Plural asset name (e.g., "Scripts")
-- `{{APP_ASSET_SINGULAR}}` — Singular asset name (e.g., "Script")
-- `{{API_KEY_PREFIX}}` — 4-character API key prefix
+- `Saleo Builder` — Display name
+- `saleo-builder` — URL-safe identifier
+- `Build Instant Saleo Demos` — Short description
+- `Saleo Views` — Plural asset name (e.g., "Scripts")
+- `Saleo View` — Singular asset name (e.g., "Script")
+- `sleo` — 4-character API key prefix
 
 ### Code Section Labels
 
