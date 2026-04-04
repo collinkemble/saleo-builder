@@ -954,8 +954,24 @@ async function showApp(email) {
   document.getElementById('app-section').style.display = 'block';
   document.getElementById('user-email').textContent = email;
 
-  // Reset to main page
-  showPage('items');
+  // Check if URL has a deep link (e.g. /views/123)
+  const viewMatch = window.location.pathname.match(/^\/views\/(\d+)$/);
+  const pageMap = { '/api-keys': 'api-keys', '/feedback': 'feedback', '/users': 'users' };
+  const urlPage = pageMap[window.location.pathname];
+
+  if (viewMatch) {
+    viewItem(parseInt(viewMatch[1]), true);
+  } else if (urlPage) {
+    showPage(urlPage, true);
+  } else {
+    showPage('items', true);
+  }
+
+  // Replace current history state so back button works from initial load
+  const initState = viewMatch
+    ? { page: 'item-detail', itemId: parseInt(viewMatch[1]) }
+    : { page: urlPage || 'items' };
+  history.replaceState(initState, '', window.location.pathname);
 
   // Check if user is admin and show/hide admin nav links
   try {
@@ -1076,7 +1092,7 @@ function syncMobileAdminNav() {
   }
 }
 
-function showPage(page) {
+function showPage(page, skipPush) {
   currentPage = page;
 
   // Hide all content pages
@@ -1104,6 +1120,13 @@ function showPage(page) {
     if (!mobBtn) return;
     mobBtn.classList.toggle('mobile-nav-active', p === navPage);
   });
+
+  // Push URL state (skip when triggered by popstate or viewItem which pushes its own)
+  if (!skipPush && page !== 'item-detail') {
+    const urlMap = { 'items': '/', 'api-keys': '/api-keys', 'feedback': '/feedback', 'users': '/users' };
+    const url = urlMap[page] || '/';
+    history.pushState({ page: page }, '', url);
+  }
 
   // Load data for the page
   if (page === 'items') loadItems();
@@ -1670,7 +1693,7 @@ async function loadItems() {
 }
 
 // --- View item detail ---
-async function viewItem(id) {
+async function viewItem(id, skipPush) {
   const email = document.getElementById('user-email').textContent;
   try {
     const resp = await fetch(`/api/items/${id}?email=${encodeURIComponent(email)}`);
@@ -1683,7 +1706,10 @@ async function viewItem(id) {
     currentItemData = item.data || {};
 
     renderDetail(item);
-    showPage('item-detail');
+    showPage('item-detail', true);
+    if (!skipPush) {
+      history.pushState({ page: 'item-detail', itemId: id }, '', `/views/${id}`);
+    }
   } catch (err) {
     showToast('Error: ' + err.message);
   }
@@ -2467,6 +2493,18 @@ async function downloadImagesZip() {
     btn.disabled = false;
   }
 }
+
+// --- Browser back/forward button support ---
+window.addEventListener('popstate', function(e) {
+  const state = e.state;
+  if (state && state.page === 'item-detail' && state.itemId) {
+    viewItem(state.itemId, true);
+  } else if (state && state.page) {
+    showPage(state.page, true);
+  } else {
+    showPage('items', true);
+  }
+});
 
 // --- Keyboard shortcuts ---
 document.addEventListener('keydown', function(e) {
