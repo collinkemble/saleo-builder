@@ -311,16 +311,19 @@
         </div>
       </div>
 
-      <!-- How to Use -->
+      <!-- How to Use (collapsible, starts collapsed) -->
       <div style="background: white; border-radius: 12px; border: 1px solid #e5e7eb; box-shadow: 0 1px 3px rgba(0,0,0,0.06); margin-bottom: 20px;">
-        <div style="padding: 14px 20px; border-bottom: 1px solid #f0f0f0;">
+        <div onclick="toggleHowToUse()" class="flex items-center justify-between cursor-pointer" style="padding: 14px 20px;">
           <span style="font-size: 13px; font-weight: 700; color: #032D60; text-transform: uppercase; letter-spacing: 0.04em;">How to Use</span>
+          <svg id="how-to-use-chevron" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#032D60" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="transition: transform 0.2s ease;"><polyline points="6 9 12 15 18 9"/></svg>
         </div>
-        <div style="padding: 16px 20px; font-size: 13px; color: #444; line-height: 1.7;">
-          <p style="margin: 0 0 12px 0;">The Aubrey Demo Saleo Builder is meant to be used on Saleo Demos built off a <a href="https://salesforce.enterprise.slack.com/archives/C08BWJ6EHME" target="_blank" style="color: #0176D3; text-decoration: underline;">Golden Demo, learn more about them here</a>.</p>
-          <p style="margin: 0 0 12px 0;">Once you have your Saleo view created, open the token library by clicking % icon in the Saleo extension. Then click the "Saleo AI" button within the library. This will allow you to paste in the Saleo Prompt that you see below.</p>
-          <p style="margin: 0 0 12px 0;">After that, you can replace all of the images that Saleo uses. First download the zip file of all images this app has created for you in the images section of this page. Then in the Saleo console, click on each page, then click its images tab, and on each image click the replace image button and select the corresponding image that you've just downloaded in the zip file.</p>
-          <p style="margin: 0;">That's all there is to it! We're working on getting Saleo API access once it's released to make this all automatic in the near future!</p>
+        <div id="how-to-use-body" style="display: none; padding: 0 20px 16px; font-size: 13px; color: #444; line-height: 1.7; border-top: 1px solid #f0f0f0;">
+          <div style="padding-top: 16px;">
+            <p style="margin: 0 0 12px 0;">The Aubrey Demo Saleo Builder is meant to be used on Saleo Demos built off a <a href="https://salesforce.enterprise.slack.com/archives/C08BWJ6EHME" target="_blank" style="color: #0176D3; text-decoration: underline;">Golden Demo, learn more about them here</a>.</p>
+            <p style="margin: 0 0 12px 0;">Once you have your Saleo view created, open the token library by clicking % icon in the Saleo extension. Then click the "Saleo AI" button within the library. This will allow you to paste in the Saleo Prompt that you see below.</p>
+            <p style="margin: 0 0 12px 0;">After that, you can replace all of the images that Saleo uses. First download the zip file of all images this app has created for you in the images section of this page. Then in the Saleo console, click on each page, then click its images tab, and on each image click the replace image button and select the corresponding image that you've just downloaded in the zip file.</p>
+            <p style="margin: 0;">That's all there is to it! We're working on getting Saleo API access once it's released to make this all automatic in the near future!</p>
+          </div>
         </div>
       </div>
 
@@ -1733,6 +1736,15 @@ function copyPrompt() {
   const text = currentItemData?.prompt || '';
   if (!text) { showToast('No prompt to copy'); return; }
   navigator.clipboard.writeText(text).then(() => showToast('Prompt copied to clipboard!')).catch(() => showToast('Failed to copy'));
+}
+
+// --- How to Use toggle ---
+function toggleHowToUse() {
+  const body = document.getElementById('how-to-use-body');
+  const chevron = document.getElementById('how-to-use-chevron');
+  const isHidden = body.style.display === 'none';
+  body.style.display = isHidden ? 'block' : 'none';
+  chevron.style.transform = isHidden ? 'rotate(180deg)' : '';
 }
 
 // --- Edit prompt ---
