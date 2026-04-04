@@ -1086,7 +1086,7 @@ app.post('/api/items/:id/share/confirm', async (req, res) => {
 });
 
 // SPA catch-all — serve index.html for any non-API route (enables /views/:id deep links)
-app.get('*', (req, res) => {
+app.get('/{*splat}', (req, res) => {
   res.sendFile(path.join(__dirname, 'index.html'));
 });
 
