@@ -256,6 +256,61 @@
         </div>
       </div>
 
+      <!-- Editable View Settings + Regenerate -->
+      <div class="mb-6" style="background: white; border-radius: 12px; padding: 24px; border: 1px solid #e5e7eb; box-shadow: 0 1px 3px rgba(0,0,0,0.06);">
+        <p class="font-bold mb-4" style="font-size: 15px; color: #032D60;">View Settings</p>
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+          <div>
+            <label class="block text-xs font-bold mb-1" style="color: #032D60;">Brand Name <span style="color: #ea001e;">*</span></label>
+            <input id="edit-brand" type="text" class="w-full px-3 py-2 rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none text-sm">
+          </div>
+          <div>
+            <label class="block text-xs font-bold mb-1" style="color: #032D60;">Brand Website URL</label>
+            <input id="edit-website" type="url" class="w-full px-3 py-2 rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none text-sm">
+          </div>
+          <div style="grid-column: 1 / -1;">
+            <label class="block text-xs font-bold mb-1" style="color: #032D60;">Brand Description</label>
+            <textarea id="edit-brand-desc" rows="2" class="w-full px-3 py-2 rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none text-sm resize-none"></textarea>
+          </div>
+          <div>
+            <label class="block text-xs font-bold mb-1" style="color: #032D60;">Industry <span style="color: #ea001e;">*</span></label>
+            <select id="edit-industry" class="w-full px-3 py-2 rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none text-sm" style="background: white;">
+              <option value="">Select an industry...</option>
+              <option value="Retail">Retail</option>
+              <option value="Other">Other</option>
+            </select>
+          </div>
+          <div>
+            <label class="block text-xs font-bold mb-1" style="color: #032D60;">Synopsis</label>
+            <input id="edit-synopsis" type="text" placeholder="e.g. A loyalty program demo for a returning customer" class="w-full px-3 py-2 rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none text-sm">
+          </div>
+        </div>
+
+        <!-- Refine prompt -->
+        <div style="margin-top: 16px;">
+          <label class="block text-xs font-bold mb-1" style="color: #032D60;">More info to further refine the script</label>
+          <div style="background: linear-gradient(135deg, #e8f2ff, #f0f7ff); border-radius: 10px; padding: 16px; border: 1px solid #cce4ff;">
+            <textarea id="refine-prompt" rows="2" placeholder="e.g. 'Make it more specific to financial services' or 'Add data points about pipeline growth'"
+              style="width: 100%; background: transparent; border: none; outline: none; resize: none; font-size: 15px; line-height: 1.5; font-family: inherit; color: #1a1a1a; overflow: hidden;"></textarea>
+          </div>
+        </div>
+
+        <div class="flex items-center justify-between mt-4">
+          <span style="font-size: 12px; color: #999; opacity: 0.6;" id="refine-hint">⌘↵ to regenerate</span>
+          <button id="refine-btn" onclick="regenerateView()" class="px-5 py-2 text-sm font-bold text-white rounded-lg cursor-pointer" style="background: linear-gradient(135deg, #0176D3, #032D60); height: 40px;">✨ Regenerate Saleo View</button>
+        </div>
+
+        <!-- Regenerate loading state -->
+        <div id="refine-loading" class="hidden" style="padding: 24px 0; text-align: center;">
+          <div class="flex gap-2 justify-center mb-3">
+            <div class="w-3 h-3 rounded-full" style="background: #0176D3; animation: pulse-dot 1.4s infinite ease-in-out both; animation-delay: 0s;"></div>
+            <div class="w-3 h-3 rounded-full" style="background: #0176D3; animation: pulse-dot 1.4s infinite ease-in-out both; animation-delay: 0.2s;"></div>
+            <div class="w-3 h-3 rounded-full" style="background: #0176D3; animation: pulse-dot 1.4s infinite ease-in-out both; animation-delay: 0.4s;"></div>
+          </div>
+          <p id="refine-loading-text" style="font-size: 13px; color: #0176D3;">Regenerating your Saleo view...</p>
+        </div>
+      </div>
+
       <!-- How to Use -->
       <div style="background: white; border-radius: 12px; border: 1px solid #e5e7eb; box-shadow: 0 1px 3px rgba(0,0,0,0.06); margin-bottom: 20px;">
         <div style="padding: 14px 20px; border-bottom: 1px solid #f0f0f0;">
@@ -369,32 +424,6 @@
                 onerror="this.parentElement.classList.add('hidden')">
             </div>
           </div>
-        </div>
-      </div>
-
-      <!-- AI Refine -->
-      <div style="background: white; border-radius: 12px; border: 1px solid #e5e7eb; box-shadow: 0 1px 3px rgba(0,0,0,0.06); margin-bottom: 20px;">
-        <div style="padding: 14px 20px; border-bottom: 1px solid #f0f0f0;">
-          <span style="font-size: 13px; font-weight: 700; color: #032D60; text-transform: uppercase; letter-spacing: 0.04em;">AI Refine</span>
-        </div>
-        <div style="padding: 16px 20px;">
-          <textarea id="refine-input" rows="3" placeholder="Describe what to change... e.g. 'Make it more specific to financial services' or 'Add data points about pipeline growth'" style="width: 100%; padding: 12px; border: 1px solid #d1d5db; border-radius: 8px; font-size: 14px; line-height: 1.5; font-family: inherit; resize: vertical; box-sizing: border-box;"></textarea>
-          <div class="flex items-center justify-between" style="margin-top: 10px;">
-            <span id="refine-status" style="font-size: 12px; color: #888;"></span>
-            <button id="refine-btn" onclick="refineView()" class="cursor-pointer" style="padding: 8px 18px; font-size: 13px; font-weight: 700; color: white; background: #7C3AED; border: none; border-radius: 8px; display: flex; align-items: center; gap: 6px;">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg>
-              Refine with AI
-            </button>
-          </div>
-        </div>
-        <!-- Refine loading state -->
-        <div id="refine-loading" class="hidden" style="padding: 24px 20px; text-align: center;">
-          <div class="flex gap-2 justify-center mb-3">
-            <div class="w-3 h-3 rounded-full" style="background: #7C3AED; animation: pulse-dot 1.4s infinite ease-in-out both; animation-delay: 0s;"></div>
-            <div class="w-3 h-3 rounded-full" style="background: #7C3AED; animation: pulse-dot 1.4s infinite ease-in-out both; animation-delay: 0.2s;"></div>
-            <div class="w-3 h-3 rounded-full" style="background: #7C3AED; animation: pulse-dot 1.4s infinite ease-in-out both; animation-delay: 0.4s;"></div>
-          </div>
-          <p id="refine-loading-text" style="font-size: 13px; color: #7C3AED;">Refining your Saleo prompt...</p>
         </div>
       </div>
 
@@ -1677,6 +1706,15 @@ function renderDetail(item) {
   document.getElementById('detail-meta-created').textContent = 'Created: ' + new Date(item.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
   document.getElementById('detail-meta-updated').textContent = item.updated_at ? 'Updated: ' + new Date(item.updated_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : '';
 
+  // Populate editable fields
+  const meta = data.metadata || {};
+  document.getElementById('edit-brand').value = meta.brand || '';
+  document.getElementById('edit-brand-desc').value = meta.brand_desc || '';
+  document.getElementById('edit-website').value = meta.brand_url || '';
+  document.getElementById('edit-industry').value = meta.industry || '';
+  document.getElementById('edit-synopsis').value = meta.synopsis || '';
+  document.getElementById('refine-prompt').value = '';
+
   // Logo URL
   renderLogoUrl(data);
   autoFetchLogo(); // fire-and-forget — fetches logo if missing
@@ -1685,9 +1723,7 @@ function renderDetail(item) {
   renderPersonaUrl(data);
   autoGeneratePersona(); // fire-and-forget — generates persona if missing
 
-  // Reset refine
-  document.getElementById('refine-input').value = '';
-  document.getElementById('refine-status').textContent = '';
+  // Reset regenerate state
   document.getElementById('refine-loading').classList.add('hidden');
   document.getElementById('refine-btn').classList.remove('hidden');
 }
@@ -1741,10 +1777,18 @@ async function savePrompt() {
   }
 }
 
-// --- Refine with AI ---
-async function refineView() {
-  const instructions = document.getElementById('refine-input').value.trim();
-  if (!instructions) { showToast('Enter refinement instructions first'); return; }
+// --- Regenerate Saleo View ---
+async function regenerateView() {
+  // Collect edited fields
+  const brand = document.getElementById('edit-brand').value.trim();
+  const brandDesc = document.getElementById('edit-brand-desc').value.trim();
+  const brandUrl = document.getElementById('edit-website').value.trim();
+  const industry = document.getElementById('edit-industry').value;
+  const synopsis = document.getElementById('edit-synopsis').value.trim();
+  const refinement = document.getElementById('refine-prompt').value.trim();
+
+  if (!brand) { showToast('Brand Name is required.'); return; }
+  if (!industry) { showToast('Industry is required.'); return; }
 
   const refineBtn = document.getElementById('refine-btn');
   const loading = document.getElementById('refine-loading');
@@ -1754,18 +1798,33 @@ async function refineView() {
   loading.classList.remove('hidden');
 
   try {
-    const userMsg = `Here is the current Saleo prompt:\n\n${currentItemData.prompt}\n\nPlease refine it with these changes:\n${instructions}\n\nReturn the same JSON format: {"prompt": "...", "summary": "..."}`;
+    // Build the regeneration prompt with current settings
+    let settingsMsg = `Here is the current Saleo prompt:\n\n${currentItemData.prompt}\n\nView settings:\n- Brand: ${brand}`;
+    if (brandDesc) settingsMsg += `\n- Brand Description: ${brandDesc}`;
+    if (brandUrl) settingsMsg += `\n- Website: ${brandUrl}`;
+    settingsMsg += `\n- Industry: ${industry}`;
+    if (synopsis) settingsMsg += `\n- Synopsis: ${synopsis}`;
+    if (refinement) settingsMsg += `\n\nAdditional refinement instructions from the user:\n"${refinement}"`;
+    settingsMsg += `\n\nRegenerate this Saleo prompt using the settings above. Apply any changes while maintaining the same format. Return the same JSON format: {"prompt": "...", "summary": "..."}`;
 
     const result = await callGeminiSSE({
       contents: [
         { role: 'user', parts: [{ text: SALEO_SYSTEM_PROMPT }] },
         { role: 'model', parts: [{ text: 'I understand. I will generate and refine Saleo prompts in the requested JSON format.' }] },
-        { role: 'user', parts: [{ text: userMsg }] }
+        { role: 'user', parts: [{ text: settingsMsg }] }
       ],
       generationConfig: { temperature: 0.7, maxOutputTokens: 8192, responseMimeType: 'application/json' }
     }, loadingText);
 
     if (result.prompt) {
+      // Update metadata with edited fields
+      currentItemData.metadata = currentItemData.metadata || {};
+      currentItemData.metadata.brand = brand;
+      currentItemData.metadata.brand_desc = brandDesc || null;
+      currentItemData.metadata.brand_url = brandUrl || null;
+      currentItemData.metadata.industry = industry;
+      currentItemData.metadata.synopsis = synopsis || null;
+
       currentItemData.prompt = result.prompt;
       if (result.summary) currentItemData.summary = result.summary;
 
@@ -1779,11 +1838,12 @@ async function refineView() {
 
       document.getElementById('prompt-display').textContent = result.prompt;
       document.getElementById('detail-summary').textContent = result.summary || '';
-      document.getElementById('refine-input').value = '';
-      showToast('Prompt refined!');
+      document.getElementById('detail-badge-type').textContent = industry || 'General';
+      document.getElementById('refine-prompt').value = '';
+      showToast('Saleo View regenerated!');
     }
   } catch (err) {
-    showToast('Refine failed: ' + err.message);
+    showToast('Regenerate failed: ' + err.message);
   } finally {
     loading.classList.add('hidden');
     refineBtn.classList.remove('hidden');
@@ -2401,12 +2461,12 @@ async function downloadImagesZip() {
 
 // --- Keyboard shortcuts ---
 document.addEventListener('keydown', function(e) {
-  // Cmd+Enter to refine when on detail page
+  // Cmd+Enter to regenerate when on detail page
   if ((e.metaKey || e.ctrlKey) && e.key === 'Enter' && currentPage === 'item-detail') {
-    const refineInput = document.getElementById('refine-input');
-    if (document.activeElement === refineInput && refineInput.value.trim()) {
+    const refinePrompt = document.getElementById('refine-prompt');
+    if (document.activeElement === refinePrompt) {
       e.preventDefault();
-      refineView();
+      regenerateView();
     }
   }
   // Escape to close dialogs
