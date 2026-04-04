@@ -4,6 +4,7 @@ const express = require('express');
 const cors = require('cors');
 const path = require('path');
 const crypto = require('crypto');
+const jwt = require('jsonwebtoken');
 const multer = require('multer');
 const { query } = require('./src/db/connection');
 const { migrate } = require('./src/db/migrate');
@@ -12,6 +13,20 @@ const { fetchBrandLogo } = require('./src/utils/logoFetcher');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
+
+// ─── JWT Session Tokens ───
+const JWT_SECRET = process.env.JWT_SECRET || (process.env.MAGIC_LINK_SECRET
+  ? crypto.createHash('sha256').update('saleo-session:' + process.env.MAGIC_LINK_SECRET).digest('hex')
+  : 'dev-jwt-secret');
+const JWT_EXPIRY = '30d';
+
+function issueSessionToken(userId, email) {
+  return jwt.sign({ userId, email }, JWT_SECRET, { expiresIn: JWT_EXPIRY });
+}
+
+function verifySessionToken(token) {
+  try { return jwt.verify(token, JWT_SECRET); } catch { return null; }
+}
 
 // ─── Middleware ───
 app.use(cors());
@@ -72,6 +87,41 @@ app.get('/api/auth/config', (req, res) => {
 app.get('/api/is-admin', (req, res) => {
   const email = req.query.email;
   res.json({ isAdmin: isAdmin(email) });
+});
+
+// ═══════════════════════════════════════════════
+// SHARED ROUTES — Session Auth
+// ═══════════════════════════════════════════════
+
+// POST /api/auth/login — exchange email for a long-lived JWT session token
+app.post('/api/auth/login', async (req, res) => {
+  try {
+    const { email } = req.body;
+    if (!email) return res.status(400).json({ error: 'Email is required' });
+    if (!email.endsWith('@salesforce.com')) return res.status(403).json({ error: 'Access restricted to @salesforce.com email addresses' });
+    const user = await getOrCreateUser(email);
+    const sessionToken = issueSessionToken(user.id, email);
+    res.json({ success: true, token: sessionToken, email: user.email });
+  } catch (err) {
+    console.error('Session login error:', err.message);
+    res.status(500).json({ error: 'Failed to create session' });
+  }
+});
+
+// POST /api/auth/validate — check if a JWT session token is still valid
+app.post('/api/auth/validate', async (req, res) => {
+  try {
+    const { token } = req.body;
+    if (!token) return res.status(400).json({ error: 'Token is required' });
+    const payload = verifySessionToken(token);
+    if (!payload || !payload.email) return res.status(401).json({ error: 'Invalid or expired session' });
+    const users = await query('SELECT id, email FROM users WHERE id = ? AND email = ?', [payload.userId, payload.email]);
+    if (users.length === 0) return res.status(401).json({ error: 'User not found' });
+    res.json({ valid: true, email: payload.email });
+  } catch (err) {
+    console.error('Session validate error:', err.message);
+    res.status(401).json({ error: 'Invalid session' });
+  }
 });
 
 // ═══════════════════════════════════════════════

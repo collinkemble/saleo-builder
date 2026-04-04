@@ -792,15 +792,38 @@ async function initAndCheckAuth() {
     console.warn('Config fetch failed:', err.message);
   }
 
+  // 1. Check for a long-lived JWT session token first (survives page refresh)
+  const sessionToken = getCookie('sessionToken');
+  if (sessionToken) {
+    try {
+      const resp = await fetch('/api/auth/validate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ token: sessionToken }),
+      });
+      if (resp.ok) {
+        const data = await resp.json();
+        if (data.valid && data.email) { showApp(data.email); return; }
+      }
+      deleteCookie('sessionToken', cookieDomain);
+    } catch (err) {
+      try {
+        const payload = JSON.parse(atob(sessionToken.split('.')[1]));
+        if (payload.email) { console.warn('Session validate failed (network?), using cached email'); showApp(payload.email); return; }
+      } catch (e) {}
+    }
+  }
+
   if (!magic) return; // Magic key not configured
 
-  // Check for a shared cookie token from another subdomain
+  // 2. Check for a shared cookie token from another subdomain
   const sharedToken = getCookie('didToken');
   if (sharedToken) {
     try {
       const isLoggedIn = await magic.user.isLoggedIn();
       if (isLoggedIn) {
         const { email } = await magic.user.getInfo();
+        await mintSessionToken(email);
         showApp(email);
         return;
       }
@@ -809,7 +832,7 @@ async function initAndCheckAuth() {
     }
   }
 
-  // Fall back to checking Magic's own session
+  // 3. Fall back to checking Magic's own session
   try {
     const isLoggedIn = await magic.user.isLoggedIn();
     if (isLoggedIn) {
@@ -818,10 +841,28 @@ async function initAndCheckAuth() {
         const didToken = await magic.user.getIdToken();
         if (didToken) setCookie('didToken', didToken, cookieDomain);
       } catch (e) { /* token fetch optional */ }
+      await mintSessionToken(email);
       showApp(email);
     }
   } catch (err) {
     console.log('Auth check:', err.message);
+  }
+}
+
+// Helper: call /api/auth/login to get a JWT and store it as a cookie
+async function mintSessionToken(email) {
+  try {
+    const resp = await fetch('/api/auth/login', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email }),
+    });
+    if (resp.ok) {
+      const data = await resp.json();
+      if (data.token) setCookie('sessionToken', data.token, cookieDomain);
+    }
+  } catch (err) {
+    console.warn('Failed to mint session token:', err.message);
   }
 }
 
@@ -848,6 +889,7 @@ async function handleLogin() {
     if (didToken) setCookie('didToken', didToken, cookieDomain);
 
     const userInfo = await magic.user.getInfo();
+    await mintSessionToken(userInfo.email);
     showApp(userInfo.email);
   } catch (err) {
     loginForm.classList.remove('hidden');
@@ -867,6 +909,7 @@ async function handleLogin() {
 async function handleLogout() {
   await magic.user.logout();
   deleteCookie('didToken', cookieDomain);
+  deleteCookie('sessionToken', cookieDomain);
   document.getElementById('app-section').style.display = 'none';
   document.getElementById('login-section').classList.remove('hidden');
   document.getElementById('login-form').classList.remove('hidden');
