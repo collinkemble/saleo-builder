@@ -283,6 +283,14 @@
           </div>
         </div>
 
+        <!-- Save Settings button (hidden until fields change) -->
+        <div id="save-settings-bar" class="hidden" style="margin-top: 14px; display: none;">
+          <div class="flex items-center justify-between" style="background: #FFFBEB; border: 1px solid #F59E0B; border-radius: 10px; padding: 10px 16px;">
+            <span style="font-size: 13px; color: #92400E;">⚠️ You have unsaved changes</span>
+            <button id="save-settings-btn" onclick="saveViewSettings()" class="px-4 py-2 text-sm font-bold text-white rounded-lg cursor-pointer" style="background: #16A34A; height: 36px;">💾 Save Settings</button>
+          </div>
+        </div>
+
         <!-- Refine prompt -->
         <div style="margin-top: 16px;">
           <label class="block text-xs font-bold mb-1" style="color: #032D60;">More info to further refine the Saleo view</label>
@@ -1741,6 +1749,16 @@ function renderDetail(item) {
   document.getElementById('edit-synopsis').value = meta.synopsis || '';
   document.getElementById('refine-prompt').value = '';
 
+  // Store original values for change detection
+  window._origSettings = {
+    brand: meta.brand || '',
+    brand_desc: meta.brand_desc || '',
+    brand_url: meta.brand_url || '',
+    industry: meta.industry || '',
+    synopsis: meta.synopsis || ''
+  };
+  hideSaveSettingsBar();
+
   // Logo URL
   renderLogoUrl(data);
   autoFetchLogo(); // fire-and-forget — fetches logo if missing
@@ -1811,6 +1829,82 @@ async function savePrompt() {
     showToast('Error: ' + err.message);
   }
 }
+
+// --- View Settings: Save & Change Detection ---
+function checkSettingsChanged() {
+  const orig = window._origSettings;
+  if (!orig) return;
+  const changed =
+    document.getElementById('edit-brand').value !== orig.brand ||
+    document.getElementById('edit-brand-desc').value !== orig.brand_desc ||
+    document.getElementById('edit-website').value !== orig.brand_url ||
+    document.getElementById('edit-industry').value !== orig.industry ||
+    document.getElementById('edit-synopsis').value !== orig.synopsis;
+  const bar = document.getElementById('save-settings-bar');
+  bar.classList.toggle('hidden', !changed);
+  bar.style.display = changed ? 'block' : 'none';
+}
+
+function hideSaveSettingsBar() {
+  const bar = document.getElementById('save-settings-bar');
+  bar.classList.add('hidden');
+  bar.style.display = 'none';
+}
+
+async function saveViewSettings() {
+  const brand = document.getElementById('edit-brand').value.trim();
+  const brandDesc = document.getElementById('edit-brand-desc').value.trim();
+  const brandUrl = document.getElementById('edit-website').value.trim();
+  const industry = document.getElementById('edit-industry').value;
+  const synopsis = document.getElementById('edit-synopsis').value.trim();
+
+  if (!brand) { alert('Brand name is required.'); return; }
+  if (!industry) { alert('Industry is required.'); return; }
+
+  const btn = document.getElementById('save-settings-btn');
+  btn.disabled = true;
+  btn.textContent = 'Saving...';
+
+  try {
+    // Update currentItemData metadata
+    currentItemData.metadata = currentItemData.metadata || {};
+    currentItemData.metadata.brand = brand;
+    currentItemData.metadata.brand_desc = brandDesc || null;
+    currentItemData.metadata.brand_url = brandUrl || null;
+    currentItemData.metadata.industry = industry;
+    currentItemData.metadata.synopsis = synopsis || null;
+
+    const email = document.getElementById('user-email').textContent;
+    const resp = await fetch(`/api/items/${currentItemId}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email, data: currentItemData })
+    });
+    if (!resp.ok) throw new Error('Save failed');
+
+    // Update original values to new state
+    window._origSettings = { brand, brand_desc: brandDesc, brand_url: brandUrl, industry, synopsis };
+
+    // Update the card title on home page
+    document.getElementById('detail-brand').textContent = brand;
+    document.getElementById('detail-breadcrumb').textContent = brand;
+
+    hideSaveSettingsBar();
+    btn.textContent = '✓ Saved!';
+    setTimeout(() => { btn.textContent = '💾 Save Settings'; btn.disabled = false; }, 1500);
+  } catch (err) {
+    alert('Failed to save settings: ' + err.message);
+    btn.textContent = '💾 Save Settings';
+    btn.disabled = false;
+  }
+}
+
+// Attach change listeners to view settings fields
+['edit-brand', 'edit-brand-desc', 'edit-website', 'edit-industry', 'edit-synopsis'].forEach(id => {
+  const el = document.getElementById(id);
+  if (el) el.addEventListener('input', checkSettingsChanged);
+  if (el && el.tagName === 'SELECT') el.addEventListener('change', checkSettingsChanged);
+});
 
 // --- Regenerate Saleo View ---
 async function regenerateView() {
