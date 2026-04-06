@@ -167,7 +167,7 @@
 
         <!-- Center — Navigation -->
         <div class="nav-desktop flex items-center gap-1">
-          <button id="nav-items" onclick="showPage('items')" class="cursor-pointer" style="padding: 6px 16px; border-radius: 6px; background: rgba(255,255,255,0.12); border: none; color: #FFFFFF; font-size: 13px; font-weight: 700; transition: background 0.15s ease;">Saleo Views</button>
+          <button id="nav-items" onclick="showPage('items')" class="cursor-pointer" style="padding: 6px 16px; border-radius: 6px; background: rgba(255,255,255,0.12); border: none; color: #FFFFFF; font-size: 13px; font-weight: 700; transition: background 0.15s ease;">Saleo Demos</button>
           <button id="nav-api-keys" onclick="showPage('api-keys')" class="cursor-pointer" style="padding: 6px 16px; border-radius: 6px; background: transparent; border: none; color: rgba(255,255,255,0.7); font-size: 13px; font-weight: 500; transition: background 0.15s ease;" onmouseenter="if(!this.dataset.active)this.style.background='rgba(255,255,255,0.07)'" onmouseleave="if(!this.dataset.active)this.style.background='transparent'">API Keys</button>
           <button id="nav-feedback" onclick="showPage('feedback')" class="hidden cursor-pointer" style="padding: 6px 16px; border-radius: 6px; background: transparent; border: none; color: rgba(255,255,255,0.7); font-size: 13px; font-weight: 500; transition: background 0.15s ease;" onmouseenter="if(!this.dataset.active)this.style.background='rgba(255,255,255,0.07)'" onmouseleave="if(!this.dataset.active)this.style.background='transparent'">Feedback</button>
           <button id="nav-users" onclick="showPage('users')" class="hidden cursor-pointer" style="padding: 6px 16px; border-radius: 6px; background: transparent; border: none; color: rgba(255,255,255,0.7); font-size: 13px; font-weight: 500; transition: background 0.15s ease;" onmouseenter="if(!this.dataset.active)this.style.background='rgba(255,255,255,0.07)'" onmouseleave="if(!this.dataset.active)this.style.background='transparent'">Users</button>
@@ -189,7 +189,7 @@
 
       <!-- Mobile dropdown menu -->
       <div id="mobile-menu" class="mobile-menu">
-        <button id="mob-nav-items" onclick="showPage('items'); closeMobileMenu();">📝 Saleo Views</button>
+        <button id="mob-nav-items" onclick="showPage('items'); closeMobileMenu();">📝 Saleo Demos</button>
         <button id="mob-nav-api-keys" onclick="showPage('api-keys'); closeMobileMenu();">🔑 API Keys</button>
         <button id="mob-nav-feedback" onclick="showPage('feedback'); closeMobileMenu();" style="display:none;">📋 Feedback</button>
         <button id="mob-nav-users" onclick="showPage('users'); closeMobileMenu();" style="display:none;">👤 Users</button>
@@ -202,23 +202,23 @@
     <div style="flex: 1;">
 
     <!-- ═══════════════════════════════════════════════ -->
-    <!-- APP-SPECIFIC: Saleo Views List                 -->
+    <!-- APP-SPECIFIC: Saleo Demos List                 -->
     <!-- ═══════════════════════════════════════════════ -->
     <div id="items-home" style="max-width: 912px; margin: 0 auto; padding: 32px 16px 0;">
       <div class="flex items-center justify-between" style="margin-bottom: 24px;">
         <div>
-          <h2 style="font-size: 35px; line-height: 40px; letter-spacing: -0.025em; font-weight: 700; color: #032D60; margin: 0 0 4px 0;">Saleo Views</h2>
+          <h2 style="font-size: 35px; line-height: 40px; letter-spacing: -0.025em; font-weight: 700; color: #032D60; margin: 0 0 4px 0;">Saleo Demos</h2>
           <p style="font-size: 14px; line-height: 20px; color: #888; margin: 0;">AI-generated prompts for the Saleo platform</p>
         </div>
-        <button onclick="openNewItemDialog()" class="cursor-pointer" style="background: #0176D3; color: white; font-weight: 700; font-size: 16px; height: 40px; padding: 0 16px; border-radius: 8px; border: none;">+ New Saleo View</button>
+        <button onclick="openNewItemDialog()" class="cursor-pointer" style="background: #0176D3; color: white; font-weight: 700; font-size: 16px; height: 40px; padding: 0 16px; border-radius: 8px; border: none;">+ New Saleo Demo</button>
       </div>
       <div id="items-grid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 16px;"></div>
       <div id="items-empty" class="hidden">
         <div style="background: white; border-radius: 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.08); padding: 60px 40px; text-align: center;">
           <p style="font-size: 28px; margin-bottom: 8px;">🎯</p>
-          <h3 style="font-size: 18px; font-weight: 500; margin-bottom: 8px; color: #111;">No Saleo Views yet</h3>
+          <h3 style="font-size: 18px; font-weight: 500; margin-bottom: 8px; color: #111;">No Saleo Demos yet</h3>
           <p style="font-size: 14px; color: #888; margin-bottom: 16px;">Create your first view to generate a Saleo prompt.</p>
-          <button onclick="openNewItemDialog()" class="cursor-pointer" style="background: #0176D3; color: white; font-weight: 500; font-size: 15px; height: 40px; padding: 0 16px; border-radius: 8px; border: none;">+ Create Saleo View</button>
+          <button onclick="openNewItemDialog()" class="cursor-pointer" style="background: #0176D3; color: white; font-weight: 500; font-size: 15px; height: 40px; padding: 0 16px; border-radius: 8px; border: none;">+ Create Saleo Demo</button>
         </div>
       </div>
     </div>
@@ -229,7 +229,7 @@
     <div id="item-detail" class="hidden" style="max-width: 912px; margin: 0 auto; padding: 32px 16px 0;">
       <!-- Breadcrumb -->
       <div style="margin-bottom: 20px;">
-        <a href="#" onclick="showPage('items'); return false;" style="color: #0176D3; font-size: 13px; text-decoration: none; font-weight: 500;">← Back to Saleo Views</a>
+        <a href="#" onclick="showPage('items'); return false;" style="color: #0176D3; font-size: 13px; text-decoration: none; font-weight: 500;">← Back to Saleo Demos</a>
       </div>
 
       <!-- Header -->
@@ -293,7 +293,7 @@
 
         <!-- Refine prompt -->
         <div style="margin-top: 16px;">
-          <label class="block text-xs font-bold mb-1" style="color: #032D60;">More info to further refine the Saleo view</label>
+          <label class="block text-xs font-bold mb-1" style="color: #032D60;">More info to further refine the Saleo demo</label>
           <div style="background: linear-gradient(135deg, #e8f2ff, #f0f7ff); border-radius: 10px; padding: 16px; border: 1px solid #cce4ff;">
             <textarea id="refine-prompt" rows="2" placeholder="e.g. 'Make it more specific to financial services' or 'Add data points about pipeline growth'"
               style="width: 100%; background: transparent; border: none; outline: none; resize: none; font-size: 15px; line-height: 1.5; font-family: inherit; color: #1a1a1a; overflow: hidden;"></textarea>
@@ -302,7 +302,7 @@
 
         <div class="flex items-center justify-between mt-4">
           <span style="font-size: 12px; color: #999; opacity: 0.6;" id="refine-hint">⌘↵ to regenerate</span>
-          <button id="refine-btn" onclick="regenerateView()" class="px-5 py-2 text-sm font-bold text-white rounded-lg cursor-pointer" style="background: linear-gradient(135deg, #0176D3, #032D60); height: 40px;">✨ Regenerate Saleo View</button>
+          <button id="refine-btn" onclick="regenerateView()" class="px-5 py-2 text-sm font-bold text-white rounded-lg cursor-pointer" style="background: linear-gradient(135deg, #0176D3, #032D60); height: 40px;">✨ Regenerate Saleo Demo</button>
         </div>
 
         <!-- Regenerate loading state -->
@@ -312,7 +312,7 @@
             <div class="w-3 h-3 rounded-full" style="background: #0176D3; animation: pulse-dot 1.4s infinite ease-in-out both; animation-delay: 0.2s;"></div>
             <div class="w-3 h-3 rounded-full" style="background: #0176D3; animation: pulse-dot 1.4s infinite ease-in-out both; animation-delay: 0.4s;"></div>
           </div>
-          <p id="refine-loading-text" style="font-size: 13px; color: #0176D3;">Regenerating your Saleo view...</p>
+          <p id="refine-loading-text" style="font-size: 13px; color: #0176D3;">Regenerating your Saleo demo...</p>
         </div>
       </div>
 
@@ -325,7 +325,7 @@
         <div id="how-to-use-body" style="display: none; padding: 0 20px 16px; font-size: 13px; color: #444; line-height: 1.7; border-top: 1px solid #f0f0f0;">
           <div style="padding-top: 16px;">
             <p style="margin: 0 0 12px 0;">The Aubrey Demo Saleo Builder is meant to be used on Saleo Demos built off a <a href="https://salesforce.enterprise.slack.com/archives/C08BWJ6EHME" target="_blank" style="color: #0176D3; text-decoration: underline;">Golden Demo, learn more about them here</a>.</p>
-            <p style="margin: 0 0 12px 0;">Once you have your Saleo view created, open the token library by clicking % icon in the Saleo extension. Then click the "Saleo AI" button within the library. This will allow you to paste in the Saleo Prompt that you see below.</p>
+            <p style="margin: 0 0 12px 0;">Once you have your Saleo demo created, open the token library by clicking % icon in the Saleo extension. Then click the "Saleo AI" button within the library. This will allow you to paste in the Saleo Prompt that you see below.</p>
             <p style="margin: 0 0 12px 0;">After that, you can replace all of the images that Saleo uses. First download the zip file of all images this app has created for you in the images section of this page. Then in the Saleo console, click on each page, then click its images tab, and on each image click the replace image button and select the corresponding image that you've just downloaded in the zip file.</p>
             <p style="margin: 0;">That's all there is to it! We're working on getting Saleo API access once it's released to make this all automatic in the near future!</p>
           </div>
@@ -451,7 +451,7 @@
       <div class="bg-white rounded-2xl shadow-2xl w-full max-w-lg" style="max-height: 90vh; overflow-y: auto;">
         <!-- Dialog header -->
         <div style="padding: 24px 28px 0;">
-          <h3 style="font-size: 20px; font-weight: 700; color: #032D60; margin: 0 0 4px;">New Saleo View</h3>
+          <h3 style="font-size: 20px; font-weight: 700; color: #032D60; margin: 0 0 4px;">New Saleo Demo</h3>
           <p style="font-size: 13px; color: #888; margin: 0 0 16px;">Generate a prompt to use in the Saleo platform.</p>
 
         </div>
@@ -539,7 +539,7 @@
       <div class="bg-white rounded-2xl shadow-2xl w-full max-w-[450px] p-8">
         <!-- Default state: email input -->
         <div id="share-form-state">
-          <h3 class="text-lg font-bold text-gray-800 mb-1">Share Saleo View</h3>
+          <h3 class="text-lg font-bold text-gray-800 mb-1">Share Saleo Demo</h3>
           <p class="text-sm text-gray-500 mb-5">Send a copy of <strong id="share-item-name"></strong> to another user.</p>
           <div class="mb-4">
             <label for="share-email-input" class="block font-bold mb-2" style="color: #032D60; font-size: 13px;">Recipient Email</label>
@@ -596,7 +596,7 @@
     <!-- ═══════════════════════════════════════════════ -->
     <div id="delete-dialog" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4" style="background: rgba(0,0,0,0.5);">
       <div class="bg-white rounded-2xl shadow-2xl w-full max-w-[450px] p-8">
-        <h3 class="text-lg font-bold text-gray-800 mb-2">Delete Saleo View</h3>
+        <h3 class="text-lg font-bold text-gray-800 mb-2">Delete Saleo Demo</h3>
         <p class="text-sm text-gray-500 mb-5">Are you sure you want to delete <strong id="delete-item-name"></strong>? This action cannot be undone.</p>
         <div class="flex justify-end gap-3">
           <button onclick="closeDeleteDialog()" class="px-4 py-2 text-sm font-medium text-gray-600 bg-gray-100 rounded-lg hover:bg-gray-200 cursor-pointer">Cancel</button>
@@ -709,7 +709,7 @@
           <span id="stat-total-users" style="font-size: 28px; font-weight: 700; color: #0176D3;">0</span>
         </div>
         <div style="flex: 1; text-align: center; padding: 20px; background: white; border: 1px solid #d8dde6; border-radius: 8px; box-shadow: 0 1px 3px rgba(3,45,96,0.06);">
-          <span style="display: block; font-size: 12px; font-weight: 700; color: rgba(0,7,20,0.624); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 4px;">Total Saleo Views</span>
+          <span style="display: block; font-size: 12px; font-weight: 700; color: rgba(0,7,20,0.624); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 4px;">Total Saleo Demos</span>
           <span id="stat-total-items" style="font-size: 28px; font-weight: 700; color: #0176D3;">0</span>
         </div>
       </div>
@@ -719,7 +719,7 @@
         <span style="font-size: 14px; font-weight: 500; color: rgba(0,7,20,0.624);">Sort by:</span>
         <button onclick="sortUsers('first_login')" id="sort-first-login" class="cursor-pointer" style="height: 24px; padding: 0 8px; border-radius: 3px; font-size: 12px; font-weight: 700; border: none; background: #0161B0; color: #fff;">First Login</button>
         <button onclick="sortUsers('last_login')" id="sort-last-login" class="cursor-pointer" style="height: 24px; padding: 0 8px; border-radius: 3px; font-size: 12px; font-weight: 700; border: 1px solid rgba(0,109,203,0.5); background: transparent; color: rgba(0,109,203,0.95);">Last Login</button>
-        <button onclick="sortUsers('items')" id="sort-items" class="cursor-pointer" style="height: 24px; padding: 0 8px; border-radius: 3px; font-size: 12px; font-weight: 700; border: 1px solid rgba(0,109,203,0.5); background: transparent; color: rgba(0,109,203,0.95);">Saleo Views Created</button>
+        <button onclick="sortUsers('items')" id="sort-items" class="cursor-pointer" style="height: 24px; padding: 0 8px; border-radius: 3px; font-size: 12px; font-weight: 700; border: 1px solid rgba(0,109,203,0.5); background: transparent; color: rgba(0,109,203,0.95);">Saleo Demos Created</button>
       </div>
 
       <!-- Table Header -->
@@ -728,7 +728,7 @@
         <span style="flex: 1; font-size: 12px; font-weight: 700; color: rgba(0,7,20,0.624); text-transform: uppercase; letter-spacing: 0.5px;">Name</span>
         <span style="width: 120px; font-size: 12px; font-weight: 700; color: rgba(0,7,20,0.624); text-transform: uppercase; letter-spacing: 0.5px; text-align: center;">First Login</span>
         <span style="width: 120px; font-size: 12px; font-weight: 700; color: rgba(0,7,20,0.624); text-transform: uppercase; letter-spacing: 0.5px; text-align: center;">Last Login</span>
-        <span style="width: 80px; font-size: 12px; font-weight: 700; color: rgba(0,7,20,0.624); text-transform: uppercase; letter-spacing: 0.5px; text-align: center;">Saleo Views</span>
+        <span style="width: 80px; font-size: 12px; font-weight: 700; color: rgba(0,7,20,0.624); text-transform: uppercase; letter-spacing: 0.5px; text-align: center;">Saleo Demos</span>
       </div>
 
       <!-- Data Rows -->
@@ -1608,7 +1608,7 @@ async function confirmDeleteItem() {
 // APP-SPECIFIC: Saleo Builder Logic
 // ═══════════════════════════════════════════════
 
-// --- System prompt for Saleo view generation ---
+// --- System prompt for Saleo demo generation ---
 const SALEO_SYSTEM_PROMPT = `You are Saleo Builder, an AI that creates ready-to-paste prompts for the Saleo demo personalization platform.
 
 Given information about a demo (brand, industry, and description), generate a JSON response with this exact structure:
@@ -1906,7 +1906,7 @@ async function saveViewSettings() {
   if (el && el.tagName === 'SELECT') el.addEventListener('change', checkSettingsChanged);
 });
 
-// --- Regenerate Saleo View ---
+// --- Regenerate Saleo Demo ---
 async function regenerateView() {
   // Collect edited fields
   const brand = document.getElementById('edit-brand').value.trim();
@@ -1969,7 +1969,7 @@ async function regenerateView() {
       document.getElementById('detail-summary').textContent = result.summary || '';
       document.getElementById('detail-badge-type').textContent = industry || 'General';
       document.getElementById('refine-prompt').value = '';
-      showToast('Saleo View regenerated!');
+      showToast('Saleo Demo regenerated!');
     }
   } catch (err) {
     showToast('Regenerate failed: ' + err.message);
@@ -2101,7 +2101,7 @@ async function generateFromPrompt() {
     const email = document.getElementById('user-email').textContent;
     const itemData = {
       prompt: prompt,
-      summary: `Saleo view for ${brand}`,
+      summary: `Saleo demo for ${brand}`,
       source_type: hasFile ? 'upload' : 'prompt',
       metadata: { industry: industry, brand: brand, brand_desc: brandDesc || null, brand_url: brandUrl || null, synopsis: synopsisText || null, source_filename: sourceFilename }
     };
@@ -2118,7 +2118,7 @@ async function generateFromPrompt() {
     document.getElementById('generate-btn').disabled = false;
     document.getElementById('generate-btn').style.opacity = '1';
     closeNewItemDialog();
-    showToast('Saleo View created!');
+    showToast('Saleo Demo created!');
     viewItem(saved.item.id);
   } catch (err) {
     document.getElementById('generate-btn').disabled = false;
