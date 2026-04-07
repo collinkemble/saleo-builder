@@ -169,6 +169,7 @@
         <div class="nav-desktop flex items-center gap-1">
           <button id="nav-items" onclick="showPage('items')" class="cursor-pointer" style="padding: 6px 16px; border-radius: 6px; background: rgba(255,255,255,0.12); border: none; color: #FFFFFF; font-size: 13px; font-weight: 700; transition: background 0.15s ease;">Saleo Demos</button>
           <button id="nav-api-keys" onclick="showPage('api-keys')" class="cursor-pointer" style="padding: 6px 16px; border-radius: 6px; background: transparent; border: none; color: rgba(255,255,255,0.7); font-size: 13px; font-weight: 500; transition: background 0.15s ease;" onmouseenter="if(!this.dataset.active)this.style.background='rgba(255,255,255,0.07)'" onmouseleave="if(!this.dataset.active)this.style.background='transparent'">API Keys</button>
+          <button id="nav-how-to" onclick="showPage('how-to')" class="cursor-pointer" style="padding: 6px 16px; border-radius: 6px; background: transparent; border: none; color: rgba(255,255,255,0.7); font-size: 13px; font-weight: 500; transition: background 0.15s ease;" onmouseenter="if(!this.dataset.active)this.style.background='rgba(255,255,255,0.07)'" onmouseleave="if(!this.dataset.active)this.style.background='transparent'">How to Use</button>
           <button id="nav-feedback" onclick="showPage('feedback')" class="hidden cursor-pointer" style="padding: 6px 16px; border-radius: 6px; background: transparent; border: none; color: rgba(255,255,255,0.7); font-size: 13px; font-weight: 500; transition: background 0.15s ease;" onmouseenter="if(!this.dataset.active)this.style.background='rgba(255,255,255,0.07)'" onmouseleave="if(!this.dataset.active)this.style.background='transparent'">Feedback</button>
           <button id="nav-users" onclick="showPage('users')" class="hidden cursor-pointer" style="padding: 6px 16px; border-radius: 6px; background: transparent; border: none; color: rgba(255,255,255,0.7); font-size: 13px; font-weight: 500; transition: background 0.15s ease;" onmouseenter="if(!this.dataset.active)this.style.background='rgba(255,255,255,0.07)'" onmouseleave="if(!this.dataset.active)this.style.background='transparent'">Users</button>
         </div>
@@ -191,6 +192,7 @@
       <div id="mobile-menu" class="mobile-menu">
         <button id="mob-nav-items" onclick="showPage('items'); closeMobileMenu();">📝 Saleo Demos</button>
         <button id="mob-nav-api-keys" onclick="showPage('api-keys'); closeMobileMenu();">🔑 API Keys</button>
+        <button id="mob-nav-how-to" onclick="showPage('how-to'); closeMobileMenu();">📖 How to Use</button>
         <button id="mob-nav-feedback" onclick="showPage('feedback'); closeMobileMenu();" style="display:none;">📋 Feedback</button>
         <button id="mob-nav-users" onclick="showPage('users'); closeMobileMenu();" style="display:none;">👤 Users</button>
         <div class="mobile-divider"></div>
@@ -205,6 +207,18 @@
     <!-- APP-SPECIFIC: Saleo Demos List                 -->
     <!-- ═══════════════════════════════════════════════ -->
     <div id="items-home" style="max-width: 912px; margin: 0 auto; padding: 32px 16px 0;">
+
+      <!-- Hero / Intro Banner -->
+      <div style="background: linear-gradient(135deg, #032D60 0%, #0176D3 100%); border-radius: 16px; padding: 32px; margin-bottom: 28px; position: relative; overflow: hidden;">
+        <div style="position: absolute; top: -40px; right: -40px; width: 200px; height: 200px; border-radius: 50%; background: rgba(255,255,255,0.05);"></div>
+        <div style="position: absolute; bottom: -60px; left: -30px; width: 160px; height: 160px; border-radius: 50%; background: rgba(255,255,255,0.04);"></div>
+        <div style="position: relative; z-index: 1;">
+          <h2 style="font-size: 24px; font-weight: 700; color: #fff; margin: 0 0 8px 0; letter-spacing: -0.02em;">🖼️ AI-Powered Saleo Demos, Built in Seconds</h2>
+          <p style="font-size: 14px; line-height: 22px; color: rgba(255,255,255,0.8); margin: 0; max-width: 680px;">Saleo Builder generates personalized Saleo demo prompts and brand imagery using AI. Just enter a brand name, choose an industry, and optionally add a demo story synopsis — and get a fully crafted Saleo prompt with AI-generated product images and logos ready to drop into the Saleo platform. Whether you're building a quick customer demo or a polished Golden Demo showcase, Saleo Builder handles the creative heavy lifting so you can focus on telling a great story.</p>
+        </div>
+      </div>
+
+      <!-- Header row -->
       <div class="flex items-center justify-between" style="margin-bottom: 24px;">
         <div>
           <h2 style="font-size: 35px; line-height: 40px; letter-spacing: -0.025em; font-weight: 700; color: #032D60; margin: 0 0 4px 0;">Saleo Demos</h2>
@@ -313,22 +327,6 @@
             <div class="w-3 h-3 rounded-full" style="background: #0176D3; animation: pulse-dot 1.4s infinite ease-in-out both; animation-delay: 0.4s;"></div>
           </div>
           <p id="refine-loading-text" style="font-size: 13px; color: #0176D3;">Regenerating your Saleo demo...</p>
-        </div>
-      </div>
-
-      <!-- How to Use (collapsible, starts collapsed) -->
-      <div style="background: white; border-radius: 12px; border: 1px solid #e5e7eb; box-shadow: 0 1px 3px rgba(0,0,0,0.06); margin-bottom: 20px;">
-        <div onclick="toggleHowToUse()" class="flex items-center justify-between cursor-pointer" style="padding: 14px 20px;">
-          <span style="font-size: 13px; font-weight: 700; color: #032D60; text-transform: uppercase; letter-spacing: 0.04em;">How to Use</span>
-          <svg id="how-to-use-chevron" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#032D60" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="transition: transform 0.2s ease;"><polyline points="6 9 12 15 18 9"/></svg>
-        </div>
-        <div id="how-to-use-body" style="display: none; padding: 0 20px 16px; font-size: 13px; color: #444; line-height: 1.7; border-top: 1px solid #f0f0f0;">
-          <div style="padding-top: 16px;">
-            <p style="margin: 0 0 12px 0;">The Aubrey Demo Saleo Builder is meant to be used on Saleo Demos built off a <a href="https://salesforce.enterprise.slack.com/archives/C08BWJ6EHME" target="_blank" style="color: #0176D3; text-decoration: underline;">Golden Demo, learn more about them here</a>.</p>
-            <p style="margin: 0 0 12px 0;">Once you have your Saleo demo created, open the token library by clicking % icon in the Saleo extension. Then click the "Saleo AI" button within the library. This will allow you to paste in the Saleo Prompt that you see below.</p>
-            <p style="margin: 0 0 12px 0;">After that, you can replace all of the images that Saleo uses. First download the zip file of all images this app has created for you in the images section of this page. Then in the Saleo console, click on each page, then click its images tab, and on each image click the replace image button and select the corresponding image that you've just downloaded in the zip file.</p>
-            <p style="margin: 0;">That's all there is to it! We're working on getting Saleo API access once it's released to make this all automatic in the near future!</p>
-          </div>
         </div>
       </div>
 
@@ -741,6 +739,106 @@
       </div>
     </div>
 
+    <!-- ===== How to Use Page ===== -->
+    <div id="how-to-section" class="hidden" style="max-width: 1024px; margin: 0 auto; padding: 32px 16px 0;">
+      <div style="margin-bottom: 20px;">
+        <h2 style="font-size: 28px; line-height: 36px; letter-spacing: -0.56px; font-weight: 700; color: #032D60; margin: 0;">How to Use Saleo Builder</h2>
+        <p style="font-size: 14px; color: #6b7280; margin-top: 6px;">Everything you need to know to create, customize, and deploy Saleo demos.</p>
+      </div>
+
+      <div style="display: flex; flex-direction: column; gap: 16px;">
+
+        <!-- Step 1 -->
+        <div style="background: white; border-radius: 12px; padding: 24px; border: 1px solid #e5e7eb; box-shadow: 0 1px 3px rgba(0,0,0,0.06);">
+          <div style="display: flex; align-items: flex-start; gap: 16px;">
+            <div style="width: 36px; height: 36px; border-radius: 50%; background: linear-gradient(135deg, #0176D3, #032D60); color: white; font-weight: 700; font-size: 16px; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">1</div>
+            <div>
+              <h3 style="font-size: 16px; font-weight: 700; color: #032D60; margin: 0 0 6px;">Create a New Saleo Demo</h3>
+              <p style="font-size: 14px; color: #4b5563; line-height: 1.6; margin: 0;">Click the <strong>"+ New Saleo Demo"</strong> button on the home page. Fill in the brand name, industry, and optionally add a brand description, website URL, and demo story synopsis. You can also upload an existing script file to extract the synopsis automatically. Hit <strong>"Generate"</strong> and AI will build a personalized Saleo prompt with brand-specific imagery.</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Step 2 -->
+        <div style="background: white; border-radius: 12px; padding: 24px; border: 1px solid #e5e7eb; box-shadow: 0 1px 3px rgba(0,0,0,0.06);">
+          <div style="display: flex; align-items: flex-start; gap: 16px;">
+            <div style="width: 36px; height: 36px; border-radius: 50%; background: linear-gradient(135deg, #0176D3, #032D60); color: white; font-weight: 700; font-size: 16px; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">2</div>
+            <div>
+              <h3 style="font-size: 16px; font-weight: 700; color: #032D60; margin: 0 0 6px;">Review Your Saleo Prompt</h3>
+              <p style="font-size: 14px; color: #4b5563; line-height: 1.6; margin: 0;">Once generated, you'll land on the demo detail page. The <strong>Saleo Prompt</strong> section contains the AI-generated prompt text — ready to copy and paste into the Saleo platform. You can click <strong>Copy</strong> to grab it or <strong>Edit</strong> to tweak it manually before using it.</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Step 3 -->
+        <div style="background: white; border-radius: 12px; padding: 24px; border: 1px solid #e5e7eb; box-shadow: 0 1px 3px rgba(0,0,0,0.06);">
+          <div style="display: flex; align-items: flex-start; gap: 16px;">
+            <div style="width: 36px; height: 36px; border-radius: 50%; background: linear-gradient(135deg, #0176D3, #032D60); color: white; font-weight: 700; font-size: 16px; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">3</div>
+            <div>
+              <h3 style="font-size: 16px; font-weight: 700; color: #032D60; margin: 0 0 6px;">Use the Prompt in Saleo</h3>
+              <p style="font-size: 14px; color: #4b5563; line-height: 1.6; margin: 0;">This app is designed for Saleo demos built off a <strong><a href="https://salesforce.enterprise.slack.com/archives/C08BWJ6EHME" target="_blank" style="color: #0176D3;">Golden Demo</a></strong>. Open the token library in the Saleo extension by clicking the <strong>%</strong> icon, then click the <strong>"Saleo AI"</strong> button within the library. Paste in the Saleo Prompt from this page and you're good to go.</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Step 4 -->
+        <div style="background: white; border-radius: 12px; padding: 24px; border: 1px solid #e5e7eb; box-shadow: 0 1px 3px rgba(0,0,0,0.06);">
+          <div style="display: flex; align-items: flex-start; gap: 16px;">
+            <div style="width: 36px; height: 36px; border-radius: 50%; background: linear-gradient(135deg, #0176D3, #032D60); color: white; font-weight: 700; font-size: 16px; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">4</div>
+            <div>
+              <h3 style="font-size: 16px; font-weight: 700; color: #032D60; margin: 0 0 6px;">Replace Images in Saleo</h3>
+              <p style="font-size: 14px; color: #4b5563; line-height: 1.6; margin: 0;">Download the zip file of AI-generated brand images from the <strong>Images</strong> section on the demo detail page. Then in the Saleo console, click on each page, open its images tab, and click <strong>Replace Image</strong> on each image — selecting the corresponding file you just downloaded.</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Step 5 -->
+        <div style="background: white; border-radius: 12px; padding: 24px; border: 1px solid #e5e7eb; box-shadow: 0 1px 3px rgba(0,0,0,0.06);">
+          <div style="display: flex; align-items: flex-start; gap: 16px;">
+            <div style="width: 36px; height: 36px; border-radius: 50%; background: linear-gradient(135deg, #0176D3, #032D60); color: white; font-weight: 700; font-size: 16px; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">5</div>
+            <div>
+              <h3 style="font-size: 16px; font-weight: 700; color: #032D60; margin: 0 0 6px;">Refine with AI</h3>
+              <p style="font-size: 14px; color: #4b5563; line-height: 1.6; margin: 0;">Want to improve your demo prompt? In the <strong>View Settings</strong> panel on the demo detail page, use the <strong>"More info to further refine the Saleo demo"</strong> text box to add instructions — for example, "Focus more on loyalty program features" or "Make the language more enterprise-focused." Then click <strong>"✨ Regenerate Saleo Demo"</strong> and AI will rebuild the prompt with your guidance.</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Step 6 -->
+        <div style="background: white; border-radius: 12px; padding: 24px; border: 1px solid #e5e7eb; box-shadow: 0 1px 3px rgba(0,0,0,0.06);">
+          <div style="display: flex; align-items: flex-start; gap: 16px;">
+            <div style="width: 36px; height: 36px; border-radius: 50%; background: linear-gradient(135deg, #0176D3, #032D60); color: white; font-weight: 700; font-size: 16px; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">6</div>
+            <div>
+              <h3 style="font-size: 16px; font-weight: 700; color: #032D60; margin: 0 0 6px;">Update Demo Settings</h3>
+              <p style="font-size: 14px; color: #4b5563; line-height: 1.6; margin: 0;">On any demo's detail page, the <strong>View Settings</strong> panel shows all the fields you entered when creating the demo — brand name, description, website URL, industry, and demo story synopsis. Change any of these anytime. A yellow <strong>"You have unsaved changes"</strong> banner will appear with a green Save button so you never lose track of what's changed.</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Step 7 -->
+        <div style="background: white; border-radius: 12px; padding: 24px; border: 1px solid #e5e7eb; box-shadow: 0 1px 3px rgba(0,0,0,0.06);">
+          <div style="display: flex; align-items: flex-start; gap: 16px;">
+            <div style="width: 36px; height: 36px; border-radius: 50%; background: linear-gradient(135deg, #0176D3, #032D60); color: white; font-weight: 700; font-size: 16px; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">7</div>
+            <div>
+              <h3 style="font-size: 16px; font-weight: 700; color: #032D60; margin: 0 0 6px;">Share with Teammates</h3>
+              <p style="font-size: 14px; color: #4b5563; line-height: 1.6; margin: 0;">Click the <strong>share icon</strong> on any demo to send a copy to another user by email. They'll get their own editable copy of the full Saleo demo in their account. If you share to the same person again, you can choose to replace their previous copy or send them a new one.</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Step 8 -->
+        <div style="background: white; border-radius: 12px; padding: 24px; border: 1px solid #e5e7eb; box-shadow: 0 1px 3px rgba(0,0,0,0.06);">
+          <div style="display: flex; align-items: flex-start; gap: 16px;">
+            <div style="width: 36px; height: 36px; border-radius: 50%; background: linear-gradient(135deg, #0176D3, #032D60); color: white; font-weight: 700; font-size: 16px; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">8</div>
+            <div>
+              <h3 style="font-size: 16px; font-weight: 700; color: #032D60; margin: 0 0 6px;">API Keys</h3>
+              <p style="font-size: 14px; color: #4b5563; line-height: 1.6; margin: 0;">Head to the <strong>API Keys</strong> page to generate keys for integrating Saleo Builder with other tools and workflows. Create named keys, track their last usage, and revoke them anytime. This is useful if you want to programmatically generate Saleo demos from external applications.</p>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
     </div><!-- end flex:1 content wrapper -->
 
     <!-- SHARED: Footer -->
@@ -964,7 +1062,7 @@ async function showApp(email) {
 
   // Check if URL has a deep link (e.g. /views/123)
   const viewMatch = window.location.pathname.match(/^\/views\/(\d+)$/);
-  const pageMap = { '/api-keys': 'api-keys', '/feedback': 'feedback', '/users': 'users' };
+  const pageMap = { '/api-keys': 'api-keys', '/how-to': 'how-to', '/feedback': 'feedback', '/users': 'users' };
   const urlPage = pageMap[window.location.pathname];
 
   if (viewMatch) {
@@ -1109,10 +1207,11 @@ function showPage(page, skipPush) {
   document.getElementById('api-keys-section').classList.toggle('hidden', page !== 'api-keys');
   document.getElementById('admin-feedback-section').classList.toggle('hidden', page !== 'feedback');
   document.getElementById('admin-users-section').classList.toggle('hidden', page !== 'users');
+  document.getElementById('how-to-section').classList.toggle('hidden', page !== 'how-to');
 
   // Update nav button styles — item-detail highlights the items nav
   const navPage = page === 'item-detail' ? 'items' : page;
-  ['items', 'api-keys', 'users', 'feedback'].forEach(p => {
+  ['items', 'api-keys', 'how-to', 'users', 'feedback'].forEach(p => {
     const btn = document.getElementById('nav-' + p);
     if (!btn) return;
     const isActive = p === navPage;
@@ -1123,7 +1222,7 @@ function showPage(page, skipPush) {
   });
 
   // Update mobile nav active state
-  ['items', 'api-keys', 'feedback', 'users'].forEach(p => {
+  ['items', 'api-keys', 'how-to', 'feedback', 'users'].forEach(p => {
     const mobBtn = document.getElementById('mob-nav-' + p);
     if (!mobBtn) return;
     mobBtn.classList.toggle('mobile-nav-active', p === navPage);
@@ -1131,7 +1230,7 @@ function showPage(page, skipPush) {
 
   // Push URL state (skip when triggered by popstate or viewItem which pushes its own)
   if (!skipPush && page !== 'item-detail') {
-    const urlMap = { 'items': '/', 'api-keys': '/api-keys', 'feedback': '/feedback', 'users': '/users' };
+    const urlMap = { 'items': '/', 'api-keys': '/api-keys', 'how-to': '/how-to', 'feedback': '/feedback', 'users': '/users' };
     const url = urlMap[page] || '/';
     history.pushState({ page: page }, '', url);
   }
@@ -1777,15 +1876,6 @@ function copyPrompt() {
   const text = currentItemData?.prompt || '';
   if (!text) { showToast('No prompt to copy'); return; }
   navigator.clipboard.writeText(text).then(() => showToast('Prompt copied to clipboard!')).catch(() => showToast('Failed to copy'));
-}
-
-// --- How to Use toggle ---
-function toggleHowToUse() {
-  const body = document.getElementById('how-to-use-body');
-  const chevron = document.getElementById('how-to-use-chevron');
-  const isHidden = body.style.display === 'none';
-  body.style.display = isHidden ? 'block' : 'none';
-  chevron.style.transform = isHidden ? 'rotate(180deg)' : '';
 }
 
 // --- Edit prompt ---
