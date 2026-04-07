@@ -666,7 +666,7 @@ app.post('/api/images/generate', async (req, res) => {
 // POST /api/images/persona — Generate a persona headshot via Gemini
 app.post('/api/images/persona', async (req, res) => {
   try {
-    const { brand, brandDesc, industry, synopsis, viewId } = req.body;
+    const { brand, brandDesc, industry, synopsis, personaName: inputPersonaName, viewId } = req.body;
     if (!brand) return res.status(400).json({ error: 'brand is required' });
 
     const { GoogleGenAI } = require('@google/genai');
@@ -677,28 +677,51 @@ app.post('/api/images/persona', async (req, res) => {
 
     // Step 1: Try to extract a persona from the synopsis using Gemini text
     let personaDesc = '';
+    let extractedName = '';
     if (synopsis && synopsis.trim()) {
       try {
         const extractResp = await ai.models.generateContent({
           model: 'gemini-2.5-flash',
-          contents: [{ text: `From this demo synopsis, extract the main persona/character being described. Return ONLY a brief physical description suitable for generating a headshot photo (age range, gender, professional appearance). If no specific person is mentioned, infer a likely customer persona for a ${industry || 'business'} brand called "${brand}"${brandDesc ? ` (${brandDesc})` : ''}. Return just the description, nothing else.\n\nSynopsis: ${synopsis}` }],
+          contents: [{ text: `From this demo synopsis, extract two things:
+1. The person's name (if one is mentioned). If no name is mentioned, leave it empty.
+2. A brief physical description suitable for generating a headshot photo (age range, gender, professional appearance).
+
+If the persona text mentions a specific gender or name that is clearly male (e.g. "John", "Mike", "he/him"), note that the persona is male.
+If no specific person is described, infer a likely customer persona for a ${industry || 'business'} brand called "${brand}"${brandDesc ? ` (${brandDesc})` : ''}.
+
+Return ONLY valid JSON with two fields: {"name": "...", "description": "..."}
+No markdown fences, no explanation.
+
+Synopsis: ${synopsis}` }],
         });
-        personaDesc = extractResp.candidates?.[0]?.content?.parts?.[0]?.text?.trim() || '';
-        console.log(`[Persona] Extracted persona desc: "${personaDesc}"`);
+        const rawText = extractResp.candidates?.[0]?.content?.parts?.[0]?.text?.trim() || '';
+        try {
+          const parsed = JSON.parse(rawText.replace(/```json\s*\n?/g, '').replace(/```\s*$/g, '').trim());
+          extractedName = parsed.name || '';
+          personaDesc = parsed.description || '';
+        } catch (parseErr) {
+          personaDesc = rawText;
+        }
+        console.log(`[Persona] Extracted: name="${extractedName}", desc="${personaDesc}"`);
       } catch (extractErr) {
         console.warn('[Persona] Extraction failed, using fallback:', extractErr.message);
       }
     }
 
+    // Determine persona name and gender
+    const finalName = inputPersonaName || extractedName || 'Rachel Morris';
+    const inferredGender = inferPersonaGender(finalName);
+    const genderDesc = inferredGender === 'female' ? 'woman' : 'man';
+
     // Fallback: generate a generic persona for the brand/industry
     if (!personaDesc) {
-      personaDesc = `A professional-looking person who would be a typical customer of ${brand}`;
+      personaDesc = `A professional-looking ${genderDesc} named ${finalName} who would be a typical customer of ${brand}`;
       if (brandDesc) personaDesc += `, ${brandDesc}`;
       if (industry && industry !== 'Other') personaDesc += `, in the ${industry} industry`;
     }
 
-    // Step 2: Generate headshot image
-    const imagePrompt = `Generate a professional headshot photo of ${personaDesc}. The person should look friendly, confident, and approachable. Clean background, professional lighting, business casual attire. Photorealistic portrait style, shoulders-up framing. No text or watermarks.`;
+    // Step 2: Generate headshot image — explicitly include gender
+    const imagePrompt = `Generate a professional headshot photo of a ${genderDesc} named ${finalName}. ${personaDesc}. The person should look friendly, confident, and approachable. Clean background, professional lighting, business casual attire. Photorealistic portrait style, shoulders-up framing. No text or watermarks.`;
 
     const response = await ai.models.generateContent({
       model: 'gemini-2.5-flash-image',
@@ -749,6 +772,37 @@ app.post('/api/images/upload', async (req, res) => {
     res.status(500).json({ error: 'Image upload failed: ' + err.message });
   }
 });
+
+// Infer gender from a first name for persona image generation
+function inferPersonaGender(name) {
+  const first = (name || '').split(/\s+/)[0].toLowerCase();
+  const femaleNames = new Set([
+    'rachel','sarah','jessica','jennifer','ashley','amanda','stephanie','nicole','melissa','michelle',
+    'elizabeth','emily','lauren','megan','hannah','samantha','katherine','natalie','olivia','sophia',
+    'emma','ava','isabella','mia','charlotte','amelia','harper','evelyn','abigail','ella','grace',
+    'victoria','lily','chloe','madison','zoe','anna','maria','diana','lisa','karen','susan','nancy',
+    'betty','helen','sandra','margaret','donna','carol','ruth','sharon','laura','linda','patricia',
+    'barbara','catherine','christine','deborah','janet','debra','andrea','marie','jean','alice',
+    'judy','jane','joyce','teresa','ann','gloria','janice','brenda','tammy','tracy','kelly',
+    'tina','sara','amy','crystal','kimberly','angela','mary','rosa','julia','alejandra','carmen',
+    'fatima','priya','mei','yuki','aiko','nadia','leila','aisha',
+  ]);
+  const maleNames = new Set([
+    'james','john','robert','michael','william','david','richard','joseph','thomas','charles',
+    'christopher','daniel','matthew','anthony','mark','donald','steven','paul','andrew','joshua',
+    'kenneth','kevin','brian','george','timothy','ronald','edward','jason','jeffrey','ryan',
+    'jacob','gary','nicholas','eric','jonathan','stephen','larry','justin','scott','brandon',
+    'benjamin','samuel','raymond','gregory','frank','alexander','patrick','jack','dennis','jerry',
+    'tyler','aaron','jose','adam','nathan','henry','peter','zachary','douglas','harold','carl',
+    'arthur','gerald','roger','keith','lawrence','terry','sean','albert','joe','christian',
+    'austin','jesse','ethan','willie','billy','bruce','ralph','roy','louis','eugene','russell',
+    'bobby','philip','harry','vincent','carlos','miguel','luis','jorge','pedro','ahmed','raj',
+    'omar','yusuf','chen','wei','kenji','hiroshi','mohammed',
+  ]);
+  if (femaleNames.has(first)) return 'female';
+  if (maleNames.has(first)) return 'male';
+  return 'female'; // default
+}
 
 // GET /api/images/proxy — Proxy-fetch an R2 image to avoid CORS issues
 app.get('/api/images/proxy', async (req, res) => {
