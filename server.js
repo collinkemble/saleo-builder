@@ -98,7 +98,8 @@ app.post('/api/auth/login', async (req, res) => {
   try {
     const { email } = req.body;
     if (!email) return res.status(400).json({ error: 'Email is required' });
-    if (!email.endsWith('@salesforce.com')) return res.status(403).json({ error: 'Access restricted to @salesforce.com email addresses' });
+    const ALLOWED_EMAILS = ['aubreykemble@gmail.com'];
+    if (!email.endsWith('@salesforce.com') && !ALLOWED_EMAILS.includes(email.toLowerCase())) return res.status(403).json({ error: 'Access restricted to @salesforce.com email addresses' });
     const user = await getOrCreateUser(email);
     const sessionToken = issueSessionToken(user.id, email);
     res.json({ success: true, token: sessionToken, email: user.email });
