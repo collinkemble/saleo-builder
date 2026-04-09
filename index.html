@@ -469,11 +469,11 @@
         <div id="create-tab-prompt" style="padding: 20px 28px 24px;">
           <div style="margin-bottom: 14px;">
             <label style="display: block; font-size: 12px; font-weight: 700; color: #032D60; margin-bottom: 5px;">Saleo Demo Name <span style="color: #e5534b;">*</span></label>
-            <input id="new-name" type="text" placeholder="e.g. Acme Corp Pipeline Demo" style="width: 100%; padding: 10px 12px; border: 1px solid #d1d5db; border-radius: 8px; font-size: 14px; box-sizing: border-box;">
+            <input id="new-name" type="text" placeholder="e.g. Acme Corp Pipeline Demo" oninput="clearFieldError('new-name')" style="width: 100%; padding: 10px 12px; border: 1px solid #d1d5db; border-radius: 8px; font-size: 14px; box-sizing: border-box;">
           </div>
           <div style="margin-bottom: 14px;">
             <label style="display: block; font-size: 12px; font-weight: 700; color: #032D60; margin-bottom: 5px;">Brand <span style="color: #e5534b;">*</span></label>
-            <input id="new-brand" type="text" placeholder="e.g. Acme Corp" style="width: 100%; padding: 10px 12px; border: 1px solid #d1d5db; border-radius: 8px; font-size: 14px; box-sizing: border-box;">
+            <input id="new-brand" type="text" placeholder="e.g. Acme Corp" oninput="clearFieldError('new-brand')" style="width: 100%; padding: 10px 12px; border: 1px solid #d1d5db; border-radius: 8px; font-size: 14px; box-sizing: border-box;">
           </div>
           <div style="margin-bottom: 14px;">
             <label style="display: block; font-size: 12px; font-weight: 700; color: #032D60; margin-bottom: 5px;">Brand Description</label>
@@ -485,7 +485,7 @@
           </div>
           <div style="margin-bottom: 14px;">
             <label style="display: block; font-size: 12px; font-weight: 700; color: #032D60; margin-bottom: 5px;">Industry <span style="color: #e5534b;">*</span></label>
-            <select id="new-industry" style="width: 100%; padding: 10px 12px; border: 1px solid #d1d5db; border-radius: 8px; font-size: 14px; background: white; box-sizing: border-box;">
+            <select id="new-industry" onchange="clearFieldError('new-industry')" style="width: 100%; padding: 10px 12px; border: 1px solid #d1d5db; border-radius: 8px; font-size: 14px; background: white; box-sizing: border-box;">
               <option value="">Select industry...</option>
               <option value="Retail">Retail</option>
               <option value="Other">Other</option>
@@ -522,7 +522,7 @@
               </div>
             </div>
           </div>
-          <p id="new-error" class="hidden" style="font-size: 13px; color: #e5534b; margin-bottom: 12px; padding: 8px 12px; background: #FEF2F2; border-radius: 6px;"></p>
+          <div id="new-validation-error" class="hidden" style="margin-bottom: 12px; padding: 10px 14px; background: #FEF2F2; border: 1px solid #FECACA; border-radius: 8px; font-size: 13px; color: #991B1B; line-height: 1.5;"></div>
           <div class="flex justify-end gap-3">
             <button onclick="closeNewItemDialog()" class="cursor-pointer" style="padding: 8px 16px; font-size: 13px; font-weight: 500; color: #666; background: #f3f4f6; border: none; border-radius: 8px;">Cancel</button>
             <button id="generate-btn" onclick="generateFromPrompt()" class="cursor-pointer" style="padding: 8px 20px; font-size: 13px; font-weight: 700; color: white; background: #0176D3; border: none; border-radius: 8px; display: flex; align-items: center; gap: 6px;">
@@ -2106,6 +2106,30 @@ function switchInputMode(mode) {
 }
 
 // --- New Item Dialog ---
+// Clear all validation red borders and hide error message
+function clearValidationErrors() {
+  const fields = ['new-name', 'new-brand', 'new-industry'];
+  fields.forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.style.border = '1px solid #d1d5db';
+  });
+  document.getElementById('new-validation-error').classList.add('hidden');
+}
+
+// Clear red border on a single field when user starts typing
+function clearFieldError(fieldId) {
+  const el = document.getElementById(fieldId);
+  if (el) el.style.border = '1px solid #d1d5db';
+  const fields = ['new-name', 'new-brand', 'new-industry'];
+  const stillInvalid = fields.some(id => {
+    const f = document.getElementById(id);
+    return f && f.style.border && f.style.border.includes('#e5534b');
+  });
+  if (!stillInvalid) {
+    document.getElementById('new-validation-error').classList.add('hidden');
+  }
+}
+
 function openNewItemDialog() {
   // Reset all fields
   document.getElementById('new-name').value = '';
@@ -2114,7 +2138,7 @@ function openNewItemDialog() {
   document.getElementById('new-brand-url').value = '';
   document.getElementById('new-industry').value = '';
   document.getElementById('new-synopsis').value = '';
-  document.getElementById('new-error').classList.add('hidden');
+  clearValidationErrors();
   clearFile();
   switchInputMode('synopsis');
   document.getElementById('new-item-dialog').classList.remove('hidden');
@@ -2122,6 +2146,7 @@ function openNewItemDialog() {
 
 function closeNewItemDialog() {
   document.getElementById('new-item-dialog').classList.add('hidden');
+  clearValidationErrors();
 }
 
 // --- File handling ---
@@ -2161,14 +2186,25 @@ async function generateFromPrompt() {
   const synopsis = document.getElementById('new-synopsis').value.trim();
   const fileInput = document.getElementById('file-input');
   const hasFile = fileInput.files && fileInput.files[0];
-  const errorEl = document.getElementById('new-error');
+  // Validate required fields and collect errors
+  const missing = [];
+  if (!name) missing.push({ id: 'new-name', label: 'Saleo Demo Name' });
+  if (!brand) missing.push({ id: 'new-brand', label: 'Brand' });
+  if (!industry) missing.push({ id: 'new-industry', label: 'Industry' });
 
-  if (!name || !brand || !industry) {
-    errorEl.textContent = 'Please fill in all required fields.';
-    errorEl.classList.remove('hidden');
+  clearValidationErrors();
+
+  if (missing.length > 0) {
+    missing.forEach(f => {
+      const el = document.getElementById(f.id);
+      if (el) el.style.border = '2px solid #e5534b';
+    });
+    const errDiv = document.getElementById('new-validation-error');
+    errDiv.innerHTML = '<strong>Please fill in the following required fields:</strong> ' + missing.map(f => f.label).join(', ');
+    errDiv.classList.remove('hidden');
+    errDiv.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
     return;
   }
-  errorEl.classList.add('hidden');
 
   try {
     let synopsisText = synopsis;
@@ -2228,8 +2264,9 @@ async function generateFromPrompt() {
   } catch (err) {
     document.getElementById('generate-btn').disabled = false;
     document.getElementById('generate-btn').style.opacity = '1';
-    errorEl.textContent = 'Failed to create view: ' + err.message;
-    errorEl.classList.remove('hidden');
+    const errDiv = document.getElementById('new-validation-error');
+    errDiv.innerHTML = '<strong>' + (err.message || 'Failed to create view') + '</strong>';
+    errDiv.classList.remove('hidden');
   }
 }
 
