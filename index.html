@@ -296,11 +296,14 @@
           </div>
           <div>
             <label class="block text-xs font-bold mb-1" style="color: #032D60;">Industry <span style="color: #ea001e;">*</span></label>
-            <select id="edit-industry" class="w-full px-3 py-2 rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none text-sm" style="background: white;">
+            <select id="edit-industry" onchange="toggleCustomIndustry('edit')" class="w-full px-3 py-2 rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none text-sm" style="background: white;">
               <option value="">Select an industry...</option>
               <option value="Retail">Retail</option>
               <option value="Other">Other</option>
             </select>
+            <div id="edit-custom-industry-wrapper" class="hidden" style="margin-top: 6px;">
+              <input id="edit-industry-custom" type="text" placeholder="e.g. Travel, Healthcare, Financial Services" class="w-full px-3 py-2 rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none text-sm">
+            </div>
           </div>
           <div>
             <label class="block text-xs font-bold mb-1" style="color: #032D60;">Demo Story Synopsis</label>
@@ -485,11 +488,14 @@
           </div>
           <div style="margin-bottom: 14px;">
             <label style="display: block; font-size: 12px; font-weight: 700; color: #032D60; margin-bottom: 5px;">Industry <span style="color: #e5534b;">*</span></label>
-            <select id="new-industry" onchange="clearFieldError('new-industry')" style="width: 100%; padding: 10px 12px; border: 1px solid #d1d5db; border-radius: 8px; font-size: 14px; background: white; box-sizing: border-box;">
+            <select id="new-industry" onchange="clearFieldError('new-industry'); toggleCustomIndustry('new');" style="width: 100%; padding: 10px 12px; border: 1px solid #d1d5db; border-radius: 8px; font-size: 14px; background: white; box-sizing: border-box;">
               <option value="">Select industry...</option>
               <option value="Retail">Retail</option>
               <option value="Other">Other</option>
             </select>
+            <div id="new-custom-industry-wrapper" class="hidden" style="margin-top: 8px;">
+              <input id="new-industry-custom" type="text" placeholder="e.g. Travel, Healthcare, Financial Services" style="width: 100%; padding: 10px 12px; border: 1px solid #d1d5db; border-radius: 8px; font-size: 14px; box-sizing: border-box;">
+            </div>
           </div>
           <!-- Demo Context Toggle -->
           <div style="margin-bottom: 14px;">
@@ -1859,7 +1865,7 @@ function renderDetail(item) {
   document.getElementById('edit-brand').value = meta.brand || '';
   document.getElementById('edit-brand-desc').value = meta.brand_desc || '';
   document.getElementById('edit-website').value = meta.brand_url || '';
-  document.getElementById('edit-industry').value = meta.industry || '';
+  setIndustryFromStored('edit', meta.industry || '');
   document.getElementById('edit-synopsis').value = meta.synopsis || '';
   document.getElementById('refine-prompt').value = '';
 
@@ -1943,7 +1949,7 @@ function checkSettingsChanged() {
     document.getElementById('edit-brand').value !== orig.brand ||
     document.getElementById('edit-brand-desc').value !== orig.brand_desc ||
     document.getElementById('edit-website').value !== orig.brand_url ||
-    document.getElementById('edit-industry').value !== orig.industry ||
+    getResolvedIndustry('edit') !== orig.industry ||
     document.getElementById('edit-synopsis').value !== orig.synopsis;
   const bar = document.getElementById('save-settings-bar');
   bar.classList.toggle('hidden', !changed);
@@ -1960,11 +1966,13 @@ async function saveViewSettings() {
   const brand = document.getElementById('edit-brand').value.trim();
   const brandDesc = document.getElementById('edit-brand-desc').value.trim();
   const brandUrl = document.getElementById('edit-website').value.trim();
-  const industry = document.getElementById('edit-industry').value;
+  const industrySelect = document.getElementById('edit-industry').value;
+  const industry = getResolvedIndustry('edit');
   const synopsis = document.getElementById('edit-synopsis').value.trim();
 
   if (!brand) { alert('Brand name is required.'); return; }
-  if (!industry) { alert('Industry is required.'); return; }
+  if (!industrySelect) { alert('Industry is required.'); return; }
+  if (industrySelect === 'Other' && !industry) { alert('Please specify your industry.'); document.getElementById('edit-industry-custom').focus(); return; }
 
   const btn = document.getElementById('save-settings-btn');
   btn.disabled = true;
@@ -2005,7 +2013,7 @@ async function saveViewSettings() {
 }
 
 // Attach change listeners to view settings fields
-['edit-brand', 'edit-brand-desc', 'edit-website', 'edit-industry', 'edit-synopsis'].forEach(id => {
+['edit-brand', 'edit-brand-desc', 'edit-website', 'edit-industry', 'edit-industry-custom', 'edit-synopsis'].forEach(id => {
   const el = document.getElementById(id);
   if (el) el.addEventListener('input', checkSettingsChanged);
   if (el && el.tagName === 'SELECT') el.addEventListener('change', checkSettingsChanged);
@@ -2017,12 +2025,14 @@ async function regenerateView() {
   const brand = document.getElementById('edit-brand').value.trim();
   const brandDesc = document.getElementById('edit-brand-desc').value.trim();
   const brandUrl = document.getElementById('edit-website').value.trim();
-  const industry = document.getElementById('edit-industry').value;
+  const industrySelect = document.getElementById('edit-industry').value;
+  const industry = getResolvedIndustry('edit');
   const synopsis = document.getElementById('edit-synopsis').value.trim();
   const refinement = document.getElementById('refine-prompt').value.trim();
 
   if (!brand) { showToast('Brand Name is required.'); return; }
-  if (!industry) { showToast('Industry is required.'); return; }
+  if (!industrySelect) { showToast('Industry is required.'); return; }
+  if (industrySelect === 'Other' && !industry) { showToast('Please specify your industry.'); document.getElementById('edit-industry-custom').focus(); return; }
 
   const refineBtn = document.getElementById('refine-btn');
   const loading = document.getElementById('refine-loading');
@@ -2084,6 +2094,40 @@ async function regenerateView() {
   }
 }
 
+// --- Custom Industry Toggle ---
+function toggleCustomIndustry(prefix) {
+  const sel = document.getElementById(prefix + '-industry');
+  const wrapper = document.getElementById(prefix + '-custom-industry-wrapper');
+  if (sel.value === 'Other') {
+    wrapper.classList.remove('hidden');
+    document.getElementById(prefix + '-industry-custom').focus();
+  } else {
+    wrapper.classList.add('hidden');
+    document.getElementById(prefix + '-industry-custom').value = '';
+  }
+}
+
+// Helper to set industry dropdown + custom field from a stored value
+function setIndustryFromStored(prefix, storedIndustry) {
+  const sel = document.getElementById(prefix + '-industry');
+  const predefined = Array.from(sel.options).map(o => o.value).filter(v => v);
+  if (storedIndustry && !predefined.includes(storedIndustry)) {
+    sel.value = 'Other';
+    document.getElementById(prefix + '-industry-custom').value = storedIndustry;
+  } else {
+    sel.value = storedIndustry || '';
+    document.getElementById(prefix + '-industry-custom').value = '';
+  }
+  toggleCustomIndustry(prefix);
+}
+
+// Helper to get resolved industry value (handles Other → custom)
+function getResolvedIndustry(prefix) {
+  const sel = document.getElementById(prefix + '-industry').value;
+  if (sel === 'Other') return document.getElementById(prefix + '-industry-custom').value.trim();
+  return sel;
+}
+
 // --- Input Mode Toggle ---
 function switchInputMode(mode) {
   const synopsisBtn = document.getElementById('mode-synopsis');
@@ -2137,6 +2181,8 @@ function openNewItemDialog() {
   document.getElementById('new-brand-desc').value = '';
   document.getElementById('new-brand-url').value = '';
   document.getElementById('new-industry').value = '';
+  document.getElementById('new-industry-custom').value = '';
+  document.getElementById('new-custom-industry-wrapper').classList.add('hidden');
   document.getElementById('new-synopsis').value = '';
   clearValidationErrors();
   clearFile();
@@ -2182,7 +2228,8 @@ async function generateFromPrompt() {
   const brand = document.getElementById('new-brand').value.trim();
   const brandDesc = document.getElementById('new-brand-desc').value.trim();
   const brandUrl = document.getElementById('new-brand-url').value.trim();
-  const industry = document.getElementById('new-industry').value;
+  const industrySelect = document.getElementById('new-industry').value;
+  const industry = getResolvedIndustry('new');
   const synopsis = document.getElementById('new-synopsis').value.trim();
   const fileInput = document.getElementById('file-input');
   const hasFile = fileInput.files && fileInput.files[0];
@@ -2190,7 +2237,8 @@ async function generateFromPrompt() {
   const missing = [];
   if (!name) missing.push({ id: 'new-name', label: 'Saleo Demo Name' });
   if (!brand) missing.push({ id: 'new-brand', label: 'Brand' });
-  if (!industry) missing.push({ id: 'new-industry', label: 'Industry' });
+  if (!industrySelect) missing.push({ id: 'new-industry', label: 'Industry' });
+  if (industrySelect === 'Other' && !industry) missing.push({ id: 'new-industry-custom', label: 'Industry (specify)' });
 
   clearValidationErrors();
 
