@@ -1786,9 +1786,13 @@ async function loadItems() {
         onmouseleave="this.style.boxShadow='0 1px 3px rgba(0,0,0,0.08)'; this.style.transform='none'; this.querySelector('.delete-btn').style.opacity='0';">
         <div style="display: flex; flex-direction: column; gap: 8px;">
           <div style="display: flex; align-items: center; gap: 12px;">
+            ${item.logo_url && item.logo_url !== 'null' ? `
+            <div style="width: 40px; height: 40px; border-radius: 10px; background: #f8f9fa; display: flex; align-items: center; justify-content: center; flex-shrink: 0; overflow: hidden; border: 1px solid #e5e7eb;">
+              <img src="${esc(item.logo_url)}" alt="" style="max-width: 32px; max-height: 32px; object-fit: contain;">
+            </div>` : `
             <div style="width: 40px; height: 40px; border-radius: 10px; background: linear-gradient(135deg, #032D60, #0176D3); color: #fff; display: flex; align-items: center; justify-content: center; font-size: 18px; font-weight: 700; flex-shrink: 0;">
               ${esc(item.name.charAt(0).toUpperCase())}
-            </div>
+            </div>`}
             <div style="flex: 1; min-width: 0;">
               <div style="font-weight: 600; font-size: 18px; line-height: 26px; letter-spacing: -0.01em; color: #111; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${esc(item.name)}</div>
             </div>
