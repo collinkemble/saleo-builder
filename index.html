@@ -286,6 +286,7 @@
           <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 4px;">
             <span style="font-size: 16px;">🎨</span>
             <span style="font-size: 13px; font-weight: 700; color: #032D60;">Brand Kit</span>
+            <span id="bk-source-badge-edit" style="display: none; font-size: 11px; font-weight: 600; color: #6d28d9; background: rgba(109,40,217,0.08); padding: 2px 8px; border-radius: 10px;"></span>
           </div>
           <p style="font-size: 12px; color: #5a6f85; margin: 0 0 12px; line-height: 1.4;">
             Select a brand kit to automatically fill in your brand name, colors, tone, style, and more below.
@@ -535,6 +536,7 @@
             <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 4px;">
               <span style="font-size: 16px;">🎨</span>
               <span style="font-size: 13px; font-weight: 700; color: #032D60;">Add Brand Kit</span>
+              <span id="bk-source-badge" style="display: none; font-size: 11px; font-weight: 600; color: #6d28d9; background: rgba(109,40,217,0.08); padding: 2px 8px; border-radius: 10px;"></span>
             </div>
             <p style="font-size: 12px; color: #5a6f85; margin: 0 0 12px; line-height: 1.4;">
               Select a brand kit to automatically fill in your brand name, colors, tone, style, and more below.
@@ -2010,6 +2012,14 @@ function renderDetail(item) {
   document.getElementById('edit-visual-style').value = meta.visual_style || '';
   document.getElementById('refine-prompt').value = '';
 
+  // Restore brand kit source badge
+  resetEditBrandKit();
+  if (meta.brand_kit_source) {
+    pendingBrandKitSource = null;
+    pendingBrandKitId = null;
+    updateBrandKitSourceBadge('-edit');
+  }
+
   // Store original values for change detection
   window._origSettings = {
     brand: meta.brand || '',
@@ -2144,6 +2154,8 @@ async function saveViewSettings() {
     currentItemData.metadata.color_secondary = colorSecondary;
     currentItemData.metadata.tone = tone || null;
     currentItemData.metadata.visual_style = visualStyle || null;
+    currentItemData.metadata.brand_kit_source = pendingBrandKitSource || currentItemData.metadata.brand_kit_source || null;
+    currentItemData.metadata.brand_kit_id = pendingBrandKitId || currentItemData.metadata.brand_kit_id || null;
 
     const email = document.getElementById('user-email').textContent;
     const resp = await fetch(`/api/items/${currentItemId}`, {
@@ -2291,6 +2303,8 @@ function getResolvedIndustry(prefix) {
 // ═══════════════════════════════════════════════
 
 let bkPickerOpen = false;
+let pendingBrandKitSource = null;
+let pendingBrandKitId = null;
 
 async function openBrandKitPicker(suffix) {
   const sfx = suffix || '';
@@ -2358,6 +2372,9 @@ async function selectBrandKit(itemId, suffix, kitName) {
     const bk = data?.item?.data?.brandKit || data?.item?.brandKit || {};
 
     applyBrandKitToForm(bk, sfx);
+    pendingBrandKitSource = kitName || 'Brand Kit Builder';
+    pendingBrandKitId = String(itemId);
+    updateBrandKitSourceBadge(sfx);
 
     dropdown.style.display = 'none';
     bkPickerOpen = false;
@@ -2469,6 +2486,28 @@ function showBrandKitSuccess(suffix) {
   badge.style.display = 'inline-flex';
 }
 
+function updateBrandKitSourceBadge(suffix) {
+  const sfx = suffix || '';
+  const badge = document.getElementById('bk-source-badge' + sfx);
+  if (!badge) return;
+  const source = pendingBrandKitSource || (currentItemData && currentItemData.metadata && currentItemData.metadata.brand_kit_source);
+  if (source) {
+    badge.textContent = '✓ ' + source;
+    badge.style.display = 'inline';
+  } else {
+    badge.style.display = 'none';
+  }
+}
+
+function resetEditBrandKit() {
+  pendingBrandKitSource = null;
+  pendingBrandKitId = null;
+  const badge = document.getElementById('bk-source-badge-edit');
+  if (badge) badge.style.display = 'none';
+  const successBadge = document.querySelector('#bk-picker-container-edit .bk-success-badge');
+  if (successBadge) successBadge.style.display = 'none';
+}
+
 // Close Brand Kit picker when clicking outside
 document.addEventListener('click', function(e) {
   if (bkPickerOpen && !e.target.closest('[id^="bk-picker-container"]')) {
@@ -2539,9 +2578,13 @@ function openNewItemDialog() {
   document.getElementById('new-tone').value = '';
   document.getElementById('new-visual-style').value = '';
   document.getElementById('new-synopsis').value = '';
-  // Reset brand kit picker if present
+  // Reset brand kit state
+  pendingBrandKitSource = null;
+  pendingBrandKitId = null;
   const bkBadge = document.querySelector('#bk-picker-container .bk-success-badge');
   if (bkBadge) bkBadge.style.display = 'none';
+  const bkSourceBadge = document.getElementById('bk-source-badge');
+  if (bkSourceBadge) bkSourceBadge.style.display = 'none';
   clearValidationErrors();
   clearFile();
   switchInputMode('synopsis');
@@ -2650,7 +2693,7 @@ async function generateFromPrompt() {
       prompt: prompt,
       summary: `Saleo demo for ${brand}`,
       source_type: hasFile ? 'upload' : 'prompt',
-      metadata: { industry: industry, brand: brand, brand_desc: brandDesc || null, brand_url: brandUrl || null, synopsis: synopsisText || null, source_filename: sourceFilename, color_primary: document.getElementById('new-color-primary-text').value || '#032D60', color_secondary: document.getElementById('new-color-secondary-text').value || '#0176D3', tone: document.getElementById('new-tone').value.trim() || null, visual_style: document.getElementById('new-visual-style').value.trim() || null }
+      metadata: { industry: industry, brand: brand, brand_desc: brandDesc || null, brand_url: brandUrl || null, synopsis: synopsisText || null, source_filename: sourceFilename, color_primary: document.getElementById('new-color-primary-text').value || '#032D60', color_secondary: document.getElementById('new-color-secondary-text').value || '#0176D3', tone: document.getElementById('new-tone').value.trim() || null, visual_style: document.getElementById('new-visual-style').value.trim() || null, brand_kit_source: pendingBrandKitSource || null, brand_kit_id: pendingBrandKitId || null }
     };
 
     const saveResp = await fetch('/api/items', {
