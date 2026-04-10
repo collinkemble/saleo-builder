@@ -715,11 +715,23 @@ app.post('/api/images/generate', async (req, res) => {
       return res.status(500).json({ error: 'Gemini did not return an image. Try again.' });
     }
 
+    // Resize to exact specified dimensions using sharp
+    const sharp = require('sharp');
+    const rawBuffer = Buffer.from(imageBase64, 'base64');
+    const resizedBuffer = await sharp(rawBuffer)
+      .resize(typeDef.w, typeDef.h, { fit: 'cover', position: 'center' })
+      .png()
+      .toBuffer();
+    const resizedBase64 = resizedBuffer.toString('base64');
+    mimeType = 'image/png';
+
+    console.log(`[ImageGen] Resized ${imageType} to ${typeDef.w}×${typeDef.h}`);
+
     // Upload to R2
     const folder = `views/${viewId || 'tmp'}/generated`;
     const slug = brand.replace(/[^a-zA-Z0-9]/g, '-').toLowerCase();
     const filename = `${slug}-${imageType}`;
-    const url = await uploadImage(imageBase64, mimeType, folder, filename);
+    const url = await uploadImage(resizedBase64, mimeType, folder, filename);
 
     console.log(`[ImageGen] ${imageType} for "${brand}" uploaded: ${url}`);
     res.json({ url, mimeType, imageType });
