@@ -280,9 +280,16 @@
 
       <!-- Editable View Settings + Regenerate -->
       <div class="mb-6" style="background: white; border-radius: 12px; padding: 24px; border: 1px solid #e5e7eb; box-shadow: 0 1px 3px rgba(0,0,0,0.06);">
-        <p class="font-bold mb-2" style="font-size: 15px; color: #032D60;">View Settings</p>
-        <!-- Brand Kit Builder picker (edit page) -->
-        <div style="margin-bottom: 14px;">
+        <p class="font-bold mb-4" style="font-size: 15px; color: #032D60;">View Settings</p>
+        <!-- Brand Kit section (edit page) -->
+        <div style="background: linear-gradient(135deg, #f0f7ff, #e8f2ff); border-radius: 10px; padding: 16px; border: 1px dashed #b0d4f1; margin-bottom: 14px;">
+          <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 4px;">
+            <span style="font-size: 16px;">🎨</span>
+            <span style="font-size: 13px; font-weight: 700; color: #032D60;">Brand Kit</span>
+          </div>
+          <p style="font-size: 12px; color: #5a6f85; margin: 0 0 12px; line-height: 1.4;">
+            Select a brand kit to automatically fill in your brand name, colors, tone, style, and more below.
+          </p>
           <div style="display: flex; gap: 8px; flex-wrap: wrap;">
             <div style="position: relative; display: inline-block;" id="bk-picker-container-edit">
               <button onclick="openBrandKitPicker('-edit')" type="button"
@@ -517,54 +524,67 @@
     <div id="new-item-dialog" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4" style="background: rgba(0,0,0,0.5);">
       <div class="bg-white rounded-2xl shadow-2xl w-full max-w-lg" style="max-height: 90vh; overflow-y: auto;">
         <!-- Dialog header -->
-        <div style="padding: 24px 28px 0;">
+        <div style="padding: 18px 28px 0;">
           <h3 style="font-size: 20px; font-weight: 700; color: #032D60; margin: 0 0 4px;">New Saleo Demo</h3>
-          <p style="font-size: 13px; color: #888; margin: 0 0 16px;">Generate a prompt to use in the Saleo platform.</p>
-          <!-- Brand Kit Builder picker (create modal) -->
-          <div style="display: flex; gap: 8px; flex-wrap: wrap;">
-            <div style="position: relative; display: inline-block;" id="bk-picker-container">
-              <button onclick="openBrandKitPicker('')" type="button"
-                style="padding: 7px 14px; font-size: 12px; font-weight: 600; color: #6d28d9; background: rgba(255,255,255,0.85); border: 1px solid #c4b5fd; border-radius: 7px; cursor: pointer;">
-                📋 Select Brand Kit
-              </button>
-              <div id="bk-picker-dropdown" style="display: none; position: absolute; top: 100%; left: 0; margin-top: 6px; width: 280px; max-height: 240px; overflow-y: auto; background: #fff; border-radius: 10px; box-shadow: 0 8px 30px rgba(0,0,0,0.18); border: 1px solid #e5e7eb; z-index: 100;">
-                <div id="bk-picker-content" style="padding: 4px 0;"></div>
+          <p style="font-size: 13px; color: #888; margin: 0 0 12px;">Generate a prompt to use in the Saleo platform.</p>
+        </div>
+
+        <!-- Brand Kit section -->
+        <div style="padding: 0 28px; margin-bottom: 4px;">
+          <div style="background: linear-gradient(135deg, #f0f7ff, #e8f2ff); border-radius: 10px; padding: 16px; border: 1px dashed #b0d4f1;">
+            <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 4px;">
+              <span style="font-size: 16px;">🎨</span>
+              <span style="font-size: 13px; font-weight: 700; color: #032D60;">Add Brand Kit</span>
+            </div>
+            <p style="font-size: 12px; color: #5a6f85; margin: 0 0 12px; line-height: 1.4;">
+              Select a brand kit to automatically fill in your brand name, colors, tone, style, and more below.
+            </p>
+            <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+              <div style="position: relative; display: inline-block;" id="bk-picker-container">
+                <button onclick="openBrandKitPicker()" type="button"
+                  style="padding: 7px 14px; font-size: 12px; font-weight: 600; color: #6d28d9; background: rgba(255,255,255,0.85); border: 1px solid #c4b5fd; border-radius: 7px; cursor: pointer;">
+                  📋 Select Brand Kit
+                </button>
+                <div id="bk-picker-dropdown" style="display: none; position: absolute; top: 100%; left: 0; margin-top: 6px; width: 280px; max-height: 240px; overflow-y: auto; background: #fff; border-radius: 10px; box-shadow: 0 8px 30px rgba(0,0,0,0.18); border: 1px solid #e5e7eb; z-index: 100;">
+                  <div id="bk-picker-content" style="padding: 4px 0;"></div>
+                </div>
               </div>
             </div>
-          </div>
-          <div style="display: flex; align-items: center; gap: 6px; margin-top: 10px; margin-bottom: 4px; font-size: 12px; color: #5a6f85; line-height: 1.4;">
-            <span>💡</span>
-            <span>
-              Don't have a Brand Kit?
-              <a href="https://brandkit-builder.aubreydemo.com/" target="_blank" rel="noopener noreferrer"
-                 style="color: #0176D3; font-weight: 600; text-decoration: none;">
-                Let Brand Kit Builder make you one →
-              </a>
-            </span>
+            <div style="display: flex; align-items: center; gap: 6px; margin-top: 10px; font-size: 12px; color: #5a6f85; line-height: 1.4;">
+              <span>💡</span>
+              <span>
+                Don't have a Brand Kit?
+                <a href="https://brandkit-builder.aubreydemo.com/" target="_blank" rel="noopener noreferrer"
+                   style="color: #0176D3; font-weight: 600; text-decoration: none;">
+                  Let Brand Kit Builder make you one →
+                </a>
+              </span>
+            </div>
           </div>
         </div>
 
         <!-- Create form -->
-        <div id="create-tab-prompt" style="padding: 20px 28px 24px;">
-          <div style="margin-bottom: 14px;">
-            <label style="display: block; font-size: 12px; font-weight: 700; color: #032D60; margin-bottom: 5px;">Saleo Demo Name <span style="color: #e5534b;">*</span></label>
-            <input id="new-name" type="text" placeholder="e.g. Acme Corp Pipeline Demo" oninput="clearFieldError('new-name')" style="width: 100%; padding: 10px 12px; border: 1px solid #d1d5db; border-radius: 8px; font-size: 14px; box-sizing: border-box;">
+        <div id="create-tab-prompt" style="padding: 14px 28px 20px;">
+          <div style="display: flex; flex-direction: column; gap: 10px;">
+          <div>
+            <label style="display: block; font-size: 12px; font-weight: 700; color: #032D60; margin-bottom: 4px;">Saleo Demo Name <span style="color: #e5534b;">*</span></label>
+            <input id="new-name" type="text" placeholder="e.g. Acme Corp Pipeline Demo" oninput="clearFieldError('new-name')" style="width: 100%; padding: 8px 12px; border: 1px solid #d1d5db; border-radius: 8px; font-size: 14px; box-sizing: border-box;">
           </div>
-          <div style="margin-bottom: 14px;">
-            <label style="display: block; font-size: 12px; font-weight: 700; color: #032D60; margin-bottom: 5px;">Brand <span style="color: #e5534b;">*</span></label>
-            <input id="new-brand" type="text" placeholder="e.g. Acme Corp" oninput="clearFieldError('new-brand')" style="width: 100%; padding: 10px 12px; border: 1px solid #d1d5db; border-radius: 8px; font-size: 14px; box-sizing: border-box;">
+          <div>
+            <label style="display: block; font-size: 12px; font-weight: 700; color: #032D60; margin-bottom: 4px;">Brand <span style="color: #e5534b;">*</span></label>
+            <input id="new-brand" type="text" placeholder="e.g. Acme Corp" oninput="clearFieldError('new-brand')" style="width: 100%; padding: 8px 12px; border: 1px solid #d1d5db; border-radius: 8px; font-size: 14px; box-sizing: border-box;">
           </div>
-          <div style="margin-bottom: 14px;">
-            <label style="display: block; font-size: 12px; font-weight: 700; color: #032D60; margin-bottom: 5px;">Brand Description</label>
-            <input id="new-brand-desc" type="text" placeholder="e.g. Global retailer specializing in outdoor gear" style="width: 100%; padding: 10px 12px; border: 1px solid #d1d5db; border-radius: 8px; font-size: 14px; box-sizing: border-box;">
+          <div>
+            <label style="display: block; font-size: 12px; font-weight: 700; color: #032D60; margin-bottom: 4px;">Brand Description</label>
+            <input id="new-brand-desc" type="text" placeholder="e.g. Global retailer specializing in outdoor gear" style="width: 100%; padding: 8px 12px; border: 1px solid #d1d5db; border-radius: 8px; font-size: 14px; box-sizing: border-box;">
           </div>
-          <div style="margin-bottom: 14px;">
-            <label style="display: block; font-size: 12px; font-weight: 700; color: #032D60; margin-bottom: 5px;">Brand Website URL</label>
-            <input id="new-brand-url" type="url" placeholder="e.g. https://www.acmecorp.com" style="width: 100%; padding: 10px 12px; border: 1px solid #d1d5db; border-radius: 8px; font-size: 14px; box-sizing: border-box;">
+          <div>
+            <label style="display: block; font-size: 12px; font-weight: 700; color: #032D60; margin-bottom: 4px;">Brand Website URL</label>
+            <input id="new-brand-url" type="url" placeholder="e.g. https://www.acmecorp.com" style="width: 100%; padding: 8px 12px; border: 1px solid #d1d5db; border-radius: 8px; font-size: 14px; box-sizing: border-box;">
           </div>
-          <div style="margin-bottom: 14px;">
-            <label style="display: block; font-size: 12px; font-weight: 700; color: #032D60; margin-bottom: 5px;">Industry <span style="color: #e5534b;">*</span></label>
-            <select id="new-industry" onchange="clearFieldError('new-industry'); toggleCustomIndustry('new');" style="width: 100%; padding: 10px 12px; border: 1px solid #d1d5db; border-radius: 8px; font-size: 14px; background: white; box-sizing: border-box;">
+          <div>
+            <label style="display: block; font-size: 12px; font-weight: 700; color: #032D60; margin-bottom: 4px;">Industry <span style="color: #e5534b;">*</span></label>
+            <select id="new-industry" onchange="clearFieldError('new-industry'); toggleCustomIndustry('new');" style="width: 100%; padding: 8px 12px; border: 1px solid #d1d5db; border-radius: 8px; font-size: 14px; background: white; box-sizing: border-box;">
               <option value="">Select industry...</option>
               <option value="Retail">Retail</option>
               <option value="Other">Other</option>
@@ -575,8 +595,8 @@
             </div>
           </div>
           <!-- Brand Colors -->
-          <div style="margin-bottom: 14px;">
-            <label style="display: block; font-size: 12px; font-weight: 700; color: #032D60; margin-bottom: 5px;">Brand Colors</label>
+          <div>
+            <label style="display: block; font-size: 12px; font-weight: 700; color: #032D60; margin-bottom: 4px;">Brand Colors</label>
             <div style="display: flex; gap: 16px;">
               <div style="flex: 1;">
                 <label style="display: block; font-size: 11px; font-weight: 600; color: #666; margin-bottom: 4px;">Primary</label>
@@ -595,18 +615,18 @@
             </div>
           </div>
           <!-- Tone -->
-          <div style="margin-bottom: 14px;">
-            <label style="display: block; font-size: 12px; font-weight: 700; color: #032D60; margin-bottom: 5px;">Tone</label>
-            <input id="new-tone" type="text" placeholder="e.g. Bold and adventurous" style="width: 100%; padding: 10px 12px; border: 1px solid #d1d5db; border-radius: 8px; font-size: 14px; box-sizing: border-box;">
+          <div>
+            <label style="display: block; font-size: 12px; font-weight: 700; color: #032D60; margin-bottom: 4px;">Tone</label>
+            <input id="new-tone" type="text" placeholder="e.g. Bold and adventurous" style="width: 100%; padding: 8px 12px; border: 1px solid #d1d5db; border-radius: 8px; font-size: 14px; box-sizing: border-box;">
           </div>
           <!-- Visual Style -->
-          <div style="margin-bottom: 14px;">
-            <label style="display: block; font-size: 12px; font-weight: 700; color: #032D60; margin-bottom: 5px;">Visual Style</label>
-            <input id="new-visual-style" type="text" placeholder="e.g. Clean, modern, and premium" style="width: 100%; padding: 10px 12px; border: 1px solid #d1d5db; border-radius: 8px; font-size: 14px; box-sizing: border-box;">
+          <div>
+            <label style="display: block; font-size: 12px; font-weight: 700; color: #032D60; margin-bottom: 4px;">Visual Style</label>
+            <input id="new-visual-style" type="text" placeholder="e.g. Clean, modern, and premium" style="width: 100%; padding: 8px 12px; border: 1px solid #d1d5db; border-radius: 8px; font-size: 14px; box-sizing: border-box;">
           </div>
           <!-- Demo Context Toggle -->
-          <div style="margin-bottom: 14px;">
-            <label style="display: block; font-size: 12px; font-weight: 700; color: #032D60; margin-bottom: 8px;">Demo Story Synopsis <span style="font-weight: 400; color: #888;">(optional)</span></label>
+          <div>
+            <label style="display: block; font-size: 12px; font-weight: 700; color: #032D60; margin-bottom: 6px;">Demo Story Synopsis <span style="font-weight: 400; color: #888;">(optional)</span></label>
             <div id="input-mode-toggle" style="display: inline-flex; background: #f3f4f6; border-radius: 8px; padding: 3px; margin-bottom: 12px;">
               <button type="button" id="mode-synopsis" onclick="switchInputMode('synopsis')" class="cursor-pointer" style="padding: 6px 16px; font-size: 12px; font-weight: 600; border: none; border-radius: 6px; background: #0176D3; color: white; transition: all 0.15s;">Write Synopsis</button>
               <button type="button" id="mode-upload" onclick="switchInputMode('upload')" class="cursor-pointer" style="padding: 6px 16px; font-size: 12px; font-weight: 600; border: none; border-radius: 6px; background: transparent; color: #666; transition: all 0.15s;">Upload Script</button>
@@ -635,8 +655,9 @@
               </div>
             </div>
           </div>
-          <div id="new-validation-error" class="hidden" style="margin-bottom: 12px; padding: 10px 14px; background: #FEF2F2; border: 1px solid #FECACA; border-radius: 8px; font-size: 13px; color: #991B1B; line-height: 1.5;"></div>
-          <div class="flex justify-end gap-3">
+          </div><!-- end flex column -->
+          <div id="new-validation-error" class="hidden" style="margin-top: 10px; margin-bottom: 10px; padding: 10px 14px; background: #FEF2F2; border: 1px solid #FECACA; border-radius: 8px; font-size: 13px; color: #991B1B; line-height: 1.5;"></div>
+          <div class="flex justify-end gap-3" style="margin-top: 10px;">
             <button onclick="closeNewItemDialog()" class="cursor-pointer" style="padding: 8px 16px; font-size: 13px; font-weight: 500; color: #666; background: #f3f4f6; border: none; border-radius: 8px;">Cancel</button>
             <button id="generate-btn" onclick="generateFromPrompt()" class="cursor-pointer" style="padding: 8px 20px; font-size: 13px; font-weight: 700; color: white; background: #0176D3; border: none; border-radius: 8px; display: flex; align-items: center; gap: 6px;">
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg>
