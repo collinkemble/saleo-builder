@@ -568,36 +568,47 @@ app.post('/api/images/logo', async (req, res) => {
     const result = await fetchBrandLogo(brand, websiteUrl);
     if (!result.found || !result.url) return res.json(result);
 
-    // Download the logo image and re-upload to R2
-    const https = require('https');
-    const http = require('http');
-    const imageBuffer = await new Promise((resolve, reject) => {
-      const fetch = (url, redirects = 3) => {
-        const protocol = url.startsWith('https') ? https : http;
-        protocol.get(url, { timeout: 10000 }, (resp) => {
-          if (resp.statusCode >= 300 && resp.statusCode < 400 && resp.headers.location && redirects > 0) {
-            const loc = resp.headers.location.startsWith('http') ? resp.headers.location : new URL(resp.headers.location, url).href;
-            resp.resume();
-            return fetch(loc, redirects - 1);
-          }
-          if (resp.statusCode !== 200) { resp.resume(); return reject(new Error(`HTTP ${resp.statusCode}`)); }
-          const chunks = [];
-          resp.on('data', c => chunks.push(c));
-          resp.on('end', () => resolve({ buffer: Buffer.concat(chunks), contentType: resp.headers['content-type'] || 'image/png' }));
-          resp.on('error', reject);
-        }).on('error', reject).on('timeout', function() { this.destroy(); reject(new Error('timeout')); });
-      };
-      fetch(result.url);
-    });
+    // Try to download and re-upload to R2; fall back to original URL if R2 fails
+    const { getR2Client } = require('./src/utils/r2');
+    if (getR2Client()) {
+      try {
+        const https = require('https');
+        const http = require('http');
+        const imageBuffer = await new Promise((resolve, reject) => {
+          const doFetch = (url, redirects = 3) => {
+            const protocol = url.startsWith('https') ? https : http;
+            protocol.get(url, { timeout: 10000 }, (resp) => {
+              if (resp.statusCode >= 300 && resp.statusCode < 400 && resp.headers.location && redirects > 0) {
+                const loc = resp.headers.location.startsWith('http') ? resp.headers.location : new URL(resp.headers.location, url).href;
+                resp.resume();
+                return doFetch(loc, redirects - 1);
+              }
+              if (resp.statusCode !== 200) { resp.resume(); return reject(new Error(`HTTP ${resp.statusCode}`)); }
+              const chunks = [];
+              resp.on('data', c => chunks.push(c));
+              resp.on('end', () => resolve({ buffer: Buffer.concat(chunks), contentType: resp.headers['content-type'] || 'image/png' }));
+              resp.on('error', reject);
+            }).on('error', reject).on('timeout', function() { this.destroy(); reject(new Error('timeout')); });
+          };
+          doFetch(result.url);
+        });
 
-    const mimeType = imageBuffer.contentType.split(';')[0].trim();
-    const folder = `views/${viewId || 'tmp'}/logo`;
-    const slug = brand.replace(/[^a-zA-Z0-9]/g, '-').toLowerCase();
-    const filename = `${slug}-logo`;
-    const r2Url = await uploadImage(imageBuffer.buffer.toString('base64'), mimeType, folder, filename);
+        const mimeType = imageBuffer.contentType.split(';')[0].trim();
+        const folder = `views/${viewId || 'tmp'}/logo`;
+        const slug = brand.replace(/[^a-zA-Z0-9]/g, '-').toLowerCase();
+        const filename = `${slug}-logo`;
+        const r2Url = await uploadImage(imageBuffer.buffer.toString('base64'), mimeType, folder, filename);
 
-    console.log(`[Logo] Copied ${result.source} logo for "${brand}" to R2: ${r2Url}`);
-    res.json({ found: true, url: r2Url, source: result.source });
+        console.log(`[Logo] Copied ${result.source} logo for "${brand}" to R2: ${r2Url}`);
+        return res.json({ found: true, url: r2Url, source: result.source });
+      } catch (r2Err) {
+        console.warn(`[Logo] R2 upload failed for "${brand}", using original URL:`, r2Err.message);
+      }
+    }
+
+    // Fallback: return the original Clearbit/Google URL directly
+    console.log(`[Logo] Returning ${result.source} logo for "${brand}" directly: ${result.url}`);
+    res.json({ found: true, url: result.url, source: result.source });
   } catch (err) {
     console.error('Logo fetch failed:', err);
     res.status(500).json({ error: 'Logo fetch failed: ' + err.message });
