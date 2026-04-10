@@ -716,16 +716,35 @@ app.post('/api/images/generate', async (req, res) => {
     }
 
     // Resize to exact specified dimensions using sharp
+    // Two-step: resize to cover the target area, then extract (crop) to exact dims
     const sharp = require('sharp');
     const rawBuffer = Buffer.from(imageBase64, 'base64');
+    const metadata = await sharp(rawBuffer).metadata();
+    const srcW = metadata.width || 1024;
+    const srcH = metadata.height || 1024;
+
+    // Calculate scale factor to cover target dimensions (no padding)
+    const scaleX = typeDef.w / srcW;
+    const scaleY = typeDef.h / srcH;
+    const scale = Math.max(scaleX, scaleY);
+    const scaledW = Math.round(srcW * scale);
+    const scaledH = Math.round(srcH * scale);
+
+    // Scale up to cover, then crop to exact target size from center
     const resizedBuffer = await sharp(rawBuffer)
-      .resize(typeDef.w, typeDef.h, { fit: 'cover', position: 'center' })
-      .png()
+      .resize(scaledW, scaledH, { fit: 'fill' })
+      .extract({
+        left: Math.round((scaledW - typeDef.w) / 2),
+        top: Math.round((scaledH - typeDef.h) / 2),
+        width: typeDef.w,
+        height: typeDef.h
+      })
+      .jpeg({ quality: 92 })
       .toBuffer();
     const resizedBase64 = resizedBuffer.toString('base64');
-    mimeType = 'image/png';
+    mimeType = 'image/jpeg';
 
-    console.log(`[ImageGen] Resized ${imageType} to ${typeDef.w}×${typeDef.h}`);
+    console.log(`[ImageGen] Resized ${imageType} from ${srcW}×${srcH} → ${typeDef.w}×${typeDef.h}`);
 
     // Upload to R2
     const folder = `views/${viewId || 'tmp'}/generated`;
