@@ -510,6 +510,22 @@
         </div>
       </div>
 
+      <!-- Generated Assets -->
+      <div style="background: white; border-radius: 12px; border: 1px solid #e5e7eb; box-shadow: 0 1px 3px rgba(0,0,0,0.06); margin-bottom: 20px;">
+        <div class="flex items-center justify-between" style="padding: 14px 20px; border-bottom: 1px solid #f0f0f0;">
+          <span style="font-size: 13px; font-weight: 700; color: #032D60; text-transform: uppercase; letter-spacing: 0.04em;">Generated Assets</span>
+          <div class="flex items-center gap-2">
+            <button id="generate-all-btn" onclick="generateAllImages()" class="cursor-pointer" style="padding: 5px 12px; font-size: 12px; font-weight: 600; color: white; background: #7C3AED; border: none; border-radius: 6px; display: flex; align-items: center; gap: 5px;">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg>
+              Generate All
+            </button>
+          </div>
+        </div>
+        <div id="generated-assets-grid" style="padding: 16px 20px;">
+          <!-- Dynamically rendered by renderGeneratedAssets() -->
+        </div>
+      </div>
+
       <!-- Metadata -->
       <div id="detail-metadata" style="background: white; border-radius: 12px; border: 1px solid #e5e7eb; box-shadow: 0 1px 3px rgba(0,0,0,0.06); padding: 16px 20px; margin-bottom: 32px;">
         <div class="flex flex-wrap gap-x-8 gap-y-2" style="font-size: 13px; color: #666;">
@@ -2042,6 +2058,10 @@ function renderDetail(item) {
   renderPersonaUrl(data);
   autoGeneratePersona(); // fire-and-forget — generates persona if missing
 
+  // Generated Assets (brand, card, product images)
+  renderGeneratedAssets();
+  autoGenerateAllImages(); // fire-and-forget — generates all if none exist
+
   // Reset regenerate state
   document.getElementById('refine-loading').classList.add('hidden');
   document.getElementById('refine-btn').classList.remove('hidden');
@@ -3119,6 +3139,311 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 });
 
+// ═══════════════════════════════════════════════
+// Generated Assets — BRAND, CARD, PRODUCT images
+// ═══════════════════════════════════════════════
+
+const GENERATED_ASSET_TYPES = [
+  { key: 'brand_01', label: 'BRAND 01 Cover Image', desc: 'Site banner image', w: 1984, h: 481, group: 'brand' },
+  { key: 'brand_02', label: 'BRAND 02 Background', desc: 'Site section background', w: 1134, h: 552, group: 'brand' },
+  { key: 'brand_03', label: 'BRAND 03 Background', desc: 'Site section background', w: 1134, h: 552, group: 'brand' },
+  { key: 'brand_hero', label: 'BRAND Hero', desc: 'Hero section background', w: 1134, h: 552, group: 'brand' },
+  { key: 'card_01', label: 'CARD 01 Image', desc: 'Lifestyle shot', w: 2551, h: 1524, group: 'card' },
+  { key: 'card_02', label: 'CARD 02 Image', desc: 'Lifestyle shot', w: 2551, h: 1524, group: 'card' },
+  { key: 'card_03', label: 'CARD 03 Image', desc: 'Lifestyle shot', w: 2551, h: 1524, group: 'card' },
+  { key: 'card_04', label: 'CARD 04 Image', desc: 'Lifestyle shot', w: 2551, h: 1524, group: 'card' },
+  { key: 'card_05', label: 'CARD 05 Image', desc: 'Lifestyle shot', w: 2551, h: 1524, group: 'card' },
+  { key: 'card_06', label: 'CARD 06 Image', desc: 'Lifestyle shot', w: 2551, h: 1524, group: 'card' },
+  { key: 'card_07', label: 'CARD 07 Image', desc: 'Lifestyle shot', w: 2551, h: 1524, group: 'card' },
+  { key: 'product_01', label: 'PRODUCT 01', desc: 'Product image', w: 400, h: 400, group: 'product' },
+  { key: 'product_02', label: 'PRODUCT 02', desc: 'Product image', w: 400, h: 400, group: 'product' },
+  { key: 'product_03', label: 'PRODUCT 03', desc: 'Product image', w: 400, h: 400, group: 'product' },
+  { key: 'product_04', label: 'PRODUCT 04', desc: 'Product image', w: 400, h: 400, group: 'product' },
+];
+
+function renderGeneratedAssets() {
+  const container = document.getElementById('generated-assets-grid');
+  if (!container) return;
+  const images = currentItemData?.images || {};
+
+  const groupColors = { brand: '#0176D3', card: '#7C3AED', product: '#059669' };
+  const groupLabels = { brand: 'Brand Images', card: 'Card Images', product: 'Product Images' };
+
+  let html = '';
+  let currentGroup = '';
+
+  for (const asset of GENERATED_ASSET_TYPES) {
+    if (asset.group !== currentGroup) {
+      currentGroup = asset.group;
+      html += `<div style="font-size: 12px; font-weight: 700; color: ${groupColors[asset.group]}; text-transform: uppercase; letter-spacing: 0.04em; margin: ${html ? '18px' : '0'} 0 10px; padding-bottom: 6px; border-bottom: 1px solid #f0f0f0;">${groupLabels[asset.group]}</div>`;
+    }
+    const url = images[asset.key] || '';
+    const hasImage = url && url.startsWith('http');
+    const aspectRatio = asset.w / asset.h;
+    const thumbW = asset.group === 'product' ? 48 : (aspectRatio > 2.5 ? 120 : 80);
+    const thumbH = Math.round(thumbW / aspectRatio);
+
+    html += `<div id="asset-row-${asset.key}" style="display: flex; align-items: center; gap: 10px; padding: 8px 0; border-bottom: 1px solid #f5f5f5;">`;
+    // Thumbnail
+    html += `<div style="width: ${thumbW}px; height: ${thumbH}px; flex-shrink: 0; border-radius: 6px; overflow: hidden; border: 1px solid #e5e7eb; background: #f9fafb; display: flex; align-items: center; justify-content: center;">`;
+    if (hasImage) {
+      html += `<img src="${esc(url)}" alt="${esc(asset.label)}" style="width: 100%; height: 100%; object-fit: cover;" onerror="this.style.display='none'">`;
+    } else {
+      html += `<span style="font-size: 10px; color: #ccc;">—</span>`;
+    }
+    html += `</div>`;
+    // Info
+    html += `<div style="flex: 1; min-width: 0;">`;
+    html += `<div style="font-size: 12px; font-weight: 600; color: #032D60; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${esc(asset.label)}</div>`;
+    html += `<div style="font-size: 11px; color: #888;">${asset.w}×${asset.h}</div>`;
+    html += `</div>`;
+    // URL input (hidden by default, toggleable)
+    html += `<input id="asset-url-${asset.key}" type="text" value="${esc(url)}" placeholder="https://…"
+      style="display: none; flex: 1; padding: 5px 8px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 11px; color: #1C2024; min-width: 100px;"
+      onchange="saveAssetUrl('${asset.key}', this.value)">`;
+    // Actions
+    html += `<div class="flex items-center gap-1" style="flex-shrink: 0;">`;
+    // Edit URL toggle
+    html += `<button onclick="toggleAssetUrl('${asset.key}')" class="cursor-pointer" title="Edit URL"
+      style="padding: 4px 6px; font-size: 12px; color: #666; background: #f3f4f6; border: 1px solid #e5e7eb; border-radius: 5px;">🔗</button>`;
+    // Upload
+    html += `<button onclick="document.getElementById('asset-file-${asset.key}').click()" class="cursor-pointer" title="Upload"
+      style="padding: 4px 6px; font-size: 12px; color: #0176D3; background: #E8F4FD; border: 1px solid #B4D6F0; border-radius: 5px;">↑</button>`;
+    html += `<input id="asset-file-${asset.key}" type="file" accept="image/*" onchange="handleAssetFileUpload('${asset.key}', this)" style="display: none;">`;
+    // Generate / Regenerate
+    html += `<button id="asset-gen-${asset.key}" onclick="generateSingleAsset('${asset.key}')" class="cursor-pointer" title="${hasImage ? 'Regenerate' : 'Generate'}"
+      style="padding: 4px 8px; font-size: 11px; font-weight: 600; color: white; background: ${groupColors[asset.group]}; border: none; border-radius: 5px; display: flex; align-items: center; gap: 3px;">
+      <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg>
+      ${hasImage ? '↻' : 'Gen'}
+    </button>`;
+    // Clear
+    if (hasImage) {
+      html += `<button onclick="clearAssetImage('${asset.key}')" class="cursor-pointer" title="Clear"
+        style="padding: 4px 6px; font-size: 12px; color: #C23934; background: none; border: none;">✕</button>`;
+    }
+    html += `</div>`;
+    html += `</div>`;
+  }
+
+  // Generation progress bar (hidden by default)
+  html += `<div id="gen-all-progress" class="hidden" style="margin-top: 14px; padding: 12px; background: #f0f7ff; border-radius: 8px; border: 1px solid #b0d4f1;">
+    <div style="font-size: 12px; font-weight: 600; color: #032D60; margin-bottom: 6px;">
+      <span id="gen-all-status">Generating images...</span>
+    </div>
+    <div style="width: 100%; height: 6px; background: #e5e7eb; border-radius: 3px; overflow: hidden;">
+      <div id="gen-all-bar" style="width: 0%; height: 100%; background: linear-gradient(90deg, #0176D3, #7C3AED); border-radius: 3px; transition: width 0.3s;"></div>
+    </div>
+    <div id="gen-all-detail" style="font-size: 11px; color: #888; margin-top: 4px;">0 of ${GENERATED_ASSET_TYPES.length}</div>
+  </div>`;
+
+  container.innerHTML = html;
+}
+
+function toggleAssetUrl(key) {
+  const inp = document.getElementById('asset-url-' + key);
+  if (inp) inp.style.display = inp.style.display === 'none' ? 'block' : 'none';
+}
+
+async function saveAssetUrl(key, url) {
+  const trimmed = (url || '').trim();
+  const oldUrl = (currentItemData.images || {})[key];
+  if (oldUrl && oldUrl !== trimmed) {
+    fetch('/api/images/delete', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ url: oldUrl }) }).catch(() => {});
+  }
+  if (!currentItemData.images) currentItemData.images = {};
+  currentItemData.images[key] = trimmed || '';
+  await saveItemData();
+  renderGeneratedAssets();
+  showToast(trimmed ? 'Image URL saved!' : 'Image cleared');
+}
+
+async function clearAssetImage(key) {
+  const oldUrl = (currentItemData.images || {})[key];
+  if (oldUrl) {
+    fetch('/api/images/delete', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ url: oldUrl }) }).catch(() => {});
+  }
+  if (!currentItemData.images) currentItemData.images = {};
+  currentItemData.images[key] = '';
+  await saveItemData();
+  renderGeneratedAssets();
+  showToast('Image cleared');
+}
+
+async function handleAssetFileUpload(key, input) {
+  const file = input.files && input.files[0];
+  if (!file) return;
+  if (!file.type.startsWith('image/')) { showToast('Please select an image file'); return; }
+  if (file.size > 10 * 1024 * 1024) { showToast('Image too large (max 10MB)'); return; }
+
+  try {
+    const reader = new FileReader();
+    const base64 = await new Promise((resolve, reject) => {
+      reader.onload = () => resolve(reader.result.split(',')[1]);
+      reader.onerror = reject;
+      reader.readAsDataURL(file);
+    });
+    const resp = await fetch('/api/images/upload', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ imageBase64: base64, mimeType: file.type, folder: `views/${currentItemId}/generated` })
+    });
+    const result = await resp.json();
+    if (result.url) {
+      await saveAssetUrl(key, result.url);
+    } else {
+      showToast(result.error || 'Upload failed');
+    }
+  } catch (e) {
+    showToast('Upload failed: ' + e.message);
+  } finally {
+    input.value = '';
+  }
+}
+
+async function generateSingleAsset(key) {
+  const meta = currentItemData?.metadata || {};
+  const brand = meta.brand || '';
+  if (!brand) { showToast('No brand set'); return; }
+
+  const btn = document.getElementById('asset-gen-' + key);
+  if (btn) { btn.disabled = true; btn.style.opacity = '0.6'; btn.innerHTML = '<span style="display:inline-block;width:10px;height:10px;border:2px solid rgba(255,255,255,0.3);border-top-color:white;border-radius:50%;animation:spin 0.8s linear infinite;"></span>'; }
+
+  // Delete old image
+  const oldUrl = (currentItemData.images || {})[key];
+  if (oldUrl) {
+    fetch('/api/images/delete', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ url: oldUrl }) }).catch(() => {});
+  }
+
+  try {
+    const resp = await fetch('/api/images/generate', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        brand,
+        brandDesc: meta.brand_desc || '',
+        industry: meta.industry || '',
+        imageType: key,
+        viewId: currentItemId,
+        tone: meta.tone || '',
+        visualStyle: meta.visual_style || '',
+        colorPrimary: meta.color_primary || '',
+        colorSecondary: meta.color_secondary || '',
+        websiteUrl: meta.brand_url || ''
+      })
+    });
+    const result = await resp.json();
+    if (result.url) {
+      if (!currentItemData.images) currentItemData.images = {};
+      currentItemData.images[key] = result.url;
+      await saveItemData();
+      renderGeneratedAssets();
+      showToast(`${key.replace(/_/g, ' ').toUpperCase()} generated!`);
+    } else {
+      showToast(result.error || 'Generation failed');
+    }
+  } catch (e) {
+    console.error(`Asset generation failed for ${key}:`, e);
+    showToast('Generation failed');
+  } finally {
+    if (btn) { btn.disabled = false; btn.style.opacity = '1'; }
+    renderGeneratedAssets();
+  }
+}
+
+async function generateAllImages() {
+  const meta = currentItemData?.metadata || {};
+  const brand = meta.brand || '';
+  if (!brand) { showToast('No brand set'); return; }
+
+  const btn = document.getElementById('generate-all-btn');
+  btn.disabled = true;
+  btn.style.opacity = '0.6';
+
+  const progress = document.getElementById('gen-all-progress');
+  const bar = document.getElementById('gen-all-bar');
+  const status = document.getElementById('gen-all-status');
+  const detail = document.getElementById('gen-all-detail');
+  progress.classList.remove('hidden');
+
+  // Only generate images that don't already exist
+  const images = currentItemData?.images || {};
+  const toGenerate = GENERATED_ASSET_TYPES.filter(a => !images[a.key] || !images[a.key].startsWith('http'));
+
+  if (toGenerate.length === 0) {
+    showToast('All images already generated!');
+    progress.classList.add('hidden');
+    btn.disabled = false;
+    btn.style.opacity = '1';
+    return;
+  }
+
+  let completed = 0;
+  let failed = 0;
+  const total = toGenerate.length;
+
+  for (const asset of toGenerate) {
+    status.textContent = `Generating ${asset.label}...`;
+    detail.textContent = `${completed} of ${total} complete${failed ? ` (${failed} failed)` : ''}`;
+    bar.style.width = `${(completed / total) * 100}%`;
+
+    try {
+      const resp = await fetch('/api/images/generate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          brand,
+          brandDesc: meta.brand_desc || '',
+          industry: meta.industry || '',
+          imageType: asset.key,
+          viewId: currentItemId,
+          tone: meta.tone || '',
+          visualStyle: meta.visual_style || '',
+          colorPrimary: meta.color_primary || '',
+          colorSecondary: meta.color_secondary || '',
+          websiteUrl: meta.brand_url || ''
+        })
+      });
+      const result = await resp.json();
+      if (result.url) {
+        if (!currentItemData.images) currentItemData.images = {};
+        currentItemData.images[asset.key] = result.url;
+        await saveItemData();
+      } else {
+        failed++;
+      }
+    } catch (e) {
+      console.error(`Failed to generate ${asset.key}:`, e);
+      failed++;
+    }
+    completed++;
+    renderGeneratedAssets();
+  }
+
+  bar.style.width = '100%';
+  status.textContent = `Done! ${completed - failed} generated${failed ? `, ${failed} failed` : ''}`;
+  detail.textContent = `${completed} of ${total} complete`;
+  showToast(`${completed - failed} images generated!`);
+
+  setTimeout(() => { progress.classList.add('hidden'); }, 3000);
+  btn.disabled = false;
+  btn.style.opacity = '1';
+}
+
+async function autoGenerateAllImages() {
+  const data = currentItemData;
+  if (!data) return;
+  const meta = data.metadata || {};
+  if (!meta.brand) return;
+  const images = data.images || {};
+
+  // Check if ANY generated assets exist — if so, skip auto-generation
+  const hasAny = GENERATED_ASSET_TYPES.some(a => images[a.key] && images[a.key].startsWith('http'));
+  if (hasAny) return;
+
+  // Fire off generation in background
+  generateAllImages();
+}
+
 async function saveItemData() {
   const email = document.getElementById('user-email').textContent;
   try {
@@ -3147,6 +3472,12 @@ async function downloadImagesZip() {
     const zip = new JSZip();
     const brand = (currentItemData?.metadata?.brand || 'brand').replace(/[^a-zA-Z0-9]/g, '-').toLowerCase();
 
+    // Build nice file names: brand_01 → "BRAND 01 Cover Image", etc.
+    const assetLabels = {};
+    if (typeof GENERATED_ASSET_TYPES !== 'undefined') {
+      for (const a of GENERATED_ASSET_TYPES) assetLabels[a.key] = a.label;
+    }
+
     for (const [type, url] of entries) {
       try {
         // Proxy through our server to avoid CORS issues with R2
@@ -3156,7 +3487,10 @@ async function downloadImagesZip() {
         const blob = await resp.blob();
         const contentType = blob.type || 'image/png';
         const ext = contentType.includes('png') ? '.png' : contentType.includes('webp') ? '.webp' : contentType.includes('svg') ? '.svg' : '.jpg';
-        zip.file(`${brand}-${type}${ext}`, blob);
+        const fileName = assetLabels[type]
+          ? assetLabels[type].replace(/[^a-zA-Z0-9 ]/g, '').replace(/\s+/g, '-')
+          : `${brand}-${type}`;
+        zip.file(`${fileName}${ext}`, blob);
       } catch (e) { console.warn(`Failed to fetch ${type} image:`, e); }
     }
 

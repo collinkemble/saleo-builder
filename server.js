@@ -616,9 +616,10 @@ app.post('/api/images/logo', async (req, res) => {
 });
 
 // POST /api/images/generate — Generate AI image via Gemini and upload to R2
+// Supports all Saleo image types: brand_01, brand_02, brand_03, brand_hero, card_01-07, product_01-04
 app.post('/api/images/generate', async (req, res) => {
   try {
-    const { brand, brandDesc, industry, imageType, viewId } = req.body;
+    const { brand, brandDesc, industry, imageType, viewId, tone, visualStyle, colorPrimary, colorSecondary, websiteUrl } = req.body;
     if (!brand) return res.status(400).json({ error: 'brand is required' });
 
     const { GoogleGenAI } = require('@google/genai');
@@ -627,21 +628,73 @@ app.post('/api/images/generate', async (req, res) => {
 
     const ai = new GoogleGenAI({ apiKey });
 
-    // Build image prompt based on type
-    let prompt;
-    if (imageType === 'hero') {
-      prompt = `Create a professional, clean hero image for a ${industry || 'business'} brand called "${brand}"`;
-      if (brandDesc) prompt += ` which is ${brandDesc}`;
-      prompt += `. The image should be a wide banner-style photo suitable for a demo presentation. Modern, polished, aspirational. No text or logos in the image. Photorealistic style.`;
-    } else {
-      prompt = `Create a professional product or lifestyle image for the brand "${brand}"`;
-      if (brandDesc) prompt += `, ${brandDesc}`;
-      prompt += `. Clean, modern, photorealistic. No text or logos.`;
+    // Build brand context string for prompts
+    const brandCtx = [];
+    if (brandDesc) brandCtx.push(`(${brandDesc})`);
+    if (industry && industry !== 'Other') brandCtx.push(`in the ${industry} industry`);
+    if (tone) brandCtx.push(`Brand tone: ${tone}.`);
+    if (visualStyle) brandCtx.push(`Visual style: ${visualStyle}.`);
+    if (colorPrimary && colorPrimary !== '#032D60') brandCtx.push(`Primary brand color: ${colorPrimary}.`);
+    if (colorSecondary && colorSecondary !== '#0176D3') brandCtx.push(`Secondary brand color: ${colorSecondary}.`);
+    const brandInfo = brandCtx.join(' ');
+
+    // Image type definitions: prompt builder and dimensions
+    const imageTypes = {
+      brand_01: {
+        prompt: `Create a professional, wide site banner image for the brand "${brand}" ${brandInfo}. This is a cover image for a website — think sweeping, cinematic, aspirational. Show environments, landscapes, or abstract scenes that evoke the brand's industry and values. No text, no logos, no words. Ultra-wide aspect ratio. Photorealistic, high quality.`,
+        w: 1984, h: 481
+      },
+      brand_02: {
+        prompt: `Create a professional site section background image for the brand "${brand}" ${brandInfo}. Subtle, atmospheric, slightly blurred or abstract. Could be a texture, gradient scene, or environmental shot that works well behind overlaid text. No text, no logos, no words. Photorealistic.`,
+        w: 1134, h: 552
+      },
+      brand_03: {
+        prompt: `Create another professional site section background image for the brand "${brand}" ${brandInfo}. Different from the previous one — try a different color palette or subject. Subtle, atmospheric, works well as a background behind text content. No text, no logos, no words. Photorealistic.`,
+        w: 1134, h: 552
+      },
+      brand_hero: {
+        prompt: `Create a stunning hero section background image for the brand "${brand}" ${brandInfo}. This is the main hero banner — it should be the most visually striking image. Show the essence of the brand through environment, activity, or lifestyle. Bold, aspirational, high impact. No text, no logos, no words. Photorealistic.`,
+        w: 1134, h: 552
+      },
+    };
+
+    // CARD images (01-07): lifestyle shots relating to the brand
+    for (let i = 1; i <= 7; i++) {
+      const num = String(i).padStart(2, '0');
+      const variation = [
+        'a lifestyle scene showing people using or enjoying the brand',
+        'a close-up detail shot related to the brand experience',
+        'an environment or location scene related to the brand',
+        'a group or social scene related to the brand lifestyle',
+        'an action or activity shot related to the brand',
+        'a behind-the-scenes or process shot related to the brand',
+        'an aspirational or inspirational scene related to the brand'
+      ][i - 1];
+      imageTypes[`card_${num}`] = {
+        prompt: `Create a professional lifestyle or product shot for the brand "${brand}" ${brandInfo}. This is card image ${i} of 7 for a website — ${variation}. High quality, editorial style photography. No text, no logos, no words. Photorealistic.${i === 1 ? ' This image will overlay on a background, so it should be vibrant and stand out.' : ''}`,
+        w: 2551, h: 1524
+      };
     }
+
+    // PRODUCT images (01-04): realistic product shots
+    for (let i = 1; i <= 4; i++) {
+      const num = String(i).padStart(2, '0');
+      imageTypes[`product_${num}`] = {
+        prompt: `Create a clean, professional product photograph for the brand "${brand}" ${brandInfo}.${websiteUrl ? ` The brand website is ${websiteUrl} — generate a realistic product that this brand would sell.` : ''} This is product ${i} of 4. Show a single realistic product on a clean, minimal background. The product should look like something this brand actually sells. Studio lighting, high-end e-commerce photography style. No text, no logos, no watermarks. Clean white or light gradient background. 400x400 square crop.`,
+        w: 400, h: 400
+      };
+    }
+
+    const typeDef = imageTypes[imageType];
+    if (!typeDef) {
+      return res.status(400).json({ error: `Unknown imageType: ${imageType}. Valid types: ${Object.keys(imageTypes).join(', ')}` });
+    }
+
+    console.log(`[ImageGen] Generating ${imageType} for "${brand}" (${typeDef.w}x${typeDef.h})`);
 
     const response = await ai.models.generateContent({
       model: 'gemini-2.5-flash-image',
-      contents: [{ text: prompt }],
+      contents: [{ text: typeDef.prompt }],
       config: {
         responseModalities: ['TEXT', 'IMAGE'],
       },
@@ -665,10 +718,11 @@ app.post('/api/images/generate', async (req, res) => {
     // Upload to R2
     const folder = `views/${viewId || 'tmp'}/generated`;
     const slug = brand.replace(/[^a-zA-Z0-9]/g, '-').toLowerCase();
-    const filename = `${slug}-${imageType || 'image'}`;
+    const filename = `${slug}-${imageType}`;
     const url = await uploadImage(imageBase64, mimeType, folder, filename);
 
-    res.json({ url, mimeType, imageType: imageType || 'hero' });
+    console.log(`[ImageGen] ${imageType} for "${brand}" uploaded: ${url}`);
+    res.json({ url, mimeType, imageType });
   } catch (err) {
     console.error('Image generation failed:', err);
     res.status(500).json({ error: 'Image generation failed: ' + err.message });
