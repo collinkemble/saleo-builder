@@ -522,7 +522,7 @@
     <!-- APP-SPECIFIC: New Item Dialog                  -->
     <!-- ═══════════════════════════════════════════════ -->
     <div id="new-item-dialog" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4" style="background: rgba(0,0,0,0.5);">
-      <div class="bg-white rounded-2xl shadow-2xl w-full max-w-lg" style="max-height: 90vh; overflow-y: auto;">
+      <div class="bg-white rounded-2xl shadow-2xl w-full max-w-[700px]" style="max-height: 85vh; overflow-y: auto;">
         <!-- Dialog header -->
         <div style="padding: 18px 28px 0;">
           <h3 style="font-size: 20px; font-weight: 700; color: #032D60; margin: 0 0 4px;">New Saleo Demo</h3>
@@ -563,99 +563,102 @@
           </div>
         </div>
 
-        <!-- Create form -->
+        <!-- Create form (2-column grid like Demoforge) -->
         <div id="create-tab-prompt" style="padding: 14px 28px 20px;">
-          <div style="display: flex; flex-direction: column; gap: 10px;">
-          <div>
-            <label style="display: block; font-size: 12px; font-weight: 700; color: #032D60; margin-bottom: 4px;">Saleo Demo Name <span style="color: #e5534b;">*</span></label>
-            <input id="new-name" type="text" placeholder="e.g. Acme Corp Pipeline Demo" oninput="clearFieldError('new-name')" style="width: 100%; padding: 8px 12px; border: 1px solid #d1d5db; border-radius: 8px; font-size: 14px; box-sizing: border-box;">
-          </div>
-          <div>
-            <label style="display: block; font-size: 12px; font-weight: 700; color: #032D60; margin-bottom: 4px;">Brand <span style="color: #e5534b;">*</span></label>
-            <input id="new-brand" type="text" placeholder="e.g. Acme Corp" oninput="clearFieldError('new-brand')" style="width: 100%; padding: 8px 12px; border: 1px solid #d1d5db; border-radius: 8px; font-size: 14px; box-sizing: border-box;">
-          </div>
-          <div>
-            <label style="display: block; font-size: 12px; font-weight: 700; color: #032D60; margin-bottom: 4px;">Brand Description</label>
-            <input id="new-brand-desc" type="text" placeholder="e.g. Global retailer specializing in outdoor gear" style="width: 100%; padding: 8px 12px; border: 1px solid #d1d5db; border-radius: 8px; font-size: 14px; box-sizing: border-box;">
-          </div>
-          <div>
-            <label style="display: block; font-size: 12px; font-weight: 700; color: #032D60; margin-bottom: 4px;">Brand Website URL</label>
-            <input id="new-brand-url" type="url" placeholder="e.g. https://www.acmecorp.com" style="width: 100%; padding: 8px 12px; border: 1px solid #d1d5db; border-radius: 8px; font-size: 14px; box-sizing: border-box;">
-          </div>
-          <div>
-            <label style="display: block; font-size: 12px; font-weight: 700; color: #032D60; margin-bottom: 4px;">Industry <span style="color: #e5534b;">*</span></label>
-            <select id="new-industry" onchange="clearFieldError('new-industry'); toggleCustomIndustry('new');" style="width: 100%; padding: 8px 12px; border: 1px solid #d1d5db; border-radius: 8px; font-size: 14px; background: white; box-sizing: border-box;">
-              <option value="">Select industry...</option>
-              <option value="Retail">Retail</option>
-              <option value="Other">Other</option>
-            </select>
-            <div id="new-custom-industry-wrapper" class="hidden" style="margin-top: 8px;">
-              <input id="new-industry-custom" type="text" placeholder="e.g. Travel, Healthcare, Financial Services" style="width: 100%; padding: 10px 12px; border: 1px solid #d1d5db; border-radius: 8px; font-size: 14px; box-sizing: border-box;">
-              <p id="new-industry-hint" style="margin-top: 6px; font-size: 11px; color: #888; font-style: italic;">This industry isn't officially supported yet, but the AI will do its best.</p>
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+            <!-- Saleo Demo Name -->
+            <div>
+              <label class="block text-xs font-bold mb-1" style="color: #032D60;">Saleo Demo Name <span style="color: #ea001e;">*</span></label>
+              <input id="new-name" type="text" placeholder="e.g. Acme Corp Pipeline Demo" oninput="clearFieldError('new-name')" class="w-full px-3 py-2 rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none text-sm">
             </div>
-          </div>
-          <!-- Brand Colors -->
-          <div>
-            <label style="display: block; font-size: 12px; font-weight: 700; color: #032D60; margin-bottom: 4px;">Brand Colors</label>
-            <div style="display: flex; gap: 16px;">
-              <div style="flex: 1;">
-                <label style="display: block; font-size: 11px; font-weight: 600; color: #666; margin-bottom: 4px;">Primary</label>
-                <div style="display: flex; align-items: center; gap: 8px;">
-                  <input id="new-color-primary" type="color" value="#032D60" style="width: 36px; height: 36px; padding: 2px; border: 1px solid #d1d5db; border-radius: 8px; cursor: pointer; background: white;" oninput="document.getElementById('new-color-primary-text').value=this.value">
-                  <input id="new-color-primary-text" type="text" value="#032D60" style="flex: 1; padding: 8px 10px; border: 1px solid #d1d5db; border-radius: 8px; font-size: 13px; font-family: monospace; box-sizing: border-box;" oninput="document.getElementById('new-color-primary').value=this.value">
+            <!-- Brand Name -->
+            <div>
+              <label class="block text-xs font-bold mb-1" style="color: #032D60;">Brand <span style="color: #ea001e;">*</span></label>
+              <input id="new-brand" type="text" placeholder="e.g. Acme Corp" oninput="clearFieldError('new-brand')" class="w-full px-3 py-2 rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none text-sm">
+            </div>
+            <!-- Brand Description (full width) -->
+            <div style="grid-column: 1 / -1;">
+              <label class="block text-xs font-bold mb-1" style="color: #032D60;">Brand Description</label>
+              <input id="new-brand-desc" type="text" placeholder="e.g. Global retailer specializing in outdoor gear" class="w-full px-3 py-2 rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none text-sm">
+            </div>
+            <!-- Website URL -->
+            <div>
+              <label class="block text-xs font-bold mb-1" style="color: #032D60;">Brand Website URL</label>
+              <input id="new-brand-url" type="url" placeholder="e.g. https://www.nike.com" class="w-full px-3 py-2 rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none text-sm">
+            </div>
+            <!-- Industry -->
+            <div>
+              <label class="block text-xs font-bold mb-1" style="color: #032D60;">Industry <span style="color: #ea001e;">*</span></label>
+              <select id="new-industry" onchange="clearFieldError('new-industry'); toggleCustomIndustry('new');" class="w-full px-3 py-2 rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none text-sm" style="background: white;">
+                <option value="">Select industry...</option>
+                <option value="Retail">Retail</option>
+                <option value="Other">Other</option>
+              </select>
+              <div id="new-custom-industry-wrapper" class="hidden" style="margin-top: 6px;">
+                <input id="new-industry-custom" type="text" placeholder="e.g. Travel, Healthcare" class="w-full px-3 py-2 rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none text-sm">
+                <p id="new-industry-hint" style="margin-top: 4px; font-size: 11px; color: #888; font-style: italic;">This industry isn't officially supported yet, but the AI will do its best.</p>
+              </div>
+            </div>
+            <!-- Brand Colors (full width) -->
+            <div style="grid-column: 1 / -1;">
+              <label class="block text-xs font-bold mb-1" style="color: #032D60;">Brand Colors</label>
+              <div style="display: flex; gap: 16px;">
+                <div style="flex: 1;">
+                  <label style="display: block; font-size: 11px; font-weight: 600; color: #666; margin-bottom: 4px;">Primary</label>
+                  <div style="display: flex; align-items: center; gap: 8px;">
+                    <input id="new-color-primary" type="color" value="#032D60" style="width: 36px; height: 36px; padding: 2px; border: 1px solid #d1d5db; border-radius: 8px; cursor: pointer; background: white;" oninput="document.getElementById('new-color-primary-text').value=this.value">
+                    <input id="new-color-primary-text" type="text" value="#032D60" style="flex: 1; padding: 8px 10px; border: 1px solid #d1d5db; border-radius: 8px; font-size: 13px; font-family: monospace; box-sizing: border-box;" oninput="document.getElementById('new-color-primary').value=this.value">
+                  </div>
+                </div>
+                <div style="flex: 1;">
+                  <label style="display: block; font-size: 11px; font-weight: 600; color: #666; margin-bottom: 4px;">Secondary</label>
+                  <div style="display: flex; align-items: center; gap: 8px;">
+                    <input id="new-color-secondary" type="color" value="#0176D3" style="width: 36px; height: 36px; padding: 2px; border: 1px solid #d1d5db; border-radius: 8px; cursor: pointer; background: white;" oninput="document.getElementById('new-color-secondary-text').value=this.value">
+                    <input id="new-color-secondary-text" type="text" value="#0176D3" style="flex: 1; padding: 8px 10px; border: 1px solid #d1d5db; border-radius: 8px; font-size: 13px; font-family: monospace; box-sizing: border-box;" oninput="document.getElementById('new-color-secondary').value=this.value">
+                  </div>
                 </div>
               </div>
-              <div style="flex: 1;">
-                <label style="display: block; font-size: 11px; font-weight: 600; color: #666; margin-bottom: 4px;">Secondary</label>
-                <div style="display: flex; align-items: center; gap: 8px;">
-                  <input id="new-color-secondary" type="color" value="#0176D3" style="width: 36px; height: 36px; padding: 2px; border: 1px solid #d1d5db; border-radius: 8px; cursor: pointer; background: white;" oninput="document.getElementById('new-color-secondary-text').value=this.value">
-                  <input id="new-color-secondary-text" type="text" value="#0176D3" style="flex: 1; padding: 8px 10px; border: 1px solid #d1d5db; border-radius: 8px; font-size: 13px; font-family: monospace; box-sizing: border-box;" oninput="document.getElementById('new-color-secondary').value=this.value">
+            </div>
+            <!-- Tone -->
+            <div>
+              <label class="block text-xs font-bold mb-1" style="color: #032D60;">Tone</label>
+              <input id="new-tone" type="text" placeholder="e.g. Bold and adventurous" class="w-full px-3 py-2 rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none text-sm">
+            </div>
+            <!-- Visual Style -->
+            <div>
+              <label class="block text-xs font-bold mb-1" style="color: #032D60;">Visual Style</label>
+              <input id="new-visual-style" type="text" placeholder="e.g. Clean, modern, and premium" class="w-full px-3 py-2 rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none text-sm">
+            </div>
+            <!-- Demo Story Synopsis (full width) -->
+            <div style="grid-column: 1 / -1;">
+              <label class="block text-xs font-bold mb-1" style="color: #032D60;">Demo Story Synopsis <span style="font-weight: 400; color: #888;">(optional)</span></label>
+              <div id="input-mode-toggle" style="display: inline-flex; background: #f3f4f6; border-radius: 8px; padding: 3px; margin-bottom: 8px;">
+                <button type="button" id="mode-synopsis" onclick="switchInputMode('synopsis')" class="cursor-pointer" style="padding: 5px 14px; font-size: 12px; font-weight: 600; border: none; border-radius: 6px; background: #0176D3; color: white; transition: all 0.15s;">Write Synopsis</button>
+                <button type="button" id="mode-upload" onclick="switchInputMode('upload')" class="cursor-pointer" style="padding: 5px 14px; font-size: 12px; font-weight: 600; border: none; border-radius: 6px; background: transparent; color: #666; transition: all 0.15s;">Upload Script</button>
+              </div>
+              <div id="synopsis-section">
+                <textarea id="new-synopsis" rows="2" placeholder="Briefly describe the demo story or narrative you want to convey..." class="w-full px-3 py-2 rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none text-sm resize-none"></textarea>
+              </div>
+              <div id="upload-section" class="hidden">
+                <div id="drop-zone" onclick="document.getElementById('file-input').click()"
+                  style="border: 2px dashed #d1d5db; border-radius: 10px; padding: 20px 16px; text-align: center; cursor: pointer; transition: border-color 0.2s, background 0.2s;"
+                  onmouseenter="this.style.borderColor='#0176D3'; this.style.background='#F8FBFF';"
+                  onmouseleave="this.style.borderColor='#d1d5db'; this.style.background='transparent';"
+                  ondragover="event.preventDefault(); this.style.borderColor='#0176D3'; this.style.background='#F8FBFF';"
+                  ondragleave="this.style.borderColor='#d1d5db'; this.style.background='transparent';"
+                  ondrop="event.preventDefault(); this.style.borderColor='#d1d5db'; this.style.background='transparent'; handleFileDrop(event);">
+                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#9ca3af" stroke-width="1.5" style="margin: 0 auto 4px; display: block;"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+                  <p style="font-size: 12px; color: #666; margin: 0 0 2px;">Drop a PDF or Word doc here, or click to browse</p>
+                  <p style="font-size: 11px; color: #aaa; margin: 0;">We'll extract the synopsis from your script</p>
+                </div>
+                <input id="file-input" type="file" accept=".pdf,.doc,.docx" style="display: none;" onchange="handleFileSelect(this)">
+                <div id="file-selected" class="hidden" style="margin-top: 6px; padding: 8px 12px; background: #F0FDF4; border: 1px solid #BBF7D0; border-radius: 8px; display: flex; align-items: center; justify-content: space-between;">
+                  <span id="file-selected-name" style="font-size: 13px; font-weight: 600; color: #166534;"></span>
+                  <button onclick="clearFile()" class="cursor-pointer" style="font-size: 12px; color: #e5534b; background: none; border: none;">Remove</button>
                 </div>
               </div>
             </div>
           </div>
-          <!-- Tone -->
-          <div>
-            <label style="display: block; font-size: 12px; font-weight: 700; color: #032D60; margin-bottom: 4px;">Tone</label>
-            <input id="new-tone" type="text" placeholder="e.g. Bold and adventurous" style="width: 100%; padding: 8px 12px; border: 1px solid #d1d5db; border-radius: 8px; font-size: 14px; box-sizing: border-box;">
-          </div>
-          <!-- Visual Style -->
-          <div>
-            <label style="display: block; font-size: 12px; font-weight: 700; color: #032D60; margin-bottom: 4px;">Visual Style</label>
-            <input id="new-visual-style" type="text" placeholder="e.g. Clean, modern, and premium" style="width: 100%; padding: 8px 12px; border: 1px solid #d1d5db; border-radius: 8px; font-size: 14px; box-sizing: border-box;">
-          </div>
-          <!-- Demo Context Toggle -->
-          <div>
-            <label style="display: block; font-size: 12px; font-weight: 700; color: #032D60; margin-bottom: 6px;">Demo Story Synopsis <span style="font-weight: 400; color: #888;">(optional)</span></label>
-            <div id="input-mode-toggle" style="display: inline-flex; background: #f3f4f6; border-radius: 8px; padding: 3px; margin-bottom: 12px;">
-              <button type="button" id="mode-synopsis" onclick="switchInputMode('synopsis')" class="cursor-pointer" style="padding: 6px 16px; font-size: 12px; font-weight: 600; border: none; border-radius: 6px; background: #0176D3; color: white; transition: all 0.15s;">Write Synopsis</button>
-              <button type="button" id="mode-upload" onclick="switchInputMode('upload')" class="cursor-pointer" style="padding: 6px 16px; font-size: 12px; font-weight: 600; border: none; border-radius: 6px; background: transparent; color: #666; transition: all 0.15s;">Upload Script</button>
-            </div>
-            <!-- Synopsis section -->
-            <div id="synopsis-section">
-              <textarea id="new-synopsis" rows="3" placeholder="Briefly describe the demo story or narrative you want to convey..." style="width: 100%; padding: 10px 12px; border: 1px solid #d1d5db; border-radius: 8px; font-size: 14px; line-height: 1.5; font-family: inherit; resize: vertical; box-sizing: border-box;"></textarea>
-            </div>
-            <!-- Upload section -->
-            <div id="upload-section" class="hidden">
-              <div id="drop-zone" onclick="document.getElementById('file-input').click()"
-                style="border: 2px dashed #d1d5db; border-radius: 10px; padding: 24px 20px; text-align: center; cursor: pointer; transition: border-color 0.2s, background 0.2s;"
-                onmouseenter="this.style.borderColor='#0176D3'; this.style.background='#F8FBFF';"
-                onmouseleave="this.style.borderColor='#d1d5db'; this.style.background='transparent';"
-                ondragover="event.preventDefault(); this.style.borderColor='#0176D3'; this.style.background='#F8FBFF';"
-                ondragleave="this.style.borderColor='#d1d5db'; this.style.background='transparent';"
-                ondrop="event.preventDefault(); this.style.borderColor='#d1d5db'; this.style.background='transparent'; handleFileDrop(event);">
-                <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#9ca3af" stroke-width="1.5" style="margin: 0 auto 6px; display: block;"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
-                <p style="font-size: 13px; color: #666; margin: 0 0 2px;">Drop a PDF or Word doc here, or click to browse</p>
-                <p style="font-size: 11px; color: #aaa; margin: 0;">We'll extract the synopsis from your script</p>
-              </div>
-              <input id="file-input" type="file" accept=".pdf,.doc,.docx" style="display: none;" onchange="handleFileSelect(this)">
-              <div id="file-selected" class="hidden" style="margin-top: 8px; padding: 10px 12px; background: #F0FDF4; border: 1px solid #BBF7D0; border-radius: 8px; display: flex; align-items: center; justify-content: space-between;">
-                <span id="file-selected-name" style="font-size: 13px; font-weight: 600; color: #166534;"></span>
-                <button onclick="clearFile()" class="cursor-pointer" style="font-size: 12px; color: #e5534b; background: none; border: none;">Remove</button>
-              </div>
-            </div>
-          </div>
-          </div><!-- end flex column -->
           <div id="new-validation-error" class="hidden" style="margin-top: 10px; margin-bottom: 10px; padding: 10px 14px; background: #FEF2F2; border: 1px solid #FECACA; border-radius: 8px; font-size: 13px; color: #991B1B; line-height: 1.5;"></div>
           <div class="flex justify-end gap-3" style="margin-top: 10px;">
             <button onclick="closeNewItemDialog()" class="cursor-pointer" style="padding: 8px 16px; font-size: 13px; font-weight: 500; color: #666; background: #f3f4f6; border: none; border-radius: 8px;">Cancel</button>
