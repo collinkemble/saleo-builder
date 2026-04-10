@@ -1142,6 +1142,54 @@ app.post('/api/items/:id/share/confirm', async (req, res) => {
   }
 });
 
+// ═══════════════════════════════════════════════
+// Brand Kit Builder Proxy
+// ═══════════════════════════════════════════════
+
+const BRANDKIT_API_URL = 'https://brandkit-builder.aubreydemo.com/api';
+
+// GET /api/brandkit-builder/items?email=<user-email> — List brand kits for a user
+app.get('/api/brandkit-builder/items', async (req, res) => {
+  const apiKey = process.env.BRANDKIT_BUILDER_API_KEY;
+  if (!apiKey) return res.status(500).json({ error: 'Brand Kit Builder not configured' });
+
+  const email = req.query.email;
+  if (!email) return res.status(400).json({ error: 'email query parameter required' });
+
+  try {
+    const resp = await fetch(`${BRANDKIT_API_URL}/items?email=${encodeURIComponent(email)}`, {
+      headers: { 'x-api-key': apiKey },
+    });
+    if (!resp.ok) throw new Error(`Brand Kit Builder responded ${resp.status}`);
+    const data = await resp.json();
+    res.json(data);
+  } catch (err) {
+    console.error('Brand Kit Builder proxy error:', err.message);
+    res.status(502).json({ error: 'Failed to fetch brand kits' });
+  }
+});
+
+// GET /api/brandkit-builder/items/:id?email=<user-email> — Get full brand kit data
+app.get('/api/brandkit-builder/items/:id', async (req, res) => {
+  const apiKey = process.env.BRANDKIT_BUILDER_API_KEY;
+  if (!apiKey) return res.status(500).json({ error: 'Brand Kit Builder not configured' });
+
+  const email = req.query.email;
+  if (!email) return res.status(400).json({ error: 'email query parameter required' });
+
+  try {
+    const resp = await fetch(`${BRANDKIT_API_URL}/items/${req.params.id}?email=${encodeURIComponent(email)}`, {
+      headers: { 'x-api-key': apiKey },
+    });
+    if (!resp.ok) throw new Error(`Brand Kit Builder responded ${resp.status}`);
+    const data = await resp.json();
+    res.json(data);
+  } catch (err) {
+    console.error('Brand Kit Builder proxy error:', err.message);
+    res.status(502).json({ error: 'Failed to fetch brand kit' });
+  }
+});
+
 // SPA catch-all — serve index.html for any non-API route (enables /views/:id deep links)
 app.get('/{*splat}', (req, res) => {
   res.sendFile(path.join(__dirname, 'index.html'));
