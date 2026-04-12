@@ -1290,7 +1290,7 @@ app.get('/api/brandkit-builder/items/:id', async (req, res) => {
 // Script Builder Proxy
 // ═══════════════════════════════════════════════
 
-const SCRIPT_API_URL = 'https://script-builder.aubreydemo.com/api';
+const SCRIPT_API_URL = 'https://scriptwriter.aubreydemo.com/api';
 
 // GET /api/script-builder/items?email=<user-email> — List scripts for a user
 app.get('/api/script-builder/items', async (req, res) => {

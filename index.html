@@ -414,7 +414,7 @@
                 <span>💡</span>
                 <span>
                   Don't have a Script?
-                  <a href="https://script-builder.aubreydemo.com/" target="_blank" rel="noopener noreferrer"
+                  <a href="https://scriptwriter.aubreydemo.com/" target="_blank" rel="noopener noreferrer"
                      style="color: #0176D3; font-weight: 600; text-decoration: none;">
                     Create one in Script Builder →
                   </a>
@@ -749,10 +749,44 @@
               <label class="block text-xs font-bold mb-1" style="color: #032D60;">Demo Story Synopsis <span style="font-weight: 400; color: #888;">(optional)</span></label>
               <div id="input-mode-toggle" style="display: inline-flex; background: #f3f4f6; border-radius: 8px; padding: 3px; margin-bottom: 8px;">
                 <button type="button" id="mode-synopsis" onclick="switchInputMode('synopsis')" class="cursor-pointer" style="padding: 5px 14px; font-size: 12px; font-weight: 600; border: none; border-radius: 6px; background: #0176D3; color: white; transition: all 0.15s;">Write Synopsis</button>
+                <button type="button" id="mode-script" onclick="switchInputMode('script')" class="cursor-pointer" style="padding: 5px 14px; font-size: 12px; font-weight: 600; border: none; border-radius: 6px; background: transparent; color: #666; transition: all 0.15s;">Select Script</button>
                 <button type="button" id="mode-upload" onclick="switchInputMode('upload')" class="cursor-pointer" style="padding: 5px 14px; font-size: 12px; font-weight: 600; border: none; border-radius: 6px; background: transparent; color: #666; transition: all 0.15s;">Upload Script</button>
               </div>
               <div id="synopsis-section">
                 <textarea id="new-synopsis" rows="2" placeholder="Briefly describe the demo story or narrative you want to convey..." class="w-full px-3 py-2 rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none text-sm resize-none"></textarea>
+              </div>
+              <div id="script-section" class="hidden">
+                <div style="background: linear-gradient(135deg, #f5f0ff, #ede8ff); border-radius: 10px; padding: 14px; border: 1px dashed #c4b5fd;">
+                  <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 4px;">
+                    <span style="font-size: 16px;">📜</span>
+                    <span style="font-size: 13px; font-weight: 700; color: #032D60;">Select Script</span>
+                    <span id="sb-source-badge" style="display: none; font-size: 11px; font-weight: 600; color: #6d28d9; background: rgba(109,40,217,0.08); padding: 2px 8px; border-radius: 10px;"></span>
+                  </div>
+                  <p style="font-size: 12px; color: #5a6f85; margin: 0 0 10px; line-height: 1.4;">
+                    Pick a script from Script Builder to use as your demo synopsis.
+                  </p>
+                  <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+                    <div style="position: relative; display: inline-block;" id="sb-picker-container">
+                      <button onclick="openScriptPicker()" type="button"
+                        style="padding: 7px 14px; font-size: 12px; font-weight: 600; color: #6d28d9; background: rgba(255,255,255,0.85); border: 1px solid #c4b5fd; border-radius: 7px; cursor: pointer;">
+                        📋 Select Script
+                      </button>
+                      <div id="sb-picker-dropdown" style="display: none; position: absolute; top: 100%; left: 0; margin-top: 6px; width: 280px; max-height: 240px; overflow-y: auto; background: #fff; border-radius: 10px; box-shadow: 0 8px 30px rgba(0,0,0,0.18); border: 1px solid #e5e7eb; z-index: 100;">
+                        <div id="sb-picker-content" style="padding: 4px 0;"></div>
+                      </div>
+                    </div>
+                  </div>
+                  <div style="display: flex; align-items: center; gap: 6px; margin-top: 10px; font-size: 12px; color: #5a6f85; line-height: 1.4;">
+                    <span>💡</span>
+                    <span>
+                      Don't have a Script?
+                      <a href="https://scriptwriter.aubreydemo.com/" target="_blank" rel="noopener noreferrer"
+                         style="color: #0176D3; font-weight: 600; text-decoration: none;">
+                        Create one in Scriptwriter →
+                      </a>
+                    </span>
+                  </div>
+                </div>
               </div>
               <div id="upload-section" class="hidden">
                 <div id="drop-zone" onclick="document.getElementById('file-input').click()"
@@ -770,38 +804,6 @@
                 <div id="file-selected" class="hidden" style="margin-top: 6px; padding: 8px 12px; background: #F0FDF4; border: 1px solid #BBF7D0; border-radius: 8px; display: flex; align-items: center; justify-content: space-between;">
                   <span id="file-selected-name" style="font-size: 13px; font-weight: 600; color: #166534;"></span>
                   <button onclick="clearFile()" class="cursor-pointer" style="font-size: 12px; color: #e5534b; background: none; border: none;">Remove</button>
-                </div>
-              </div>
-              <!-- Script Builder picker (create modal) -->
-              <div style="background: linear-gradient(135deg, #f5f0ff, #ede8ff); border-radius: 10px; padding: 14px; border: 1px dashed #c4b5fd; margin-top: 10px;">
-                <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 4px;">
-                  <span style="font-size: 16px;">📜</span>
-                  <span style="font-size: 13px; font-weight: 700; color: #032D60;">Select Script</span>
-                  <span id="sb-source-badge" style="display: none; font-size: 11px; font-weight: 600; color: #6d28d9; background: rgba(109,40,217,0.08); padding: 2px 8px; border-radius: 10px;"></span>
-                </div>
-                <p style="font-size: 12px; color: #5a6f85; margin: 0 0 10px; line-height: 1.4;">
-                  Pick a script from Script Builder to use as your demo synopsis.
-                </p>
-                <div style="display: flex; gap: 8px; flex-wrap: wrap;">
-                  <div style="position: relative; display: inline-block;" id="sb-picker-container">
-                    <button onclick="openScriptPicker()" type="button"
-                      style="padding: 7px 14px; font-size: 12px; font-weight: 600; color: #6d28d9; background: rgba(255,255,255,0.85); border: 1px solid #c4b5fd; border-radius: 7px; cursor: pointer;">
-                      📋 Select Script
-                    </button>
-                    <div id="sb-picker-dropdown" style="display: none; position: absolute; top: 100%; left: 0; margin-top: 6px; width: 280px; max-height: 240px; overflow-y: auto; background: #fff; border-radius: 10px; box-shadow: 0 8px 30px rgba(0,0,0,0.18); border: 1px solid #e5e7eb; z-index: 100;">
-                      <div id="sb-picker-content" style="padding: 4px 0;"></div>
-                    </div>
-                  </div>
-                </div>
-                <div style="display: flex; align-items: center; gap: 6px; margin-top: 10px; font-size: 12px; color: #5a6f85; line-height: 1.4;">
-                  <span>💡</span>
-                  <span>
-                    Don't have a Script?
-                    <a href="https://script-builder.aubreydemo.com/" target="_blank" rel="noopener noreferrer"
-                       style="color: #0176D3; font-weight: 600; text-decoration: none;">
-                      Create one in Script Builder →
-                    </a>
-                  </span>
                 </div>
               </div>
             </div>
@@ -2720,7 +2722,7 @@ async function openScriptPicker(suffix) {
       content.innerHTML = `
         <div style="padding: 20px; text-align: center;">
           <div style="font-size: 13px; color: #888; margin-bottom: 8px;">No scripts found</div>
-          <a href="https://script-builder.aubreydemo.com/" target="_blank" rel="noopener noreferrer"
+          <a href="https://scriptwriter.aubreydemo.com/" target="_blank" rel="noopener noreferrer"
              style="font-size: 12px; color: #0176D3; font-weight: 600; text-decoration: none;">
             Create one in Script Builder →
           </a>
@@ -2830,20 +2832,30 @@ document.addEventListener('click', function(e) {
 // --- Input Mode Toggle ---
 function switchInputMode(mode) {
   const synopsisBtn = document.getElementById('mode-synopsis');
+  const scriptBtn = document.getElementById('mode-script');
   const uploadBtn = document.getElementById('mode-upload');
   const synopsisSection = document.getElementById('synopsis-section');
+  const scriptSection = document.getElementById('script-section');
   const uploadSection = document.getElementById('upload-section');
+
+  // Reset all tabs
+  [synopsisBtn, scriptBtn, uploadBtn].forEach(btn => {
+    if (btn) { btn.style.background = 'transparent'; btn.style.color = '#666'; }
+  });
+  [synopsisSection, scriptSection, uploadSection].forEach(sec => {
+    if (sec) sec.classList.add('hidden');
+  });
+
   if (mode === 'synopsis') {
     synopsisBtn.style.background = '#0176D3'; synopsisBtn.style.color = 'white';
-    uploadBtn.style.background = 'transparent'; uploadBtn.style.color = '#666';
     synopsisSection.classList.remove('hidden');
-    uploadSection.classList.add('hidden');
     clearFile();
+  } else if (mode === 'script') {
+    scriptBtn.style.background = '#0176D3'; scriptBtn.style.color = 'white';
+    scriptSection.classList.remove('hidden');
   } else {
     uploadBtn.style.background = '#0176D3'; uploadBtn.style.color = 'white';
-    synopsisBtn.style.background = 'transparent'; synopsisBtn.style.color = '#666';
     uploadSection.classList.remove('hidden');
-    synopsisSection.classList.add('hidden');
     document.getElementById('new-synopsis').value = '';
   }
 }
