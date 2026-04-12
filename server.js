@@ -1306,6 +1306,12 @@ app.get('/api/scriptwriter/scripts', async (req, res) => {
     });
     if (!resp.ok) throw new Error(`Scriptwriter responded ${resp.status}`);
     const data = await resp.json();
+    // Log first script's keys for debugging name field
+    const scripts = data.scripts || [];
+    if (scripts.length > 0) {
+      console.log('[Scriptwriter] First script keys:', Object.keys(scripts[0]).join(', '));
+      console.log('[Scriptwriter] First script sample:', JSON.stringify(scripts[0]).substring(0, 500));
+    }
     res.json(data);
   } catch (err) {
     console.error('Scriptwriter proxy error:', err.message);

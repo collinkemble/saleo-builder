@@ -786,6 +786,10 @@
                       </a>
                     </span>
                   </div>
+                  <div id="script-selected" class="hidden" style="margin-top: 8px; padding: 8px 12px; background: #F0FDF4; border: 1px solid #BBF7D0; border-radius: 8px; display: flex; align-items: center; justify-content: space-between;">
+                    <span id="script-selected-name" style="font-size: 13px; font-weight: 600; color: #166534;"></span>
+                    <button onclick="clearSelectedScript()" class="cursor-pointer" style="font-size: 12px; color: #e5534b; background: none; border: none;">Remove</button>
+                  </div>
                 </div>
               </div>
               <div id="upload-section" class="hidden">
@@ -2732,17 +2736,22 @@ async function openScriptPicker(suffix) {
 
     content.innerHTML = `
       <div style="padding: 8px 14px; font-size: 11px; font-weight: 700; color: #888; text-transform: uppercase; letter-spacing: 0.05em;">Your Scripts</div>
-      ${items.map(item => `
-        <button onclick="selectScript(${item.id}, '${sfx}', '${(item.name || 'Untitled').replace(/'/g, "\\'")}')" style="display: flex; align-items: center; gap: 10px; width: 100%; padding: 10px 14px; border: none; background: none; cursor: pointer; font-size: 13px; color: #333; text-align: left;" onmouseenter="this.style.background='#f5f3ff'" onmouseleave="this.style.background='none'">
+      ${items.map(item => {
+        const displayName = item.script_name || item.name || 'Untitled';
+        const safeName = displayName.replace(/'/g, "\\'").replace(/"/g, '&quot;');
+        return `
+        <button onclick="selectScript(${item.id}, '${sfx}', '${safeName}')" style="display: flex; align-items: center; gap: 10px; width: 100%; padding: 10px 14px; border: none; background: none; cursor: pointer; font-size: 13px; color: #333; text-align: left;" onmouseenter="this.style.background='#f5f3ff'" onmouseleave="this.style.background='none'">
           <span style="width: 32px; height: 32px; border-radius: 8px; background: linear-gradient(135deg, #7c3aed, #a78bfa); color: #fff; display: flex; align-items: center; justify-content: center; font-size: 14px; font-weight: 700; flex-shrink: 0;">📜</span>
-          <span style="flex: 1; font-weight: 600;">${item.name || 'Untitled'}</span>
-        </button>
-      `).join('')}`;
+          <span style="flex: 1; font-weight: 600;">${displayName}</span>
+        </button>`;
+      }).join('')}`;
   } catch (err) {
     console.error('Failed to load scripts:', err);
     content.innerHTML = '<div style="padding: 20px; text-align: center; font-size: 13px; color: #e5534b;">Failed to load scripts</div>';
   }
 }
+
+let pendingScriptSynopsis = null; // Stored synopsis from selected script
 
 async function selectScript(itemId, suffix, scriptName) {
   const sfx = suffix || '';
@@ -2758,14 +2767,15 @@ async function selectScript(itemId, suffix, scriptName) {
     if (!resp.ok) throw new Error('Failed to fetch');
     const data = await resp.json();
 
-    // Extract script content — try common data shapes from Scriptwriter API
-    const script = data?.script || data?.item || {};
-    const scriptData = script?.data || script;
-    const synopsis = scriptData.synopsis || scriptData.script || scriptData.story || scriptData.summary || scriptData.content || scriptData.prompt || script.name || '';
+    // Extract synopsis from Scriptwriter API response
+    const script = data?.script || {};
+    const synopsis = script.synopsis || script.summary || script.content || '';
 
-    applyScriptToForm(synopsis, sfx);
-    pendingScriptSource = scriptName || 'Script Builder';
+    pendingScriptSynopsis = synopsis;
+    pendingScriptSource = scriptName || 'Scriptwriter';
     pendingScriptId = String(itemId);
+
+    applyScriptToForm(scriptName, synopsis, sfx);
     updateScriptSourceBadge(sfx);
 
     dropdown.style.display = 'none';
@@ -2777,21 +2787,38 @@ async function selectScript(itemId, suffix, scriptName) {
   }
 }
 
-function applyScriptToForm(synopsis, suffix) {
+function applyScriptToForm(scriptName, synopsis, suffix) {
   const sfx = suffix || '';
+
   if (sfx === '-edit') {
+    // On detail page, set the synopsis field directly
     const el = document.getElementById('edit-synopsis');
     if (el) el.value = synopsis;
+    checkSettingsChanged();
   } else {
-    const el = document.getElementById('new-synopsis');
-    if (el) el.value = synopsis;
-    // Also switch to synopsis mode if user was on upload tab
-    switchInputMode('synopsis');
+    // On create modal, show as a "selected file" badge (like uploaded scripts)
+    const selectedEl = document.getElementById('script-selected');
+    const nameEl = document.getElementById('script-selected-name');
+    if (selectedEl && nameEl) {
+      nameEl.textContent = '📜 ' + (scriptName || 'Selected Script');
+      selectedEl.classList.remove('hidden');
+    }
   }
 
   showScriptSuccess(sfx);
-  showToast('Script applied — synopsis updated');
-  if (sfx === '-edit') checkSettingsChanged();
+  showToast('Script applied');
+}
+
+function clearSelectedScript() {
+  pendingScriptSynopsis = null;
+  pendingScriptSource = null;
+  pendingScriptId = null;
+  const selectedEl = document.getElementById('script-selected');
+  if (selectedEl) selectedEl.classList.add('hidden');
+  const badge = document.querySelector('#sb-picker-container .sb-success-badge');
+  if (badge) badge.style.display = 'none';
+  const srcBadge = document.getElementById('sb-source-badge');
+  if (srcBadge) srcBadge.style.display = 'none';
 }
 
 function showScriptSuccess(suffix) {
@@ -2912,10 +2939,13 @@ function openNewItemDialog() {
   // Reset script state
   pendingScriptSource = null;
   pendingScriptId = null;
+  pendingScriptSynopsis = null;
   const sbBadge = document.querySelector('#sb-picker-container .sb-success-badge');
   if (sbBadge) sbBadge.style.display = 'none';
   const sbSourceBadge = document.getElementById('sb-source-badge');
   if (sbSourceBadge) sbSourceBadge.style.display = 'none';
+  const scriptSelected = document.getElementById('script-selected');
+  if (scriptSelected) scriptSelected.classList.add('hidden');
   clearValidationErrors();
   clearFile();
   switchInputMode('synopsis');
@@ -2987,11 +3017,16 @@ async function generateFromPrompt() {
   }
 
   try {
-    let synopsisText = synopsis;
+    let synopsisText = synopsis || pendingScriptSynopsis || '';
     let sourceFilename = null;
 
     document.getElementById('generate-btn').disabled = true;
     document.getElementById('generate-btn').style.opacity = '0.6';
+
+    // If a script was selected from Scriptwriter, use its synopsis
+    if (pendingScriptSynopsis && !synopsis) {
+      sourceFilename = pendingScriptSource || 'Scriptwriter';
+    }
 
     // If a file was uploaded, extract synopsis from it
     if (hasFile) {
