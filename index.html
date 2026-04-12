@@ -384,11 +384,7 @@
               <p id="edit-industry-hint" style="margin-top: 6px; font-size: 11px; color: #888; font-style: italic;">This industry isn't officially supported yet, but the AI will do its best.</p>
             </div>
           </div>
-          <div>
-            <label class="block text-xs font-bold mb-1" style="color: #032D60;">Demo Story Synopsis</label>
-            <input id="edit-synopsis" type="text" placeholder="e.g. A loyalty program demo for a returning customer" class="w-full px-3 py-2 rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none text-sm">
-          </div>
-          <!-- Script Builder picker (detail page) -->
+          <!-- Script Builder picker (detail page) — above Synopsis -->
           <div style="grid-column: 1 / -1;">
             <div style="background: linear-gradient(135deg, #f5f0ff, #ede8ff); border-radius: 10px; padding: 14px; border: 1px dashed #c4b5fd;">
               <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 4px;">
@@ -397,9 +393,9 @@
                 <span id="sb-source-badge-edit" style="display: none; font-size: 11px; font-weight: 600; color: #6d28d9; background: rgba(109,40,217,0.08); padding: 2px 8px; border-radius: 10px;"></span>
               </div>
               <p style="font-size: 12px; color: #5a6f85; margin: 0 0 10px; line-height: 1.4;">
-                Select a script from Script Builder to update your demo synopsis.
+                Select a script from Scriptwriter to update your demo synopsis.
               </p>
-              <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+              <div style="display: flex; gap: 8px; flex-wrap: wrap; align-items: center;">
                 <div style="position: relative; display: inline-block;" id="sb-picker-container-edit">
                   <button onclick="openScriptPicker('-edit')" type="button"
                     style="padding: 7px 14px; font-size: 12px; font-weight: 600; color: #6d28d9; background: rgba(255,255,255,0.85); border: 1px solid #c4b5fd; border-radius: 7px; cursor: pointer;">
@@ -409,6 +405,10 @@
                     <div id="sb-picker-content-edit" style="padding: 4px 0;"></div>
                   </div>
                 </div>
+                <a id="sb-open-link-edit" href="#" target="_blank" rel="noopener noreferrer"
+                   style="display: none; padding: 7px 14px; font-size: 12px; font-weight: 600; color: #0176D3; background: rgba(255,255,255,0.85); border: 1px solid #b0d4f1; border-radius: 7px; text-decoration: none; cursor: pointer;">
+                  ↗ Open in Scriptwriter
+                </a>
               </div>
               <div style="display: flex; align-items: center; gap: 6px; margin-top: 10px; font-size: 12px; color: #5a6f85; line-height: 1.4;">
                 <span>💡</span>
@@ -416,11 +416,15 @@
                   Don't have a Script?
                   <a href="https://scriptwriter.aubreydemo.com/" target="_blank" rel="noopener noreferrer"
                      style="color: #0176D3; font-weight: 600; text-decoration: none;">
-                    Create one in Script Builder →
+                    Create one in Scriptwriter →
                   </a>
                 </span>
               </div>
             </div>
+          </div>
+          <div>
+            <label class="block text-xs font-bold mb-1" style="color: #032D60;">Demo Story Synopsis</label>
+            <input id="edit-synopsis" type="text" placeholder="e.g. A loyalty program demo for a returning customer" class="w-full px-3 py-2 rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none text-sm">
           </div>
           <!-- Brand Colors -->
           <div style="grid-column: 1 / -1;">
@@ -2181,6 +2185,16 @@ function renderDetail(item) {
   if (meta.script_source) {
     updateScriptSourceBadge('-edit');
   }
+  // Show "Open in Scriptwriter" link if a script is attached
+  const sbOpenLink = document.getElementById('sb-open-link-edit');
+  if (sbOpenLink) {
+    if (meta.script_id) {
+      sbOpenLink.href = 'https://scriptwriter.aubreydemo.com/scripts/' + meta.script_id;
+      sbOpenLink.style.display = 'inline-flex';
+    } else {
+      sbOpenLink.style.display = 'none';
+    }
+  }
 
   // Store original values for change detection
   window._origSettings = {
@@ -2777,6 +2791,15 @@ async function selectScript(itemId, suffix, scriptName) {
 
     applyScriptToForm(scriptName, synopsis, sfx);
     updateScriptSourceBadge(sfx);
+
+    // Show "Open in Scriptwriter" link on detail page
+    if (sfx === '-edit') {
+      const sbOpenLink = document.getElementById('sb-open-link-edit');
+      if (sbOpenLink) {
+        sbOpenLink.href = 'https://scriptwriter.aubreydemo.com/scripts/' + itemId;
+        sbOpenLink.style.display = 'inline-flex';
+      }
+    }
 
     dropdown.style.display = 'none';
     sbPickerOpen = false;
