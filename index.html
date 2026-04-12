@@ -310,6 +310,9 @@
           <div class="flex items-center gap-2 flex-wrap">
             <span id="detail-badge-type" style="font-size: 11px; font-weight: 700; padding: 3px 10px; border-radius: 999px; background: #E8F4FD; color: #0176D3; text-transform: uppercase; letter-spacing: 0.03em;"></span>
             <span id="detail-badge-source" style="font-size: 11px; font-weight: 700; padding: 3px 10px; border-radius: 999px; background: #F3F0FF; color: #7C3AED; text-transform: uppercase; letter-spacing: 0.03em;"></span>
+            <a id="detail-script-link" href="#" target="_blank" rel="noopener noreferrer"
+               style="display: none; font-size: 11px; font-weight: 700; padding: 3px 10px; border-radius: 999px; background: #f5f0ff; color: #6d28d9; text-decoration: none; letter-spacing: 0.03em; cursor: pointer;">
+            </a>
             <span id="detail-summary" style="font-size: 13px; color: #888; margin-left: 4px;"></span>
           </div>
         </div>
@@ -405,11 +408,6 @@
                     <div id="sb-picker-content-edit" style="padding: 4px 0;"></div>
                   </div>
                 </div>
-                <a id="sb-open-link-edit" href="about:blank" target="_blank" rel="noopener noreferrer"
-                   onclick="if(this.dataset.url){window.open(this.dataset.url,'_blank');return false;}"
-                   style="display: none; padding: 7px 14px; font-size: 12px; font-weight: 600; color: #0176D3; background: rgba(255,255,255,0.85); border: 1px solid #b0d4f1; border-radius: 7px; text-decoration: none; cursor: pointer;">
-                  ↗ Open in Scriptwriter
-                </a>
               </div>
               <div style="display: flex; align-items: center; gap: 6px; margin-top: 10px; font-size: 12px; color: #5a6f85; line-height: 1.4;">
                 <span>💡</span>
@@ -2186,16 +2184,15 @@ function renderDetail(item) {
   if (meta.script_source) {
     updateScriptSourceBadge('-edit');
   }
-  // Show "Open in Scriptwriter" link if a script is attached
-  const sbOpenLink = document.getElementById('sb-open-link-edit');
-  if (sbOpenLink) {
+  // Show script link in header if a script is attached
+  const detailScriptLink = document.getElementById('detail-script-link');
+  if (detailScriptLink) {
     if (meta.script_id) {
-      const scriptUrl = 'https://scriptwriter.aubreydemo.com/scripts/' + meta.script_id;
-      sbOpenLink.href = scriptUrl;
-      sbOpenLink.dataset.url = scriptUrl;
-      sbOpenLink.style.display = 'inline-flex';
+      detailScriptLink.href = 'https://scriptwriter.aubreydemo.com/scripts/' + meta.script_id;
+      detailScriptLink.textContent = (meta.script_source || 'Script') + ' ↗';
+      detailScriptLink.style.display = 'inline-block';
     } else {
-      sbOpenLink.style.display = 'none';
+      detailScriptLink.style.display = 'none';
     }
   }
 
@@ -2795,14 +2792,13 @@ async function selectScript(itemId, suffix, scriptName) {
     applyScriptToForm(scriptName, synopsis, sfx);
     updateScriptSourceBadge(sfx);
 
-    // Show "Open in Scriptwriter" link on detail page
+    // Update header script link on detail page
     if (sfx === '-edit') {
-      const sbOpenLink = document.getElementById('sb-open-link-edit');
-      if (sbOpenLink) {
-        const scriptUrl = 'https://scriptwriter.aubreydemo.com/scripts/' + itemId;
-        sbOpenLink.href = scriptUrl;
-        sbOpenLink.dataset.url = scriptUrl;
-        sbOpenLink.style.display = 'inline-flex';
+      const detailScriptLink = document.getElementById('detail-script-link');
+      if (detailScriptLink) {
+        detailScriptLink.href = 'https://scriptwriter.aubreydemo.com/scripts/' + itemId;
+        detailScriptLink.textContent = (scriptName || 'Script') + ' ↗';
+        detailScriptLink.style.display = 'inline-block';
       }
     }
 
