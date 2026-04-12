@@ -310,9 +310,6 @@
           <div class="flex items-center gap-2 flex-wrap">
             <span id="detail-badge-type" style="font-size: 11px; font-weight: 700; padding: 3px 10px; border-radius: 999px; background: #E8F4FD; color: #0176D3; text-transform: uppercase; letter-spacing: 0.03em;"></span>
             <span id="detail-badge-source" style="font-size: 11px; font-weight: 700; padding: 3px 10px; border-radius: 999px; background: #F3F0FF; color: #7C3AED; text-transform: uppercase; letter-spacing: 0.03em;"></span>
-            <span id="detail-script-link" onclick="window.open(this.dataset.url, '_blank')"
-               style="display: none; font-size: 11px; font-weight: 700; padding: 3px 10px; border-radius: 999px; background: #f5f0ff; color: #6d28d9; text-decoration: none; letter-spacing: 0.03em; cursor: pointer;">
-            </span>
             <span id="detail-summary" style="font-size: 13px; color: #888; margin-left: 4px;"></span>
           </div>
         </div>
@@ -2184,17 +2181,6 @@ function renderDetail(item) {
   if (meta.script_source) {
     updateScriptSourceBadge('-edit');
   }
-  // Show script link in header if a script is attached
-  const detailScriptLink = document.getElementById('detail-script-link');
-  if (detailScriptLink) {
-    if (meta.script_id) {
-      detailScriptLink.dataset.url = 'https://scriptwriter.aubreydemo.com/scripts/' + meta.script_id;
-      detailScriptLink.textContent = (meta.script_source || 'Script') + ' ↗';
-      detailScriptLink.style.display = 'inline-block';
-    } else {
-      detailScriptLink.style.display = 'none';
-    }
-  }
 
   // Store original values for change detection
   window._origSettings = {
@@ -2792,16 +2778,6 @@ async function selectScript(itemId, suffix, scriptName) {
     applyScriptToForm(scriptName, synopsis, sfx);
     updateScriptSourceBadge(sfx);
 
-    // Update header script link on detail page
-    if (sfx === '-edit') {
-      const detailScriptLink = document.getElementById('detail-script-link');
-      if (detailScriptLink) {
-        detailScriptLink.dataset.url = 'https://scriptwriter.aubreydemo.com/scripts/' + itemId;
-        detailScriptLink.textContent = (scriptName || 'Script') + ' ↗';
-        detailScriptLink.style.display = 'inline-block';
-      }
-    }
-
     dropdown.style.display = 'none';
     sbPickerOpen = false;
   } catch (err) {
@@ -2866,7 +2842,13 @@ function updateScriptSourceBadge(suffix) {
   if (!badge) return;
   const source = pendingScriptSource || (currentItemData && currentItemData.metadata && currentItemData.metadata.script_source);
   if (source) {
-    badge.textContent = '✓ ' + source;
+    const scriptId = pendingScriptId || (currentItemData && currentItemData.metadata && currentItemData.metadata.script_id);
+    if (scriptId) {
+      const scriptUrl = `https://scriptwriter.aubreydemo.com/scripts/${esc(String(scriptId))}`;
+      badge.innerHTML = `<a href="${scriptUrl}" target="_blank" rel="noopener noreferrer" style="color: #6d28d9; text-decoration: none;" onmouseenter="this.style.textDecoration='underline'" onmouseleave="this.style.textDecoration='none'">✓ ${esc(source)} ↗</a>`;
+    } else {
+      badge.textContent = '✓ ' + source;
+    }
     badge.style.display = 'inline';
   } else {
     badge.style.display = 'none';
