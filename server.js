@@ -1294,7 +1294,7 @@ const SCRIPT_API_URL = 'https://script-builder.aubreydemo.com/api';
 
 // GET /api/script-builder/items?email=<user-email> — List scripts for a user
 app.get('/api/script-builder/items', async (req, res) => {
-  const apiKey = process.env.SCRIPT_BUILDER_API_KEY;
+  const apiKey = process.env.SCRIPTWRITER_API_KEY;
   if (!apiKey) return res.status(500).json({ error: 'Script Builder not configured' });
 
   const email = req.query.email;
@@ -1315,7 +1315,7 @@ app.get('/api/script-builder/items', async (req, res) => {
 
 // GET /api/script-builder/items/:id?email=<user-email> — Get full script data
 app.get('/api/script-builder/items/:id', async (req, res) => {
-  const apiKey = process.env.SCRIPT_BUILDER_API_KEY;
+  const apiKey = process.env.SCRIPTWRITER_API_KEY;
   if (!apiKey) return res.status(500).json({ error: 'Script Builder not configured' });
 
   const email = req.query.email;
