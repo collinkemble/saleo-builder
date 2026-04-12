@@ -388,6 +388,40 @@
             <label class="block text-xs font-bold mb-1" style="color: #032D60;">Demo Story Synopsis</label>
             <input id="edit-synopsis" type="text" placeholder="e.g. A loyalty program demo for a returning customer" class="w-full px-3 py-2 rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none text-sm">
           </div>
+          <!-- Script Builder picker (detail page) -->
+          <div style="grid-column: 1 / -1;">
+            <div style="background: linear-gradient(135deg, #f5f0ff, #ede8ff); border-radius: 10px; padding: 14px; border: 1px dashed #c4b5fd;">
+              <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 4px;">
+                <span style="font-size: 16px;">📜</span>
+                <span style="font-size: 13px; font-weight: 700; color: #032D60;">Script</span>
+                <span id="sb-source-badge-edit" style="display: none; font-size: 11px; font-weight: 600; color: #6d28d9; background: rgba(109,40,217,0.08); padding: 2px 8px; border-radius: 10px;"></span>
+              </div>
+              <p style="font-size: 12px; color: #5a6f85; margin: 0 0 10px; line-height: 1.4;">
+                Select a script from Script Builder to update your demo synopsis.
+              </p>
+              <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+                <div style="position: relative; display: inline-block;" id="sb-picker-container-edit">
+                  <button onclick="openScriptPicker('-edit')" type="button"
+                    style="padding: 7px 14px; font-size: 12px; font-weight: 600; color: #6d28d9; background: rgba(255,255,255,0.85); border: 1px solid #c4b5fd; border-radius: 7px; cursor: pointer;">
+                    📋 Select Script
+                  </button>
+                  <div id="sb-picker-dropdown-edit" style="display: none; position: absolute; top: 100%; left: 0; margin-top: 6px; width: 280px; max-height: 240px; overflow-y: auto; background: #fff; border-radius: 10px; box-shadow: 0 8px 30px rgba(0,0,0,0.18); border: 1px solid #e5e7eb; z-index: 100;">
+                    <div id="sb-picker-content-edit" style="padding: 4px 0;"></div>
+                  </div>
+                </div>
+              </div>
+              <div style="display: flex; align-items: center; gap: 6px; margin-top: 10px; font-size: 12px; color: #5a6f85; line-height: 1.4;">
+                <span>💡</span>
+                <span>
+                  Don't have a Script?
+                  <a href="https://script-builder.aubreydemo.com/" target="_blank" rel="noopener noreferrer"
+                     style="color: #0176D3; font-weight: 600; text-decoration: none;">
+                    Create one in Script Builder →
+                  </a>
+                </span>
+              </div>
+            </div>
+          </div>
           <!-- Brand Colors -->
           <div style="grid-column: 1 / -1;">
             <label class="block text-xs font-bold mb-1" style="color: #032D60;">Brand Colors</label>
@@ -736,6 +770,38 @@
                 <div id="file-selected" class="hidden" style="margin-top: 6px; padding: 8px 12px; background: #F0FDF4; border: 1px solid #BBF7D0; border-radius: 8px; display: flex; align-items: center; justify-content: space-between;">
                   <span id="file-selected-name" style="font-size: 13px; font-weight: 600; color: #166534;"></span>
                   <button onclick="clearFile()" class="cursor-pointer" style="font-size: 12px; color: #e5534b; background: none; border: none;">Remove</button>
+                </div>
+              </div>
+              <!-- Script Builder picker (create modal) -->
+              <div style="background: linear-gradient(135deg, #f5f0ff, #ede8ff); border-radius: 10px; padding: 14px; border: 1px dashed #c4b5fd; margin-top: 10px;">
+                <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 4px;">
+                  <span style="font-size: 16px;">📜</span>
+                  <span style="font-size: 13px; font-weight: 700; color: #032D60;">Select Script</span>
+                  <span id="sb-source-badge" style="display: none; font-size: 11px; font-weight: 600; color: #6d28d9; background: rgba(109,40,217,0.08); padding: 2px 8px; border-radius: 10px;"></span>
+                </div>
+                <p style="font-size: 12px; color: #5a6f85; margin: 0 0 10px; line-height: 1.4;">
+                  Pick a script from Script Builder to use as your demo synopsis.
+                </p>
+                <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+                  <div style="position: relative; display: inline-block;" id="sb-picker-container">
+                    <button onclick="openScriptPicker()" type="button"
+                      style="padding: 7px 14px; font-size: 12px; font-weight: 600; color: #6d28d9; background: rgba(255,255,255,0.85); border: 1px solid #c4b5fd; border-radius: 7px; cursor: pointer;">
+                      📋 Select Script
+                    </button>
+                    <div id="sb-picker-dropdown" style="display: none; position: absolute; top: 100%; left: 0; margin-top: 6px; width: 280px; max-height: 240px; overflow-y: auto; background: #fff; border-radius: 10px; box-shadow: 0 8px 30px rgba(0,0,0,0.18); border: 1px solid #e5e7eb; z-index: 100;">
+                      <div id="sb-picker-content" style="padding: 4px 0;"></div>
+                    </div>
+                  </div>
+                </div>
+                <div style="display: flex; align-items: center; gap: 6px; margin-top: 10px; font-size: 12px; color: #5a6f85; line-height: 1.4;">
+                  <span>💡</span>
+                  <span>
+                    Don't have a Script?
+                    <a href="https://script-builder.aubreydemo.com/" target="_blank" rel="noopener noreferrer"
+                       style="color: #0176D3; font-weight: 600; text-decoration: none;">
+                      Create one in Script Builder →
+                    </a>
+                  </span>
                 </div>
               </div>
             </div>
@@ -2099,6 +2165,17 @@ function renderDetail(item) {
     updateBrandKitSourceBadge('-edit');
   }
 
+  // Restore script source badge
+  pendingScriptSource = null;
+  pendingScriptId = null;
+  const sbBadgeEdit = document.getElementById('sb-source-badge-edit');
+  if (sbBadgeEdit) sbBadgeEdit.style.display = 'none';
+  const sbSuccessEdit = document.querySelector('#sb-picker-container-edit .sb-success-badge');
+  if (sbSuccessEdit) sbSuccessEdit.style.display = 'none';
+  if (meta.script_source) {
+    updateScriptSourceBadge('-edit');
+  }
+
   // Store original values for change detection
   window._origSettings = {
     brand: meta.brand || '',
@@ -2239,6 +2316,8 @@ async function saveViewSettings() {
     currentItemData.metadata.visual_style = visualStyle || null;
     currentItemData.metadata.brand_kit_source = pendingBrandKitSource || currentItemData.metadata.brand_kit_source || null;
     currentItemData.metadata.brand_kit_id = pendingBrandKitId || currentItemData.metadata.brand_kit_id || null;
+    currentItemData.metadata.script_source = pendingScriptSource || currentItemData.metadata.script_source || null;
+    currentItemData.metadata.script_id = pendingScriptId || currentItemData.metadata.script_id || null;
 
     const email = document.getElementById('user-email').textContent;
     const resp = await fetch(`/api/items/${currentItemId}`, {
@@ -2605,6 +2684,149 @@ document.addEventListener('click', function(e) {
   }
 });
 
+// ═══════════════════════════════════════════════
+// Script Builder — Picker Integration
+// ═══════════════════════════════════════════════
+
+let sbPickerOpen = false;
+let pendingScriptSource = null;
+let pendingScriptId = null;
+
+async function openScriptPicker(suffix) {
+  const sfx = suffix || '';
+  const dropdown = document.getElementById('sb-picker-dropdown' + sfx);
+  const content = document.getElementById('sb-picker-content' + sfx);
+
+  if (sbPickerOpen) {
+    dropdown.style.display = 'none';
+    sbPickerOpen = false;
+    return;
+  }
+
+  const email = document.getElementById('user-email').textContent;
+  if (!email) { alert('Unable to load scripts — not logged in.'); return; }
+
+  dropdown.style.display = 'block';
+  sbPickerOpen = true;
+  content.innerHTML = '<div style="padding: 20px; text-align: center; font-size: 13px; color: #888;">⏳ Loading scripts...</div>';
+
+  try {
+    const resp = await fetch('/api/script-builder/items?email=' + encodeURIComponent(email));
+    if (!resp.ok) throw new Error('Failed to load');
+    const data = await resp.json();
+    const items = data.items || [];
+
+    if (items.length === 0) {
+      content.innerHTML = `
+        <div style="padding: 20px; text-align: center;">
+          <div style="font-size: 13px; color: #888; margin-bottom: 8px;">No scripts found</div>
+          <a href="https://script-builder.aubreydemo.com/" target="_blank" rel="noopener noreferrer"
+             style="font-size: 12px; color: #0176D3; font-weight: 600; text-decoration: none;">
+            Create one in Script Builder →
+          </a>
+        </div>`;
+      return;
+    }
+
+    content.innerHTML = `
+      <div style="padding: 8px 14px; font-size: 11px; font-weight: 700; color: #888; text-transform: uppercase; letter-spacing: 0.05em;">Your Scripts</div>
+      ${items.map(item => `
+        <button onclick="selectScript(${item.id}, '${sfx}', '${(item.name || 'Untitled').replace(/'/g, "\\'")}')" style="display: flex; align-items: center; gap: 10px; width: 100%; padding: 10px 14px; border: none; background: none; cursor: pointer; font-size: 13px; color: #333; text-align: left;" onmouseenter="this.style.background='#f5f3ff'" onmouseleave="this.style.background='none'">
+          <span style="width: 32px; height: 32px; border-radius: 8px; background: linear-gradient(135deg, #7c3aed, #a78bfa); color: #fff; display: flex; align-items: center; justify-content: center; font-size: 14px; font-weight: 700; flex-shrink: 0;">📜</span>
+          <span style="flex: 1; font-weight: 600;">${item.name || 'Untitled'}</span>
+        </button>
+      `).join('')}`;
+  } catch (err) {
+    console.error('Failed to load scripts:', err);
+    content.innerHTML = '<div style="padding: 20px; text-align: center; font-size: 13px; color: #e5534b;">Failed to load scripts</div>';
+  }
+}
+
+async function selectScript(itemId, suffix, scriptName) {
+  const sfx = suffix || '';
+  const email = document.getElementById('user-email').textContent;
+  if (!email) return;
+
+  const dropdown = document.getElementById('sb-picker-dropdown' + sfx);
+  const content = document.getElementById('sb-picker-content' + sfx);
+  content.innerHTML = '<div style="padding: 20px; text-align: center; font-size: 13px; color: #888;">⏳ Applying script...</div>';
+
+  try {
+    const resp = await fetch('/api/script-builder/items/' + itemId + '?email=' + encodeURIComponent(email));
+    if (!resp.ok) throw new Error('Failed to fetch');
+    const data = await resp.json();
+
+    // Extract script content — try common data shapes
+    const itemData = data?.item?.data || {};
+    const synopsis = itemData.synopsis || itemData.script || itemData.story || itemData.summary || itemData.content || '';
+
+    applyScriptToForm(synopsis, sfx);
+    pendingScriptSource = scriptName || 'Script Builder';
+    pendingScriptId = String(itemId);
+    updateScriptSourceBadge(sfx);
+
+    dropdown.style.display = 'none';
+    sbPickerOpen = false;
+  } catch (err) {
+    console.error('Failed to apply script:', err);
+    content.innerHTML = '<div style="padding: 20px; text-align: center; font-size: 13px; color: #e5534b;">Failed to apply script</div>';
+    setTimeout(() => { dropdown.style.display = 'none'; sbPickerOpen = false; }, 1500);
+  }
+}
+
+function applyScriptToForm(synopsis, suffix) {
+  const sfx = suffix || '';
+  if (sfx === '-edit') {
+    const el = document.getElementById('edit-synopsis');
+    if (el) el.value = synopsis;
+  } else {
+    const el = document.getElementById('new-synopsis');
+    if (el) el.value = synopsis;
+    // Also switch to synopsis mode if user was on upload tab
+    switchInputMode('synopsis');
+  }
+
+  showScriptSuccess(sfx);
+  showToast('Script applied — synopsis updated');
+  if (sfx === '-edit') checkSettingsChanged();
+}
+
+function showScriptSuccess(suffix) {
+  const sfx = suffix || '';
+  const container = document.getElementById('sb-picker-container' + sfx);
+  if (!container) return;
+  let badge = container.querySelector('.sb-success-badge');
+  if (!badge) {
+    badge = document.createElement('div');
+    badge.className = 'sb-success-badge';
+    badge.style.cssText = 'display: inline-flex; align-items: center; gap: 6px; padding: 4px 10px; border-radius: 6px; background: #E8F5E9; color: #2E7D32; font-size: 11px; font-weight: 600; margin-top: 8px;';
+    container.appendChild(badge);
+  }
+  badge.textContent = '✓ Script applied — synopsis updated';
+  badge.style.display = 'inline-flex';
+}
+
+function updateScriptSourceBadge(suffix) {
+  const sfx = suffix || '';
+  const badge = document.getElementById('sb-source-badge' + sfx);
+  if (!badge) return;
+  const source = pendingScriptSource || (currentItemData && currentItemData.metadata && currentItemData.metadata.script_source);
+  if (source) {
+    badge.textContent = '✓ ' + source;
+    badge.style.display = 'inline';
+  } else {
+    badge.style.display = 'none';
+  }
+}
+
+// Close Script picker when clicking outside
+document.addEventListener('click', function(e) {
+  if (sbPickerOpen && !e.target.closest('[id^="sb-picker-container"]')) {
+    document.querySelectorAll('[id^="sb-picker-dropdown"]').forEach(el => el.style.display = 'none');
+    sbPickerOpen = false;
+  }
+});
+
 // --- Input Mode Toggle ---
 function switchInputMode(mode) {
   const synopsisBtn = document.getElementById('mode-synopsis');
@@ -2674,6 +2896,13 @@ function openNewItemDialog() {
   if (bkBadge) bkBadge.style.display = 'none';
   const bkSourceBadge = document.getElementById('bk-source-badge');
   if (bkSourceBadge) bkSourceBadge.style.display = 'none';
+  // Reset script state
+  pendingScriptSource = null;
+  pendingScriptId = null;
+  const sbBadge = document.querySelector('#sb-picker-container .sb-success-badge');
+  if (sbBadge) sbBadge.style.display = 'none';
+  const sbSourceBadge = document.getElementById('sb-source-badge');
+  if (sbSourceBadge) sbSourceBadge.style.display = 'none';
   clearValidationErrors();
   clearFile();
   switchInputMode('synopsis');
@@ -2782,7 +3011,7 @@ async function generateFromPrompt() {
       prompt: prompt,
       summary: `Saleo demo for ${brand}`,
       source_type: hasFile ? 'upload' : 'prompt',
-      metadata: { industry: industry, brand: brand, brand_desc: brandDesc || null, brand_url: brandUrl || null, synopsis: synopsisText || null, source_filename: sourceFilename, color_primary: document.getElementById('new-color-primary-text').value || '#032D60', color_secondary: document.getElementById('new-color-secondary-text').value || '#0176D3', tone: document.getElementById('new-tone').value.trim() || null, visual_style: document.getElementById('new-visual-style').value.trim() || null, brand_kit_source: pendingBrandKitSource || null, brand_kit_id: pendingBrandKitId || null }
+      metadata: { industry: industry, brand: brand, brand_desc: brandDesc || null, brand_url: brandUrl || null, synopsis: synopsisText || null, source_filename: sourceFilename, color_primary: document.getElementById('new-color-primary-text').value || '#032D60', color_secondary: document.getElementById('new-color-secondary-text').value || '#0176D3', tone: document.getElementById('new-tone').value.trim() || null, visual_style: document.getElementById('new-visual-style').value.trim() || null, brand_kit_source: pendingBrandKitSource || null, brand_kit_id: pendingBrandKitId || null, script_source: pendingScriptSource || null, script_id: pendingScriptId || null }
     };
 
     const saveResp = await fetch('/api/items', {

@@ -1286,6 +1286,54 @@ app.get('/api/brandkit-builder/items/:id', async (req, res) => {
   }
 });
 
+// ═══════════════════════════════════════════════
+// Script Builder Proxy
+// ═══════════════════════════════════════════════
+
+const SCRIPT_API_URL = 'https://script-builder.aubreydemo.com/api';
+
+// GET /api/script-builder/items?email=<user-email> — List scripts for a user
+app.get('/api/script-builder/items', async (req, res) => {
+  const apiKey = process.env.SCRIPT_BUILDER_API_KEY;
+  if (!apiKey) return res.status(500).json({ error: 'Script Builder not configured' });
+
+  const email = req.query.email;
+  if (!email) return res.status(400).json({ error: 'email query parameter required' });
+
+  try {
+    const resp = await fetch(`${SCRIPT_API_URL}/items?email=${encodeURIComponent(email)}`, {
+      headers: { 'x-api-key': apiKey },
+    });
+    if (!resp.ok) throw new Error(`Script Builder responded ${resp.status}`);
+    const data = await resp.json();
+    res.json(data);
+  } catch (err) {
+    console.error('Script Builder proxy error:', err.message);
+    res.status(502).json({ error: 'Failed to fetch scripts' });
+  }
+});
+
+// GET /api/script-builder/items/:id?email=<user-email> — Get full script data
+app.get('/api/script-builder/items/:id', async (req, res) => {
+  const apiKey = process.env.SCRIPT_BUILDER_API_KEY;
+  if (!apiKey) return res.status(500).json({ error: 'Script Builder not configured' });
+
+  const email = req.query.email;
+  if (!email) return res.status(400).json({ error: 'email query parameter required' });
+
+  try {
+    const resp = await fetch(`${SCRIPT_API_URL}/items/${req.params.id}?email=${encodeURIComponent(email)}`, {
+      headers: { 'x-api-key': apiKey },
+    });
+    if (!resp.ok) throw new Error(`Script Builder responded ${resp.status}`);
+    const data = await resp.json();
+    res.json(data);
+  } catch (err) {
+    console.error('Script Builder proxy error:', err.message);
+    res.status(502).json({ error: 'Failed to fetch script' });
+  }
+});
+
 // SPA catch-all — serve index.html for any non-API route (enables /views/:id deep links)
 app.get('/{*splat}', (req, res) => {
   res.sendFile(path.join(__dirname, 'index.html'));
