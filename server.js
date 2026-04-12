@@ -1292,44 +1292,44 @@ app.get('/api/brandkit-builder/items/:id', async (req, res) => {
 
 const SCRIPT_API_URL = 'https://scriptwriter.aubreydemo.com/api';
 
-// GET /api/script-builder/items?email=<user-email> — List scripts for a user
-app.get('/api/script-builder/items', async (req, res) => {
+// GET /api/scriptwriter/scripts?email=<user-email> — List scripts for a user
+app.get('/api/scriptwriter/scripts', async (req, res) => {
   const apiKey = process.env.SCRIPTWRITER_API_KEY;
-  if (!apiKey) return res.status(500).json({ error: 'Script Builder not configured' });
+  if (!apiKey) return res.status(500).json({ error: 'Scriptwriter not configured' });
 
   const email = req.query.email;
   if (!email) return res.status(400).json({ error: 'email query parameter required' });
 
   try {
-    const resp = await fetch(`${SCRIPT_API_URL}/items?email=${encodeURIComponent(email)}`, {
+    const resp = await fetch(`${SCRIPT_API_URL}/scripts?email=${encodeURIComponent(email)}`, {
       headers: { 'x-api-key': apiKey },
     });
-    if (!resp.ok) throw new Error(`Script Builder responded ${resp.status}`);
+    if (!resp.ok) throw new Error(`Scriptwriter responded ${resp.status}`);
     const data = await resp.json();
     res.json(data);
   } catch (err) {
-    console.error('Script Builder proxy error:', err.message);
+    console.error('Scriptwriter proxy error:', err.message);
     res.status(502).json({ error: 'Failed to fetch scripts' });
   }
 });
 
-// GET /api/script-builder/items/:id?email=<user-email> — Get full script data
-app.get('/api/script-builder/items/:id', async (req, res) => {
+// GET /api/scriptwriter/scripts/:id?email=<user-email> — Get full script data
+app.get('/api/scriptwriter/scripts/:id', async (req, res) => {
   const apiKey = process.env.SCRIPTWRITER_API_KEY;
-  if (!apiKey) return res.status(500).json({ error: 'Script Builder not configured' });
+  if (!apiKey) return res.status(500).json({ error: 'Scriptwriter not configured' });
 
   const email = req.query.email;
   if (!email) return res.status(400).json({ error: 'email query parameter required' });
 
   try {
-    const resp = await fetch(`${SCRIPT_API_URL}/items/${req.params.id}?email=${encodeURIComponent(email)}`, {
+    const resp = await fetch(`${SCRIPT_API_URL}/scripts/${req.params.id}?email=${encodeURIComponent(email)}`, {
       headers: { 'x-api-key': apiKey },
     });
-    if (!resp.ok) throw new Error(`Script Builder responded ${resp.status}`);
+    if (!resp.ok) throw new Error(`Scriptwriter responded ${resp.status}`);
     const data = await resp.json();
     res.json(data);
   } catch (err) {
-    console.error('Script Builder proxy error:', err.message);
+    console.error('Scriptwriter proxy error:', err.message);
     res.status(502).json({ error: 'Failed to fetch script' });
   }
 });

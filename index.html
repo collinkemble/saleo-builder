@@ -2713,10 +2713,10 @@ async function openScriptPicker(suffix) {
   content.innerHTML = '<div style="padding: 20px; text-align: center; font-size: 13px; color: #888;">⏳ Loading scripts...</div>';
 
   try {
-    const resp = await fetch('/api/script-builder/items?email=' + encodeURIComponent(email));
+    const resp = await fetch('/api/scriptwriter/scripts?email=' + encodeURIComponent(email));
     if (!resp.ok) throw new Error('Failed to load');
     const data = await resp.json();
-    const items = data.items || [];
+    const items = data.scripts || data.items || [];
 
     if (items.length === 0) {
       content.innerHTML = `
@@ -2754,13 +2754,14 @@ async function selectScript(itemId, suffix, scriptName) {
   content.innerHTML = '<div style="padding: 20px; text-align: center; font-size: 13px; color: #888;">⏳ Applying script...</div>';
 
   try {
-    const resp = await fetch('/api/script-builder/items/' + itemId + '?email=' + encodeURIComponent(email));
+    const resp = await fetch('/api/scriptwriter/scripts/' + itemId + '?email=' + encodeURIComponent(email));
     if (!resp.ok) throw new Error('Failed to fetch');
     const data = await resp.json();
 
-    // Extract script content — try common data shapes
-    const itemData = data?.item?.data || {};
-    const synopsis = itemData.synopsis || itemData.script || itemData.story || itemData.summary || itemData.content || '';
+    // Extract script content — try common data shapes from Scriptwriter API
+    const script = data?.script || data?.item || {};
+    const scriptData = script?.data || script;
+    const synopsis = scriptData.synopsis || scriptData.script || scriptData.story || scriptData.summary || scriptData.content || scriptData.prompt || script.name || '';
 
     applyScriptToForm(synopsis, sfx);
     pendingScriptSource = scriptName || 'Script Builder';
