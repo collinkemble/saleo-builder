@@ -2575,7 +2575,13 @@ function updateBrandKitSourceBadge(suffix) {
   if (!badge) return;
   const source = pendingBrandKitSource || (currentItemData && currentItemData.metadata && currentItemData.metadata.brand_kit_source);
   if (source) {
-    badge.textContent = '✓ ' + source;
+    const bkId = pendingBrandKitId || (currentItemData && currentItemData.metadata && currentItemData.metadata.brand_kit_id);
+    if (bkId) {
+      const bkUrl = `https://brandkit-builder.aubreydemo.com/views/${esc(bkId)}`;
+      badge.innerHTML = `<a href="${bkUrl}" target="_blank" rel="noopener noreferrer" style="color: #6d28d9; text-decoration: none;" onmouseenter="this.style.textDecoration='underline'" onmouseleave="this.style.textDecoration='none'">✓ ${esc(source)} ↗</a>`;
+    } else {
+      badge.textContent = '✓ ' + source;
+    }
     badge.style.display = 'inline';
   } else {
     badge.style.display = 'none';
