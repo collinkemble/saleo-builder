@@ -3811,11 +3811,11 @@ async function autoGenerateAllImages() {
   if (!meta.brand) return;
   const images = data.images || {};
 
-  // Check if ANY generated assets exist — if so, skip auto-generation
-  const hasAny = GENERATED_ASSET_TYPES.some(a => images[a.key] && images[a.key].startsWith('http'));
-  if (hasAny) return;
+  // Check if ALL generated assets exist — if so, skip auto-generation
+  const allExist = GENERATED_ASSET_TYPES.every(a => images[a.key] && images[a.key].startsWith('http'));
+  if (allExist) return;
 
-  // Fire off generation in background
+  // Fire off generation for any missing images
   generateAllImages();
 }
 
