@@ -98,9 +98,12 @@
     .apps-dropdown-btn svg { transition: transform 0.15s ease; }
     .apps-dropdown:hover .apps-dropdown-btn svg { transform: rotate(180deg); }
     .apps-dropdown-menu {
-      display: none; position: absolute; top: 100%; left: 0; margin-top: 6px;
+      display: none; position: absolute; top: 100%; left: 0; margin-top: 0;
       background: #fff; border-radius: 10px; box-shadow: 0 8px 32px rgba(0,0,0,0.18);
       min-width: 240px; padding: 6px 0; z-index: 2000;
+    }
+    .apps-dropdown-menu::before {
+      content: ''; position: absolute; top: -8px; left: 0; right: 0; height: 8px;
     }
     .apps-dropdown:hover .apps-dropdown-menu { display: block; }
     .apps-dropdown-menu a {
