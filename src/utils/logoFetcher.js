@@ -2,11 +2,14 @@
  * Logo Fetcher — attempts to find a real brand logo from the web.
  * Adapted from PocketSIC.
  *
+ * NOTE: Clearbit Logo API was shut down December 2025.
+ * Now uses Apistemic Logo API as the primary source.
+ *
  * Strategy (tried in order):
  *   1. Extract domain from provided website URL
  *   2. Map brand name to known domain
  *   3. Guess brandname.com
- *   Then try: Clearbit Logo API → Google Favicon v2
+ *   Then try: Apistemic Logo API → Google Favicon v2
  */
 
 const https = require('https');
@@ -220,12 +223,13 @@ async function fetchBrandLogo(brandName, websiteUrl) {
   const domain = guessDomain(brandName, websiteUrl);
   if (!domain) return { found: false };
 
-  // Strategy 1: Clearbit Logo API (high-res, transparent bg)
-  const clearbitUrl = `https://logo.clearbit.com/${domain}`;
+  // Strategy 1: Apistemic Logo API (high-res, transparent bg)
+  // (Replaces Clearbit Logo API, which was shut down December 2025)
+  const apistemicUrl = `https://logos-api.apistemic.com/domain:${domain}`;
   try {
-    if (await checkImageUrl(clearbitUrl)) {
-      console.log(`[LogoFetcher] Found logo for "${brandName}" via Clearbit: ${clearbitUrl}`);
-      return { found: true, url: clearbitUrl, source: 'clearbit' };
+    if (await checkImageUrl(apistemicUrl)) {
+      console.log(`[LogoFetcher] Found logo for "${brandName}" via Apistemic: ${apistemicUrl}`);
+      return { found: true, url: apistemicUrl, source: 'apistemic' };
     }
   } catch (_) { /* continue */ }
 
