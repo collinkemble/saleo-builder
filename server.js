@@ -692,27 +692,36 @@ app.post('/api/images/generate', async (req, res) => {
 
     console.log(`[ImageGen] Generating ${imageType} for "${brand}" (${typeDef.w}x${typeDef.h})`);
 
-    const response = await ai.models.generateContent({
-      model: 'gemini-2.5-flash-image',
-      contents: [{ text: typeDef.prompt }],
-      config: {
-        responseModalities: ['TEXT', 'IMAGE'],
-      },
-    });
-
-    // Extract image from response
+    // Retry up to 3 attempts for Gemini failures
     let imageBase64 = null;
     let mimeType = 'image/png';
-    for (const part of response.candidates?.[0]?.content?.parts || []) {
-      if (part.inlineData) {
-        imageBase64 = part.inlineData.data;
-        mimeType = part.inlineData.mimeType || 'image/png';
-        break;
+    let lastGenErr;
+    for (let attempt = 1; attempt <= 3; attempt++) {
+      try {
+        const response = await ai.models.generateContent({
+          model: 'gemini-2.5-flash-image',
+          contents: [{ text: typeDef.prompt }],
+          config: { responseModalities: ['TEXT', 'IMAGE'] },
+        });
+
+        for (const part of response.candidates?.[0]?.content?.parts || []) {
+          if (part.inlineData) {
+            imageBase64 = part.inlineData.data;
+            mimeType = part.inlineData.mimeType || 'image/png';
+            break;
+          }
+        }
+        if (imageBase64) break;
+        throw new Error('Gemini did not return an image');
+      } catch (genErr) {
+        lastGenErr = genErr;
+        console.warn(`[ImageGen] ${imageType} attempt ${attempt}/3 failed: ${genErr.message}`);
+        if (attempt < 3) await new Promise(r => setTimeout(r, attempt === 1 ? 2000 : 5000));
       }
     }
 
     if (!imageBase64) {
-      return res.status(500).json({ error: 'Gemini did not return an image. Try again.' });
+      return res.status(500).json({ error: `Image generation failed after 3 attempts: ${lastGenErr?.message || 'No image returned'}` });
     }
 
     // Resize to exact specified dimensions using sharp
@@ -1020,6 +1029,155 @@ app.get('/api/items/:id', async (req, res) => {
   }
 });
 
+// ─── Server-side image generation (background) ───
+// Generates a single image with up to 2 retries on failure
+async function generateSingleImage(brand, meta, imageType, itemId) {
+  const { GoogleGenAI } = require('@google/genai');
+  const sharp = require('sharp');
+  const apiKey = process.env.GEMINI_API_KEY;
+  if (!apiKey) throw new Error('GEMINI_API_KEY not configured');
+
+  const ai = new GoogleGenAI({ apiKey });
+
+  const brandCtx = [];
+  if (meta.brand_desc) brandCtx.push(`(${meta.brand_desc})`);
+  if (meta.industry && meta.industry !== 'Other') brandCtx.push(`in the ${meta.industry} industry`);
+  if (meta.tone) brandCtx.push(`Brand tone: ${meta.tone}.`);
+  if (meta.visual_style) brandCtx.push(`Visual style: ${meta.visual_style}.`);
+  if (meta.color_primary && meta.color_primary !== '#032D60') brandCtx.push(`Primary brand color: ${meta.color_primary}.`);
+  if (meta.color_secondary && meta.color_secondary !== '#0176D3') brandCtx.push(`Secondary brand color: ${meta.color_secondary}.`);
+  const brandInfo = brandCtx.join(' ');
+
+  // Build image type definitions (same as in /api/images/generate)
+  const imageTypes = {
+    brand_01: { prompt: `Create a professional, wide site banner image for the brand "${brand}" ${brandInfo}. This is a cover image for a website — think sweeping, cinematic, aspirational. Show environments, landscapes, or abstract scenes that evoke the brand's industry and values. No text, no logos, no words. Ultra-wide aspect ratio. Photorealistic, high quality.`, w: 1984, h: 481 },
+    brand_02: { prompt: `Create a professional site section background image for the brand "${brand}" ${brandInfo}. Subtle, atmospheric, slightly blurred or abstract. Could be a texture, gradient scene, or environmental shot that works well behind overlaid text. No text, no logos, no words. Photorealistic.`, w: 1134, h: 552 },
+    brand_03: { prompt: `Create another professional site section background image for the brand "${brand}" ${brandInfo}. Different from the previous one — try a different color palette or subject. Subtle, atmospheric, works well as a background behind text content. No text, no logos, no words. Photorealistic.`, w: 1134, h: 552 },
+    brand_hero: { prompt: `Create a stunning hero section background image for the brand "${brand}" ${brandInfo}. This is the main hero banner — it should be the most visually striking image. Show the essence of the brand through environment, activity, or lifestyle. Bold, aspirational, high impact. No text, no logos, no words. Photorealistic.`, w: 1134, h: 552 },
+  };
+  for (let i = 1; i <= 7; i++) {
+    const num = String(i).padStart(2, '0');
+    const variation = ['a lifestyle scene showing people using or enjoying the brand','a close-up detail shot related to the brand experience','an environment or location scene related to the brand','a group or social scene related to the brand lifestyle','an action or activity shot related to the brand','a behind-the-scenes or process shot related to the brand','an aspirational or inspirational scene related to the brand'][i - 1];
+    imageTypes[`card_${num}`] = { prompt: `Create a professional lifestyle or product shot for the brand "${brand}" ${brandInfo}. This is card image ${i} of 7 for a website — ${variation}. High quality, editorial style photography. No text, no logos, no words. Photorealistic.${i === 1 ? ' This image will overlay on a background, so it should be vibrant and stand out.' : ''}`, w: 2551, h: 1524 };
+  }
+  for (let i = 1; i <= 4; i++) {
+    const num = String(i).padStart(2, '0');
+    imageTypes[`product_${num}`] = { prompt: `Create a clean, professional product photograph for the brand "${brand}" ${brandInfo}.${meta.brand_url ? ` The brand website is ${meta.brand_url} — generate a realistic product that this brand would sell.` : ''} This is product ${i} of 4. Show a single realistic product on a clean, minimal background. The product should look like something this brand actually sells. Studio lighting, high-end e-commerce photography style. No text, no logos, no watermarks. Clean white or light gradient background. 400x400 square crop.`, w: 400, h: 400 };
+  }
+
+  const typeDef = imageTypes[imageType];
+  if (!typeDef) throw new Error(`Unknown imageType: ${imageType}`);
+
+  // Retry up to 3 attempts
+  let lastErr;
+  for (let attempt = 1; attempt <= 3; attempt++) {
+    try {
+      console.log(`[BgImageGen] Generating ${imageType} for "${brand}" (attempt ${attempt}/3)`);
+
+      const response = await ai.models.generateContent({
+        model: 'gemini-2.5-flash-image',
+        contents: [{ text: typeDef.prompt }],
+        config: { responseModalities: ['TEXT', 'IMAGE'] },
+      });
+
+      let imageBase64 = null;
+      let mimeType = 'image/png';
+      for (const part of response.candidates?.[0]?.content?.parts || []) {
+        if (part.inlineData) {
+          imageBase64 = part.inlineData.data;
+          mimeType = part.inlineData.mimeType || 'image/png';
+          break;
+        }
+      }
+      if (!imageBase64) throw new Error('Gemini did not return an image');
+
+      // Resize to exact dimensions
+      const rawBuffer = Buffer.from(imageBase64, 'base64');
+      const metadata = await sharp(rawBuffer).metadata();
+      const srcW = metadata.width || 1024;
+      const srcH = metadata.height || 1024;
+      const scaleX = typeDef.w / srcW;
+      const scaleY = typeDef.h / srcH;
+      const scale = Math.max(scaleX, scaleY);
+      const scaledW = Math.round(srcW * scale);
+      const scaledH = Math.round(srcH * scale);
+
+      const resizedBuffer = await sharp(rawBuffer)
+        .resize(scaledW, scaledH, { fit: 'fill' })
+        .extract({
+          left: Math.round((scaledW - typeDef.w) / 2),
+          top: Math.round((scaledH - typeDef.h) / 2),
+          width: typeDef.w,
+          height: typeDef.h
+        })
+        .jpeg({ quality: 92 })
+        .toBuffer();
+
+      const folder = `views/${itemId}/generated`;
+      const slug = brand.replace(/[^a-zA-Z0-9]/g, '-').toLowerCase();
+      const filename = `${slug}-${imageType}`;
+      const url = await uploadImage(resizedBuffer.toString('base64'), 'image/jpeg', folder, filename);
+
+      console.log(`[BgImageGen] ${imageType} for "${brand}" uploaded: ${url}`);
+      return url;
+    } catch (err) {
+      lastErr = err;
+      console.warn(`[BgImageGen] ${imageType} attempt ${attempt} failed: ${err.message}`);
+      if (attempt < 3) {
+        // Wait before retry: 2s, then 5s
+        await new Promise(r => setTimeout(r, attempt === 1 ? 2000 : 5000));
+      }
+    }
+  }
+  throw lastErr;
+}
+
+// Background job: generate all missing images for an item
+async function backgroundGenerateImages(itemId, email) {
+  try {
+    // Fetch the item
+    const items = await query('SELECT * FROM items WHERE id = ?', [itemId]);
+    if (items.length === 0) return;
+    const item = items[0];
+    let data = typeof item.data === 'string' ? JSON.parse(item.data) : (item.data || {});
+    const meta = data.metadata || {};
+    const brand = meta.brand;
+    if (!brand) { console.log(`[BgImageGen] Item ${itemId}: no brand, skipping`); return; }
+
+    const images = data.images || {};
+    const allTypes = [
+      'brand_01', 'brand_02', 'brand_03', 'brand_hero',
+      'card_01', 'card_02', 'card_03', 'card_04', 'card_05', 'card_06', 'card_07',
+      'product_01', 'product_02', 'product_03', 'product_04'
+    ];
+    const missing = allTypes.filter(t => !images[t] || !images[t].startsWith('http'));
+    if (missing.length === 0) { console.log(`[BgImageGen] Item ${itemId}: all images present`); return; }
+
+    console.log(`[BgImageGen] Item ${itemId}: generating ${missing.length} missing images for "${brand}"`);
+
+    let generated = 0;
+    let failed = 0;
+    for (const imageType of missing) {
+      try {
+        const url = await generateSingleImage(brand, meta, imageType, itemId);
+        if (!data.images) data.images = {};
+        data.images[imageType] = url;
+        generated++;
+
+        // Save progress after each image
+        await query('UPDATE items SET data = ?, updated_at = NOW() WHERE id = ?', [JSON.stringify(data), itemId]);
+      } catch (err) {
+        console.error(`[BgImageGen] Item ${itemId}: ${imageType} failed after retries: ${err.message}`);
+        failed++;
+      }
+    }
+
+    console.log(`[BgImageGen] Item ${itemId}: done — ${generated} generated, ${failed} failed`);
+  } catch (err) {
+    console.error(`[BgImageGen] Item ${itemId}: background generation error:`, err.message);
+  }
+}
+
 // POST /api/items — create a new item
 app.post('/api/items', async (req, res) => {
   try {
@@ -1034,14 +1192,24 @@ app.post('/api/items', async (req, res) => {
       [user.id, name.trim(), data ? JSON.stringify(data) : null]
     );
 
+    const itemId = result.insertId;
+
+    // Respond immediately, then kick off background image generation
     res.status(201).json({
       item: {
-        id: result.insertId,
+        id: itemId,
         name: name.trim(),
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString(),
       }
     });
+
+    // Fire-and-forget: generate missing images in background
+    if (data?.metadata?.brand) {
+      backgroundGenerateImages(itemId, email).catch(err => {
+        console.error(`[BgImageGen] Uncaught error for item ${itemId}:`, err.message);
+      });
+    }
   } catch (err) {
     console.error('Failed to create item:', err);
     res.status(500).json({ error: 'Failed to create item' });
