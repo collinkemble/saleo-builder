@@ -2754,6 +2754,7 @@ async function openScriptPicker(suffix) {
 }
 
 let pendingScriptSynopsis = null; // Stored synopsis from selected script
+let currentInputMode = 'synopsis'; // Track which tab is active: 'synopsis', 'script', 'upload'
 
 async function selectScript(itemId, suffix, scriptName) {
   const sfx = suffix || '';
@@ -2867,6 +2868,7 @@ document.addEventListener('click', function(e) {
 
 // --- Input Mode Toggle ---
 function switchInputMode(mode) {
+  currentInputMode = mode; // Track active tab
   const synopsisBtn = document.getElementById('mode-synopsis');
   const scriptBtn = document.getElementById('mode-script');
   const uploadBtn = document.getElementById('mode-upload');
@@ -3025,19 +3027,27 @@ async function generateFromPrompt() {
   }
 
   try {
-    let synopsisText = synopsis || pendingScriptSynopsis || '';
+    let synopsisText = '';
     let sourceFilename = null;
 
     document.getElementById('generate-btn').disabled = true;
     document.getElementById('generate-btn').style.opacity = '0.6';
 
-    // If a script was selected from Scriptwriter, use its synopsis
-    if (pendingScriptSynopsis && !synopsis) {
-      sourceFilename = pendingScriptSource || 'Scriptwriter';
+    // Respect the active input tab
+    if (currentInputMode === 'synopsis') {
+      // Use typed synopsis only
+      synopsisText = synopsis;
+    } else if (currentInputMode === 'script') {
+      // Use script synopsis only (ignore typed text)
+      synopsisText = pendingScriptSynopsis || '';
+      if (pendingScriptSynopsis) {
+        sourceFilename = pendingScriptSource || 'Scriptwriter';
+      }
     }
+    // For 'upload' mode, synopsisText stays empty until file is processed below
 
     // If a file was uploaded, extract synopsis from it
-    if (hasFile) {
+    if (currentInputMode === 'upload' && hasFile) {
       const formData = new FormData();
       formData.append('file', fileInput.files[0]);
       const uploadResp = await fetch('/api/upload', { method: 'POST', body: formData });
