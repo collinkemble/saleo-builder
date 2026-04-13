@@ -1233,7 +1233,7 @@ app.put('/api/items/:id', async (req, res) => {
     const user = await getOrCreateUser(email);
 
     // Verify ownership
-    const existing = await query('SELECT id FROM items WHERE id = ? AND user_id = ?', [req.params.id, user.id]);
+    const existing = await query('SELECT * FROM items WHERE id = ? AND user_id = ?', [req.params.id, user.id]);
     if (existing.length === 0) {
       return res.status(404).json({ error: 'Item not found' });
     }
@@ -1244,6 +1244,20 @@ app.put('/api/items/:id', async (req, res) => {
     );
 
     res.json({ success: true });
+
+    // Check if this update added brand metadata — if so, generate missing images in background
+    const meta = data?.metadata || {};
+    const images = data?.images || {};
+    const allTypes = ['brand_01','brand_02','brand_03','brand_hero','card_01','card_02','card_03','card_04','card_05','card_06','card_07','product_01','product_02','product_03','product_04'];
+    const missing = allTypes.filter(t => !images[t] || !images[t].startsWith?.('http'));
+    console.log(`[PUT /api/items/${req.params.id}] Brand: "${meta.brand || 'NONE'}". Images present: ${allTypes.length - missing.length}/${allTypes.length}. Missing: ${missing.length}`);
+
+    if (meta.brand && missing.length > 0) {
+      console.log(`[PUT /api/items/${req.params.id}] Kicking off background generation for ${missing.length} missing images`);
+      backgroundGenerateImages(parseInt(req.params.id), email).catch(err => {
+        console.error(`[BgImageGen] Uncaught error for item ${req.params.id}:`, err.message);
+      });
+    }
   } catch (err) {
     console.error('Failed to update item:', err);
     res.status(500).json({ error: 'Failed to update item' });
