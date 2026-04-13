@@ -1205,10 +1205,16 @@ app.post('/api/items', async (req, res) => {
     });
 
     // Fire-and-forget: generate missing images in background
-    if (data?.metadata?.brand) {
+    const itemData = data || {};
+    const meta = itemData.metadata || {};
+    console.log(`[POST /api/items] Item ${itemId} created. Brand: "${meta.brand || 'NONE'}". Has metadata: ${!!itemData.metadata}. Keys: ${Object.keys(itemData).join(',')}`);
+    if (meta.brand) {
+      console.log(`[POST /api/items] Kicking off background image generation for item ${itemId} (brand: ${meta.brand})`);
       backgroundGenerateImages(itemId, email).catch(err => {
         console.error(`[BgImageGen] Uncaught error for item ${itemId}:`, err.message);
       });
+    } else {
+      console.log(`[POST /api/items] No brand in metadata, skipping background image generation. Data keys: ${Object.keys(itemData).join(',')}, metadata keys: ${Object.keys(meta).join(',')}`);
     }
   } catch (err) {
     console.error('Failed to create item:', err);
