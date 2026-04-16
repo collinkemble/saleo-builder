@@ -1221,17 +1221,23 @@ Existing image groups: ${allGroups.join(', ')}
 
 The user says: "${prompt}"
 
-Parse this into a JSON object with these fields:
-- count: number of images to generate (1-10, default 1)
-- group_name: human-readable group name (e.g. "Email Banners", "Social Media", "Products"). Use an existing group name if the request matches (brand → "Brand Images", card → "Card Images", product → "Product Images").
-- group_key: snake_case key for the group (e.g. "email_banner", "social_media", "product"). Use existing group keys if the request matches.
-- width: image width in pixels (default 1024)
-- height: image height in pixels (default 1024)
-- image_prompts: array of individual image generation prompts. Each should be a detailed, professional prompt for an AI image generator. Include the brand name and context. Always end with "No text, no logos, no words. Photorealistic, high quality." Each prompt should be different/varied.
+The user may request MULTIPLE types of images in a single request (e.g. "4 product images, an email banner, and a mobile hero"). You MUST parse this into a JSON array where EACH distinct type of image is a separate object.
 
-If the user mentions specific dimensions like "600x200" or "at 1920x1080", use those. Otherwise use sensible defaults for the type (e.g. product images = 400x400, banners = 1200x400, social posts = 1080x1080).
+Return a JSON array (NOT an object, an ARRAY) of group objects, one per distinct image type. Each object has:
+- count: number of images for this type (1-10, default 1)
+- group_name: human-readable group name (e.g. "Email Banners", "Mobile App Heroes", "Product Images"). Use existing group names if the request matches (brand → "Brand Images", card → "Card Images", product → "Product Images").
+- group_key: snake_case key for the group (e.g. "email_banner", "mobile_app_hero", "product"). Use existing group keys if the request matches.
+- width: image width in pixels for this type
+- height: image height in pixels for this type
+- image_prompts: array of individual image generation prompts (one per count). Each should be a detailed, professional prompt for an AI image generator. Include the brand name and context. Always end with "No text, no logos, no words. Photorealistic, high quality." Each prompt should be different/varied.
 
-Respond ONLY with valid JSON, no markdown, no explanation.`;
+If the user mentions specific dimensions like "600x300", use those. Otherwise use sensible defaults for the type (e.g. product images = 400x400, banners = 1200x400, email banners = 600x300, mobile heroes = 1080x1920, social posts = 1080x1080).
+
+Examples:
+- "Generate 4 more product images" → [{"count":4,"group_name":"Product Images","group_key":"product","width":400,"height":400,"image_prompts":["...", "...", "...", "..."]}]
+- "Create an email banner at 600x300 and 2 social media posts" → [{"count":1,"group_name":"Email Banners","group_key":"email_banner","width":600,"height":300,"image_prompts":["..."]}, {"count":2,"group_name":"Social Media Posts","group_key":"social_media","width":1080,"height":1080,"image_prompts":["...", "..."]}]
+
+Respond ONLY with a valid JSON array, no markdown, no explanation.`;
 
     console.log(`[CustomImageGen] Interpreting prompt: "${prompt}"`);
     const interpretResp = await ai.models.generateContent({
@@ -1239,24 +1245,19 @@ Respond ONLY with valid JSON, no markdown, no explanation.`;
       contents: [{ text: interpretPrompt }],
     });
 
-    let parsed;
+    let groups;
     try {
       let text = interpretResp.candidates?.[0]?.content?.parts?.[0]?.text || '';
-      console.log(`[CustomImageGen] Raw Gemini response: ${text.substring(0, 500)}`);
+      console.log(`[CustomImageGen] Raw Gemini response: ${text.substring(0, 800)}`);
       text = text.replace(/^```(?:json)?\s*\n?/i, '').replace(/\n?```\s*$/i, '').trim();
-      parsed = JSON.parse(text);
-      console.log(`[CustomImageGen] Parsed: count=${parsed.count}, group=${parsed.group_name}, ${parsed.width}x${parsed.height}`);
+      const parsed = JSON.parse(text);
+      // Normalize: if AI returned a single object instead of array, wrap it
+      groups = Array.isArray(parsed) ? parsed : [parsed];
+      console.log(`[CustomImageGen] Parsed ${groups.length} group(s): ${groups.map(g => `${g.count}x ${g.group_name}`).join(', ')}`);
     } catch (e) {
       console.error('[CustomImageGen] Failed to parse interpretation:', e.message);
       return res.status(500).json({ error: 'Failed to interpret prompt. Try rephrasing.' });
     }
-
-    const count = Math.min(Math.max(parsed.count || 1, 1), 10);
-    const groupName = parsed.group_name || 'Custom Images';
-    const groupKey = (parsed.group_key || 'custom').replace(/[^a-z0-9_]/g, '_');
-    const w = parsed.width || 1024;
-    const h = parsed.height || 1024;
-    const imagePrompts = parsed.image_prompts || [];
 
     // Compute next available custom key number
     const existingKeys = (existingCustomTypes || []).map(t => t.key);
@@ -1266,17 +1267,27 @@ Respond ONLY with valid JSON, no markdown, no explanation.`;
       if (m) nextNum = Math.max(nextNum, parseInt(m[1]) + 1);
     }
 
-    // Build the plan — client will generate images one at a time via /api/images/regenerate-custom
+    // Build the plan across all groups — client will generate images one at a time
     const plan = [];
-    for (let i = 0; i < count; i++) {
-      const key = `custom_${String(nextNum + i).padStart(3, '0')}`;
-      const imgPrompt = imagePrompts[i] || imagePrompts[0] || `Create a professional image for the brand "${brand}" ${brandInfo}. No text, no logos, no words. Photorealistic, high quality.`;
-      const num = String(i + 1).padStart(2, '0');
-      const label = `${groupName.toUpperCase().replace(/\s+IMAGES$/i, '')} ${num}`;
-      plan.push({ key, label, group: groupKey, w, h, desc: groupName, prompt: imgPrompt });
+    for (const group of groups) {
+      const count = Math.min(Math.max(group.count || 1, 1), 10);
+      const groupName = group.group_name || 'Custom Images';
+      const groupKey = (group.group_key || 'custom').replace(/[^a-z0-9_]/g, '_');
+      const w = group.width || 1024;
+      const h = group.height || 1024;
+      const imagePrompts = group.image_prompts || [];
+
+      for (let i = 0; i < count; i++) {
+        const key = `custom_${String(nextNum).padStart(3, '0')}`;
+        nextNum++;
+        const imgPrompt = imagePrompts[i] || imagePrompts[0] || `Create a professional image for the brand "${brand}" ${brandInfo}. No text, no logos, no words. Photorealistic, high quality.`;
+        const num = String(i + 1).padStart(2, '0');
+        const label = `${groupName.toUpperCase().replace(/\s+IMAGES$/i, '')} ${num}`;
+        plan.push({ key, label, group: groupKey, w, h, desc: groupName, prompt: imgPrompt });
+      }
     }
 
-    res.json({ plan, group_name: groupName, group_key: groupKey });
+    res.json({ plan });
   } catch (err) {
     console.error('[CustomImageGen] Error:', err.message);
     res.status(500).json({ error: err.message || 'Failed to interpret prompt' });
