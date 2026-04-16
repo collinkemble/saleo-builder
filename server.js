@@ -1147,6 +1147,10 @@ async function backgroundGenerateImages(itemId, email) {
     const brand = meta.brand;
     if (!brand) { console.log(`[BgImageGen] Item ${itemId}: no brand, skipping`); return; }
 
+    // Only auto-generate standard images for Retail industry
+    const industry = (meta.industry || '').toLowerCase();
+    if (industry !== 'retail') { console.log(`[BgImageGen] Item ${itemId}: industry "${meta.industry}" is not Retail, skipping standard image gen`); return; }
+
     const images = data.images || {};
     const allTypes = [
       'brand_01', 'brand_02', 'brand_03', 'brand_hero',
