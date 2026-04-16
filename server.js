@@ -1239,9 +1239,11 @@ Respond ONLY with valid JSON, no markdown, no explanation.`;
     let parsed;
     try {
       let text = interpretResp.candidates?.[0]?.content?.parts?.[0]?.text || '';
+      console.log(`[CustomImageGen] Raw Gemini response: ${text.substring(0, 500)}`);
       // Strip markdown code fences if present
       text = text.replace(/^```(?:json)?\s*\n?/i, '').replace(/\n?```\s*$/i, '').trim();
       parsed = JSON.parse(text);
+      console.log(`[CustomImageGen] Parsed: count=${parsed.count}, group=${parsed.group_name}, ${parsed.width}x${parsed.height}`);
     } catch (e) {
       console.error('[CustomImageGen] Failed to parse interpretation:', e.message);
       return res.status(500).json({ error: 'Failed to interpret prompt. Try rephrasing.' });

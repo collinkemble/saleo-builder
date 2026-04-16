@@ -3968,8 +3968,17 @@ async function generateCustomImages() {
     });
 
     if (!resp.ok) {
-      const err = await resp.json();
-      throw new Error(err.error || 'Failed to generate images');
+      let errMsg = 'Failed to generate images';
+      try {
+        const errBody = await resp.text();
+        if (errBody.startsWith('{')) {
+          const errJson = JSON.parse(errBody);
+          errMsg = errJson.error || errMsg;
+        } else {
+          errMsg = `Server error (${resp.status})`;
+        }
+      } catch (_) {}
+      throw new Error(errMsg);
     }
 
     const data = await resp.json();
