@@ -3945,11 +3945,12 @@ async function generateCustomImages() {
   btn.style.opacity = '0.6';
   progress.classList.remove('hidden');
   status.textContent = 'Interpreting your request...';
-  bar.style.width = '10%';
+  bar.style.width = '5%';
   detail.textContent = '';
 
   try {
-    const resp = await fetch('/api/images/generate-from-prompt', {
+    // Step 1: Interpret the prompt (fast — text-only AI call)
+    const interpretResp = await fetch('/api/images/interpret-prompt', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -3962,51 +3963,79 @@ async function generateCustomImages() {
         colorPrimary: meta.color_primary || '',
         colorSecondary: meta.color_secondary || '',
         websiteUrl: meta.brand_url || '',
-        viewId: currentItemId,
         existingCustomTypes: currentItemData.custom_asset_types || []
       })
     });
 
-    if (!resp.ok) {
-      let errMsg = 'Failed to generate images';
+    if (!interpretResp.ok) {
+      let errMsg = 'Failed to interpret prompt';
       try {
-        const errBody = await resp.text();
-        if (errBody.startsWith('{')) {
-          const errJson = JSON.parse(errBody);
-          errMsg = errJson.error || errMsg;
-        } else {
-          errMsg = `Server error (${resp.status})`;
-        }
+        const errBody = await interpretResp.text();
+        if (errBody.startsWith('{')) errMsg = JSON.parse(errBody).error || errMsg;
+        else errMsg = `Server error (${interpretResp.status})`;
       } catch (_) {}
       throw new Error(errMsg);
     }
 
-    const data = await resp.json();
-    const results = data.results || [];
-    const total = results.length;
-    let succeeded = 0;
+    const planData = await interpretResp.json();
+    const plan = planData.plan || [];
+    const total = plan.length;
+
+    if (total === 0) throw new Error('No images to generate');
 
     if (!currentItemData.images) currentItemData.images = {};
     if (!currentItemData.custom_asset_types) currentItemData.custom_asset_types = [];
 
     status.textContent = `Generating ${total} image${total > 1 ? 's' : ''}...`;
+    bar.style.width = '10%';
+    let succeeded = 0;
 
-    for (let i = 0; i < results.length; i++) {
-      const r = results[i];
-      bar.style.width = `${10 + ((i + 1) / total) * 90}%`;
-      detail.textContent = `${i + 1} of ${total}: ${r.label}`;
+    // Step 2: Generate each image individually via regenerate-custom (avoids timeout)
+    for (let i = 0; i < plan.length; i++) {
+      const item = plan[i];
+      detail.textContent = `${i + 1} of ${total}: ${item.label}`;
+      bar.style.width = `${10 + ((i + 0.5) / total) * 90}%`;
 
-      if (r.url) {
-        currentItemData.images[r.key] = r.url;
-        currentItemData.custom_asset_types.push({
-          key: r.key, label: r.label, desc: r.desc, w: r.w, h: r.h, group: r.group, prompt: r.prompt || prompt
+      try {
+        const genResp = await fetch('/api/images/regenerate-custom', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            key: item.key,
+            prompt: item.prompt,
+            w: item.w,
+            h: item.h,
+            brand,
+            brandDesc: meta.brand_desc || '',
+            industry: meta.industry || '',
+            tone: meta.tone || '',
+            visualStyle: meta.visual_style || '',
+            colorPrimary: meta.color_primary || '',
+            colorSecondary: meta.color_secondary || '',
+            websiteUrl: meta.brand_url || '',
+            viewId: currentItemId
+          })
         });
-        succeeded++;
-      }
-    }
 
-    await saveItemData();
-    renderGeneratedAssets();
+        if (genResp.ok) {
+          const result = await genResp.json();
+          if (result.url) {
+            currentItemData.images[item.key] = result.url;
+            currentItemData.custom_asset_types.push({
+              key: item.key, label: item.label, desc: item.desc, w: item.w, h: item.h, group: item.group, prompt: item.prompt
+            });
+            succeeded++;
+            // Save progress after each image
+            await saveItemData();
+            renderGeneratedAssets();
+          }
+        }
+      } catch (e) {
+        console.error(`Custom image ${item.key} failed:`, e);
+      }
+
+      bar.style.width = `${10 + ((i + 1) / total) * 90}%`;
+    }
 
     bar.style.width = '100%';
     status.textContent = `Done! ${succeeded} image${succeeded > 1 ? 's' : ''} generated.`;

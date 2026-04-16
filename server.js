@@ -1181,10 +1181,10 @@ async function backgroundGenerateImages(itemId, email) {
   }
 }
 
-// POST /api/images/generate-from-prompt — AI interprets a prompt and generates custom images
-app.post('/api/images/generate-from-prompt', async (req, res) => {
+// POST /api/images/interpret-prompt — AI interprets a prompt and returns a generation plan (fast, no image gen)
+app.post('/api/images/interpret-prompt', async (req, res) => {
   try {
-    const { prompt, brand, brandDesc, industry, tone, visualStyle, colorPrimary, colorSecondary, websiteUrl, viewId, existingCustomTypes } = req.body;
+    const { prompt, brand, brandDesc, industry, tone, visualStyle, colorPrimary, colorSecondary, websiteUrl, existingCustomTypes } = req.body;
     if (!prompt) return res.status(400).json({ error: 'prompt is required' });
     if (!brand) return res.status(400).json({ error: 'brand is required' });
 
@@ -1194,7 +1194,7 @@ app.post('/api/images/generate-from-prompt', async (req, res) => {
     const { GoogleGenAI } = require('@google/genai');
     const ai = new GoogleGenAI({ apiKey });
 
-    // Build brand context for image prompts
+    // Build brand context
     const brandCtx = [];
     if (brandDesc) brandCtx.push(`(${brandDesc})`);
     if (industry && industry !== 'Other') brandCtx.push(`in the ${industry} industry`);
@@ -1204,7 +1204,6 @@ app.post('/api/images/generate-from-prompt', async (req, res) => {
     if (colorSecondary && colorSecondary !== '#0176D3') brandCtx.push(`Secondary brand color: ${colorSecondary}.`);
     const brandInfo = brandCtx.join(' ');
 
-    // Phase 1: Use Gemini text model to interpret the prompt
     const existingGroups = ['brand', 'card', 'product'];
     const customGroups = (existingCustomTypes || []).map(t => t.group).filter((g, i, a) => a.indexOf(g) === i);
     const allGroups = [...existingGroups, ...customGroups];
@@ -1240,7 +1239,6 @@ Respond ONLY with valid JSON, no markdown, no explanation.`;
     try {
       let text = interpretResp.candidates?.[0]?.content?.parts?.[0]?.text || '';
       console.log(`[CustomImageGen] Raw Gemini response: ${text.substring(0, 500)}`);
-      // Strip markdown code fences if present
       text = text.replace(/^```(?:json)?\s*\n?/i, '').replace(/\n?```\s*$/i, '').trim();
       parsed = JSON.parse(text);
       console.log(`[CustomImageGen] Parsed: count=${parsed.count}, group=${parsed.group_name}, ${parsed.width}x${parsed.height}`);
@@ -1264,32 +1262,20 @@ Respond ONLY with valid JSON, no markdown, no explanation.`;
       if (m) nextNum = Math.max(nextNum, parseInt(m[1]) + 1);
     }
 
-    // Phase 2: Generate images
-    const meta = { brand_desc: brandDesc, industry, tone, visual_style: visualStyle, color_primary: colorPrimary, color_secondary: colorSecondary, brand_url: websiteUrl };
-    const results = [];
-
+    // Build the plan — client will generate images one at a time via /api/images/regenerate-custom
+    const plan = [];
     for (let i = 0; i < count; i++) {
       const key = `custom_${String(nextNum + i).padStart(3, '0')}`;
       const imgPrompt = imagePrompts[i] || imagePrompts[0] || `Create a professional image for the brand "${brand}" ${brandInfo}. No text, no logos, no words. Photorealistic, high quality.`;
       const num = String(i + 1).padStart(2, '0');
       const label = `${groupName.toUpperCase().replace(/\s+IMAGES$/i, '')} ${num}`;
-      const desc = parsed.group_name || 'Custom image';
-
-      try {
-        console.log(`[CustomImageGen] Generating ${key} (${i + 1}/${count}): ${label}`);
-        const url = await generateSingleImage(brand, meta, key, viewId, { customPrompt: imgPrompt, w, h });
-        results.push({ key, url, label, group: groupKey, w, h, desc, prompt: imgPrompt });
-      } catch (err) {
-        console.error(`[CustomImageGen] ${key} failed: ${err.message}`);
-        results.push({ key, url: null, label, group: groupKey, w, h, desc, prompt: imgPrompt, error: err.message });
-      }
+      plan.push({ key, label, group: groupKey, w, h, desc: groupName, prompt: imgPrompt });
     }
 
-    console.log(`[CustomImageGen] Done: ${results.filter(r => r.url).length}/${count} generated`);
-    res.json({ results, group_name: groupName, group_key: groupKey });
+    res.json({ plan, group_name: groupName, group_key: groupKey });
   } catch (err) {
     console.error('[CustomImageGen] Error:', err.message);
-    res.status(500).json({ error: err.message || 'Failed to generate custom images' });
+    res.status(500).json({ error: err.message || 'Failed to interpret prompt' });
   }
 });
 
