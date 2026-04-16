@@ -1031,7 +1031,7 @@ app.get('/api/items/:id', async (req, res) => {
 
 // ─── Server-side image generation (background) ───
 // Generates a single image with up to 2 retries on failure
-async function generateSingleImage(brand, meta, imageType, itemId) {
+async function generateSingleImage(brand, meta, imageType, itemId, opts = {}) {
   const { GoogleGenAI } = require('@google/genai');
   const sharp = require('sharp');
   const apiKey = process.env.GEMINI_API_KEY;
@@ -1065,7 +1065,10 @@ async function generateSingleImage(brand, meta, imageType, itemId) {
     imageTypes[`product_${num}`] = { prompt: `Create a clean, professional product photograph for the brand "${brand}" ${brandInfo}.${meta.brand_url ? ` The brand website is ${meta.brand_url} — generate a realistic product that this brand would sell.` : ''} This is product ${i} of 4. Show a single realistic product on a clean, minimal background. The product should look like something this brand actually sells. Studio lighting, high-end e-commerce photography style. No text, no logos, no watermarks. Clean white or light gradient background. 400x400 square crop.`, w: 400, h: 400 };
   }
 
-  const typeDef = imageTypes[imageType];
+  // Support custom prompt/dimensions via opts, or fall back to hardcoded types
+  const typeDef = opts.customPrompt
+    ? { prompt: opts.customPrompt, w: opts.w || 1024, h: opts.h || 1024 }
+    : imageTypes[imageType];
   if (!typeDef) throw new Error(`Unknown imageType: ${imageType}`);
 
   // Retry up to 3 attempts
@@ -1177,6 +1180,131 @@ async function backgroundGenerateImages(itemId, email) {
     console.error(`[BgImageGen] Item ${itemId}: background generation error:`, err.message);
   }
 }
+
+// POST /api/images/generate-from-prompt — AI interprets a prompt and generates custom images
+app.post('/api/images/generate-from-prompt', async (req, res) => {
+  try {
+    const { prompt, brand, brandDesc, industry, tone, visualStyle, colorPrimary, colorSecondary, websiteUrl, viewId, existingCustomTypes } = req.body;
+    if (!prompt) return res.status(400).json({ error: 'prompt is required' });
+    if (!brand) return res.status(400).json({ error: 'brand is required' });
+
+    const apiKey = process.env.GEMINI_API_KEY;
+    if (!apiKey) return res.status(500).json({ error: 'GEMINI_API_KEY not configured' });
+
+    const { GoogleGenAI } = require('@google/genai');
+    const ai = new GoogleGenAI({ apiKey });
+
+    // Build brand context for image prompts
+    const brandCtx = [];
+    if (brandDesc) brandCtx.push(`(${brandDesc})`);
+    if (industry && industry !== 'Other') brandCtx.push(`in the ${industry} industry`);
+    if (tone) brandCtx.push(`Brand tone: ${tone}.`);
+    if (visualStyle) brandCtx.push(`Visual style: ${visualStyle}.`);
+    if (colorPrimary && colorPrimary !== '#032D60') brandCtx.push(`Primary brand color: ${colorPrimary}.`);
+    if (colorSecondary && colorSecondary !== '#0176D3') brandCtx.push(`Secondary brand color: ${colorSecondary}.`);
+    const brandInfo = brandCtx.join(' ');
+
+    // Phase 1: Use Gemini text model to interpret the prompt
+    const existingGroups = ['brand', 'card', 'product'];
+    const customGroups = (existingCustomTypes || []).map(t => t.group).filter((g, i, a) => a.indexOf(g) === i);
+    const allGroups = [...existingGroups, ...customGroups];
+
+    const interpretPrompt = `You are a helper that interprets image generation requests for a brand demo platform.
+
+The brand is "${brand}" ${brandInfo}.
+${websiteUrl ? `Brand website: ${websiteUrl}` : ''}
+
+Existing image groups: ${allGroups.join(', ')}
+
+The user says: "${prompt}"
+
+Parse this into a JSON object with these fields:
+- count: number of images to generate (1-10, default 1)
+- group_name: human-readable group name (e.g. "Email Banners", "Social Media", "Products"). Use an existing group name if the request matches (brand → "Brand Images", card → "Card Images", product → "Product Images").
+- group_key: snake_case key for the group (e.g. "email_banner", "social_media", "product"). Use existing group keys if the request matches.
+- width: image width in pixels (default 1024)
+- height: image height in pixels (default 1024)
+- image_prompts: array of individual image generation prompts. Each should be a detailed, professional prompt for an AI image generator. Include the brand name and context. Always end with "No text, no logos, no words. Photorealistic, high quality." Each prompt should be different/varied.
+
+If the user mentions specific dimensions like "600x200" or "at 1920x1080", use those. Otherwise use sensible defaults for the type (e.g. product images = 400x400, banners = 1200x400, social posts = 1080x1080).
+
+Respond ONLY with valid JSON, no markdown, no explanation.`;
+
+    console.log(`[CustomImageGen] Interpreting prompt: "${prompt}"`);
+    const interpretResp = await ai.models.generateContent({
+      model: 'gemini-2.5-flash',
+      contents: [{ text: interpretPrompt }],
+    });
+
+    let parsed;
+    try {
+      let text = interpretResp.candidates?.[0]?.content?.parts?.[0]?.text || '';
+      // Strip markdown code fences if present
+      text = text.replace(/^```(?:json)?\s*\n?/i, '').replace(/\n?```\s*$/i, '').trim();
+      parsed = JSON.parse(text);
+    } catch (e) {
+      console.error('[CustomImageGen] Failed to parse interpretation:', e.message);
+      return res.status(500).json({ error: 'Failed to interpret prompt. Try rephrasing.' });
+    }
+
+    const count = Math.min(Math.max(parsed.count || 1, 1), 10);
+    const groupName = parsed.group_name || 'Custom Images';
+    const groupKey = (parsed.group_key || 'custom').replace(/[^a-z0-9_]/g, '_');
+    const w = parsed.width || 1024;
+    const h = parsed.height || 1024;
+    const imagePrompts = parsed.image_prompts || [];
+
+    // Compute next available custom key number
+    const existingKeys = (existingCustomTypes || []).map(t => t.key);
+    let nextNum = 1;
+    for (const k of existingKeys) {
+      const m = k.match(/^custom_(\d+)$/);
+      if (m) nextNum = Math.max(nextNum, parseInt(m[1]) + 1);
+    }
+
+    // Phase 2: Generate images
+    const meta = { brand_desc: brandDesc, industry, tone, visual_style: visualStyle, color_primary: colorPrimary, color_secondary: colorSecondary, brand_url: websiteUrl };
+    const results = [];
+
+    for (let i = 0; i < count; i++) {
+      const key = `custom_${String(nextNum + i).padStart(3, '0')}`;
+      const imgPrompt = imagePrompts[i] || imagePrompts[0] || `Create a professional image for the brand "${brand}" ${brandInfo}. No text, no logos, no words. Photorealistic, high quality.`;
+      const num = String(i + 1).padStart(2, '0');
+      const label = `${groupName.toUpperCase().replace(/\s+IMAGES$/i, '')} ${num}`;
+      const desc = parsed.group_name || 'Custom image';
+
+      try {
+        console.log(`[CustomImageGen] Generating ${key} (${i + 1}/${count}): ${label}`);
+        const url = await generateSingleImage(brand, meta, key, viewId, { customPrompt: imgPrompt, w, h });
+        results.push({ key, url, label, group: groupKey, w, h, desc, prompt: imgPrompt });
+      } catch (err) {
+        console.error(`[CustomImageGen] ${key} failed: ${err.message}`);
+        results.push({ key, url: null, label, group: groupKey, w, h, desc, prompt: imgPrompt, error: err.message });
+      }
+    }
+
+    console.log(`[CustomImageGen] Done: ${results.filter(r => r.url).length}/${count} generated`);
+    res.json({ results, group_name: groupName, group_key: groupKey });
+  } catch (err) {
+    console.error('[CustomImageGen] Error:', err.message);
+    res.status(500).json({ error: err.message || 'Failed to generate custom images' });
+  }
+});
+
+// POST /api/images/regenerate-custom — regenerate a single custom image
+app.post('/api/images/regenerate-custom', async (req, res) => {
+  try {
+    const { key, prompt: imgPrompt, w, h, brand, brandDesc, industry, tone, visualStyle, colorPrimary, colorSecondary, websiteUrl, viewId } = req.body;
+    if (!key || !imgPrompt || !brand) return res.status(400).json({ error: 'key, prompt, and brand are required' });
+
+    const meta = { brand_desc: brandDesc, industry, tone, visual_style: visualStyle, color_primary: colorPrimary, color_secondary: colorSecondary, brand_url: websiteUrl };
+    const url = await generateSingleImage(brand, meta, key, viewId, { customPrompt: imgPrompt, w: w || 1024, h: h || 1024 });
+    res.json({ key, url });
+  } catch (err) {
+    console.error('[RegenCustom] Error:', err.message);
+    res.status(500).json({ error: err.message || 'Failed to regenerate image' });
+  }
+});
 
 // POST /api/items — create a new item
 app.post('/api/items', async (req, res) => {

@@ -621,6 +621,31 @@
         <div id="generated-assets-grid" style="padding: 16px 20px;">
           <!-- Dynamically rendered by renderGeneratedAssets() -->
         </div>
+        <!-- Custom Image Prompt -->
+        <div style="padding: 0 20px 16px;">
+          <div style="background: linear-gradient(135deg, #faf5ff, #f3e8ff); border: 1px dashed #c4b5fd; border-radius: 10px; padding: 14px;">
+            <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 8px;">
+              <span style="font-size: 16px;">🎨</span>
+              <span style="font-size: 13px; font-weight: 700; color: #032D60;">Generate Custom Images</span>
+            </div>
+            <p style="font-size: 12px; color: #5a6f85; margin: 0 0 10px; line-height: 1.5;">Describe what you want and AI will generate the images. You can specify count and dimensions.</p>
+            <div style="display: flex; gap: 8px; align-items: stretch;">
+              <input id="custom-image-prompt" type="text" placeholder='e.g. "Generate 5 more product images" or "Create 2 email banners at 600x200"' style="flex: 1; padding: 8px 12px; font-size: 13px; border: 1px solid #d1d5db; border-radius: 8px; outline: none;" onkeydown="if(event.key==='Enter')generateCustomImages()">
+              <button id="custom-image-btn" onclick="generateCustomImages()" class="cursor-pointer" style="padding: 8px 16px; font-size: 12px; font-weight: 600; color: white; background: #7C3AED; border: none; border-radius: 8px; white-space: nowrap; display: flex; align-items: center; gap: 5px;">
+                ✨ Generate
+              </button>
+            </div>
+            <div id="custom-gen-progress" class="hidden" style="margin-top: 10px; padding: 10px; background: rgba(255,255,255,0.8); border-radius: 8px; border: 1px solid #e5e7eb;">
+              <div style="font-size: 12px; font-weight: 600; color: #032D60; margin-bottom: 4px;">
+                <span id="custom-gen-status">Interpreting your request...</span>
+              </div>
+              <div style="width: 100%; height: 5px; background: #e5e7eb; border-radius: 3px; overflow: hidden;">
+                <div id="custom-gen-bar" style="width: 0%; height: 100%; background: linear-gradient(90deg, #7C3AED, #a855f7); border-radius: 3px; transition: width 0.3s;"></div>
+              </div>
+              <div id="custom-gen-detail" style="font-size: 11px; color: #888; margin-top: 3px;"></div>
+            </div>
+          </div>
+        </div>
       </div>
 
       <!-- Image Lightbox Overlay -->
@@ -3540,19 +3565,46 @@ function renderGeneratedAssets() {
 
   const groupColors = { brand: '#0176D3', card: '#7C3AED', product: '#059669' };
   const groupLabels = { brand: 'Brand Images', card: 'Card Images', product: 'Product Images' };
+  // Dynamic colors for custom groups
+  const customGroupPalette = ['#DC2626', '#D97706', '#0D9488', '#2563EB', '#9333EA', '#DB2777', '#65A30D', '#0891B2'];
+
+  // Merge standard + custom types
+  const customTypes = currentItemData?.custom_asset_types || [];
+  const allTypes = [...GENERATED_ASSET_TYPES, ...customTypes];
+
+  // Assign colors and labels to custom groups
+  let paletteIdx = 0;
+  for (const ct of customTypes) {
+    if (!groupColors[ct.group]) {
+      groupColors[ct.group] = customGroupPalette[paletteIdx % customGroupPalette.length];
+      paletteIdx++;
+    }
+    if (!groupLabels[ct.group]) {
+      groupLabels[ct.group] = ct.group.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase()) + ' Images';
+    }
+  }
 
   let html = '';
   let currentGroup = '';
+  let customGroupsSeen = new Set();
 
-  for (const asset of GENERATED_ASSET_TYPES) {
+  for (const asset of allTypes) {
+    const isCustom = asset.key.startsWith('custom_');
     if (asset.group !== currentGroup) {
       currentGroup = asset.group;
-      html += `<div style="font-size: 12px; font-weight: 700; color: ${groupColors[asset.group]}; text-transform: uppercase; letter-spacing: 0.04em; margin: ${html ? '18px' : '0'} 0 10px; padding-bottom: 6px; border-bottom: 1px solid #f0f0f0;">${groupLabels[asset.group]}</div>`;
+      const isCustomGroup = isCustom && !customGroupsSeen.has(asset.group);
+      if (isCustom) customGroupsSeen.add(asset.group);
+      html += `<div style="font-size: 12px; font-weight: 700; color: ${groupColors[asset.group] || '#666'}; text-transform: uppercase; letter-spacing: 0.04em; margin: ${html ? '18px' : '0'} 0 10px; padding-bottom: 6px; border-bottom: 1px solid #f0f0f0; display: flex; align-items: center; justify-content: space-between;">`;
+      html += `<span>${groupLabels[asset.group] || asset.group}</span>`;
+      if (isCustom) {
+        html += `<button onclick="deleteCustomGroup('${esc(asset.group)}')" class="cursor-pointer" title="Delete this group" style="font-size: 11px; color: #C23934; background: none; border: none; padding: 2px 6px;">🗑 Delete Group</button>`;
+      }
+      html += `</div>`;
     }
     const url = images[asset.key] || '';
     const hasImage = url && url.startsWith('http');
     const aspectRatio = asset.w / asset.h;
-    const thumbW = asset.group === 'product' ? 48 : (aspectRatio > 2.5 ? 120 : 80);
+    const thumbW = (asset.w === asset.h) ? 48 : (aspectRatio > 2.5 ? 120 : 80);
     const thumbH = Math.round(thumbW / aspectRatio);
 
     html += `<div id="asset-row-${asset.key}" style="display: flex; align-items: center; gap: 10px; padding: 8px 0; border-bottom: 1px solid #f5f5f5;">`;
@@ -3584,7 +3636,7 @@ function renderGeneratedAssets() {
     html += `<input id="asset-file-${asset.key}" type="file" accept="image/*" onchange="handleAssetFileUpload('${asset.key}', this)" style="display: none;">`;
     // Generate / Regenerate
     html += `<button id="asset-gen-${asset.key}" onclick="generateSingleAsset('${asset.key}')" class="cursor-pointer" title="${hasImage ? 'Regenerate' : 'Generate'}"
-      style="padding: 4px 8px; font-size: 11px; font-weight: 600; color: white; background: ${groupColors[asset.group]}; border: none; border-radius: 5px; display: flex; align-items: center; gap: 3px;">
+      style="padding: 4px 8px; font-size: 11px; font-weight: 600; color: white; background: ${groupColors[asset.group] || '#666'}; border: none; border-radius: 5px; display: flex; align-items: center; gap: 3px;">
       <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg>
       ${hasImage ? '↻' : 'Gen'}
     </button>`;
@@ -3647,9 +3699,31 @@ async function clearAssetImage(key) {
   }
   if (!currentItemData.images) currentItemData.images = {};
   currentItemData.images[key] = '';
+  // For custom keys, also remove from custom_asset_types
+  if (key.startsWith('custom_') && currentItemData.custom_asset_types) {
+    currentItemData.custom_asset_types = currentItemData.custom_asset_types.filter(t => t.key !== key);
+    delete currentItemData.images[key];
+  }
   await saveItemData();
   renderGeneratedAssets();
   showToast('Image cleared');
+}
+
+async function deleteCustomGroup(groupKey) {
+  if (!confirm(`Delete all images in this group?`)) return;
+  const customs = currentItemData.custom_asset_types || [];
+  const toDelete = customs.filter(t => t.group === groupKey);
+  for (const t of toDelete) {
+    const url = (currentItemData.images || {})[t.key];
+    if (url) {
+      fetch('/api/images/delete', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ url }) }).catch(() => {});
+      delete currentItemData.images[t.key];
+    }
+  }
+  currentItemData.custom_asset_types = customs.filter(t => t.group !== groupKey);
+  await saveItemData();
+  renderGeneratedAssets();
+  showToast('Custom group deleted');
 }
 
 async function handleAssetFileUpload(key, input) {
@@ -3698,22 +3772,48 @@ async function generateSingleAsset(key) {
   }
 
   try {
-    const resp = await fetch('/api/images/generate', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        brand,
-        brandDesc: meta.brand_desc || '',
-        industry: meta.industry || '',
-        imageType: key,
-        viewId: currentItemId,
-        tone: meta.tone || '',
-        visualStyle: meta.visual_style || '',
-        colorPrimary: meta.color_primary || '',
-        colorSecondary: meta.color_secondary || '',
-        websiteUrl: meta.brand_url || ''
-      })
-    });
+    let resp;
+    // Custom images use the regenerate-custom endpoint with their stored prompt
+    if (key.startsWith('custom_')) {
+      const customMeta = (currentItemData.custom_asset_types || []).find(t => t.key === key);
+      if (!customMeta) { showToast('Custom image metadata not found'); return; }
+      resp = await fetch('/api/images/regenerate-custom', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          key,
+          prompt: customMeta.prompt || `Create a professional image for the brand "${brand}". No text, no logos, no words. Photorealistic, high quality.`,
+          w: customMeta.w || 1024,
+          h: customMeta.h || 1024,
+          brand,
+          brandDesc: meta.brand_desc || '',
+          industry: meta.industry || '',
+          tone: meta.tone || '',
+          visualStyle: meta.visual_style || '',
+          colorPrimary: meta.color_primary || '',
+          colorSecondary: meta.color_secondary || '',
+          websiteUrl: meta.brand_url || '',
+          viewId: currentItemId
+        })
+      });
+    } else {
+      resp = await fetch('/api/images/generate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          brand,
+          brandDesc: meta.brand_desc || '',
+          industry: meta.industry || '',
+          imageType: key,
+          viewId: currentItemId,
+          tone: meta.tone || '',
+          visualStyle: meta.visual_style || '',
+          colorPrimary: meta.color_primary || '',
+          colorSecondary: meta.color_secondary || '',
+          websiteUrl: meta.brand_url || ''
+        })
+      });
+    }
     const result = await resp.json();
     if (result.url) {
       if (!currentItemData.images) currentItemData.images = {};
@@ -3827,6 +3927,96 @@ async function autoGenerateAllImages() {
   generateAllImages();
 }
 
+async function generateCustomImages() {
+  const prompt = document.getElementById('custom-image-prompt').value.trim();
+  if (!prompt) { showToast('Please enter a prompt describing what images you want.'); return; }
+
+  const meta = currentItemData?.metadata || {};
+  const brand = meta.brand;
+  if (!brand) { showToast('No brand set — please set a brand name first.'); return; }
+
+  const btn = document.getElementById('custom-image-btn');
+  const progress = document.getElementById('custom-gen-progress');
+  const status = document.getElementById('custom-gen-status');
+  const bar = document.getElementById('custom-gen-bar');
+  const detail = document.getElementById('custom-gen-detail');
+
+  btn.disabled = true;
+  btn.style.opacity = '0.6';
+  progress.classList.remove('hidden');
+  status.textContent = 'Interpreting your request...';
+  bar.style.width = '10%';
+  detail.textContent = '';
+
+  try {
+    const resp = await fetch('/api/images/generate-from-prompt', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        prompt,
+        brand,
+        brandDesc: meta.brand_desc || '',
+        industry: meta.industry || '',
+        tone: meta.tone || '',
+        visualStyle: meta.visual_style || '',
+        colorPrimary: meta.color_primary || '',
+        colorSecondary: meta.color_secondary || '',
+        websiteUrl: meta.brand_url || '',
+        viewId: currentItemId,
+        existingCustomTypes: currentItemData.custom_asset_types || []
+      })
+    });
+
+    if (!resp.ok) {
+      const err = await resp.json();
+      throw new Error(err.error || 'Failed to generate images');
+    }
+
+    const data = await resp.json();
+    const results = data.results || [];
+    const total = results.length;
+    let succeeded = 0;
+
+    if (!currentItemData.images) currentItemData.images = {};
+    if (!currentItemData.custom_asset_types) currentItemData.custom_asset_types = [];
+
+    status.textContent = `Generating ${total} image${total > 1 ? 's' : ''}...`;
+
+    for (let i = 0; i < results.length; i++) {
+      const r = results[i];
+      bar.style.width = `${10 + ((i + 1) / total) * 90}%`;
+      detail.textContent = `${i + 1} of ${total}: ${r.label}`;
+
+      if (r.url) {
+        currentItemData.images[r.key] = r.url;
+        currentItemData.custom_asset_types.push({
+          key: r.key, label: r.label, desc: r.desc, w: r.w, h: r.h, group: r.group, prompt: r.prompt || prompt
+        });
+        succeeded++;
+      }
+    }
+
+    await saveItemData();
+    renderGeneratedAssets();
+
+    bar.style.width = '100%';
+    status.textContent = `Done! ${succeeded} image${succeeded > 1 ? 's' : ''} generated.`;
+    showToast(`${succeeded} custom image${succeeded > 1 ? 's' : ''} generated!`);
+    document.getElementById('custom-image-prompt').value = '';
+
+    setTimeout(() => { progress.classList.add('hidden'); }, 3000);
+  } catch (err) {
+    console.error('Custom image generation failed:', err);
+    status.textContent = `Error: ${err.message}`;
+    bar.style.width = '0%';
+    setTimeout(() => { progress.classList.add('hidden'); }, 5000);
+    showToast('Custom image generation failed: ' + err.message);
+  }
+
+  btn.disabled = false;
+  btn.style.opacity = '1';
+}
+
 async function saveItemData() {
   const email = document.getElementById('user-email').textContent;
   try {
@@ -3861,6 +4051,10 @@ async function downloadImagesZip() {
     const assetLabels = {};
     if (typeof GENERATED_ASSET_TYPES !== 'undefined') {
       for (const a of GENERATED_ASSET_TYPES) assetLabels[a.key] = a.label;
+    }
+    // Include custom asset labels
+    for (const ct of (currentItemData?.custom_asset_types || [])) {
+      assetLabels[ct.key] = ct.label;
     }
 
     for (const [type, url] of entries) {
