@@ -516,10 +516,10 @@
         </div>
       </div>
 
-      <!-- Images -->
+      <!-- Project Images -->
       <div style="background: white; border-radius: 12px; border: 1px solid #e5e7eb; box-shadow: 0 1px 3px rgba(0,0,0,0.06); margin-bottom: 20px;">
         <div class="flex items-center justify-between" style="padding: 14px 20px; border-bottom: 1px solid #f0f0f0;">
-          <span style="font-size: 13px; font-weight: 700; color: #032D60; text-transform: uppercase; letter-spacing: 0.04em;">Images</span>
+          <span style="font-size: 13px; font-weight: 700; color: #032D60; text-transform: uppercase; letter-spacing: 0.04em;">Project Images</span>
           <button id="download-images-btn" onclick="downloadImagesZip()" class="cursor-pointer" style="padding: 5px 12px; font-size: 12px; font-weight: 600; color: #0176D3; background: #E8F4FD; border: 1px solid #B4D6F0; border-radius: 6px; display: flex; align-items: center; gap: 5px;">
             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
             Download .zip
@@ -595,11 +595,9 @@
             </div>
           </div>
         </div>
-      </div>
 
-      <!-- Generated Assets -->
-      <div style="background: white; border-radius: 12px; border: 1px solid #e5e7eb; box-shadow: 0 1px 3px rgba(0,0,0,0.06); margin-bottom: 20px;">
-        <div class="flex items-center justify-between" style="padding: 14px 20px; border-bottom: 1px solid #f0f0f0;">
+        <!-- Generated Assets sub-section -->
+        <div class="flex items-center justify-between" style="padding: 14px 20px; border-top: 1px solid #f0f0f0; border-bottom: 1px solid #f0f0f0;">
           <span style="font-size: 13px; font-weight: 700; color: #032D60; text-transform: uppercase; letter-spacing: 0.04em;">Generated Assets</span>
           <div class="flex items-center gap-2">
             <button id="generate-all-btn" onclick="generateAllImages()" class="cursor-pointer" style="padding: 5px 12px; font-size: 12px; font-weight: 600; color: white; background: #7C3AED; border: none; border-radius: 6px; display: flex; align-items: center; gap: 5px;">
@@ -608,22 +606,9 @@
             </button>
           </div>
         </div>
-        <!-- Progress bar at top of assets section so user sees it immediately -->
-        <div id="gen-all-progress" class="hidden" style="margin: 16px 20px 0; padding: 12px; background: #f0f7ff; border-radius: 8px; border: 1px solid #b0d4f1;">
-          <div style="font-size: 12px; font-weight: 600; color: #032D60; margin-bottom: 6px;">
-            <span id="gen-all-status">Generating images...</span>
-          </div>
-          <div style="width: 100%; height: 6px; background: #e5e7eb; border-radius: 3px; overflow: hidden;">
-            <div id="gen-all-bar" style="width: 0%; height: 100%; background: linear-gradient(90deg, #0176D3, #7C3AED); border-radius: 3px; transition: width 0.3s;"></div>
-          </div>
-          <div id="gen-all-detail" style="font-size: 11px; color: #888; margin-top: 4px;">0 of 15</div>
-        </div>
-        <div id="generated-assets-grid" style="padding: 16px 20px;">
-          <!-- Dynamically rendered by renderGeneratedAssets() -->
-        </div>
-        <!-- Custom Image Prompt -->
-        <div style="padding: 0 20px 16px;">
-          <div style="background: linear-gradient(135deg, #faf5ff, #f3e8ff); border: 1px dashed #c4b5fd; border-radius: 10px; padding: 14px;">
+        <!-- Custom Image Prompt (right below Generated Assets heading) -->
+        <div style="padding: 16px 20px 0;">
+          <div style="background: linear-gradient(135deg, #faf5ff, #f3e8ff); border: 1px dashed #c4b5fd; border-radius: 10px; padding: 14px; margin-bottom: 4px;">
             <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 8px;">
               <span style="font-size: 16px;">🎨</span>
               <span style="font-size: 13px; font-weight: 700; color: #032D60;">Generate Custom Images</span>
@@ -645,6 +630,19 @@
               <div id="custom-gen-detail" style="font-size: 11px; color: #888; margin-top: 3px;"></div>
             </div>
           </div>
+        </div>
+        <!-- Progress bar at top of assets section so user sees it immediately -->
+        <div id="gen-all-progress" class="hidden" style="margin: 16px 20px 0; padding: 12px; background: #f0f7ff; border-radius: 8px; border: 1px solid #b0d4f1;">
+          <div style="font-size: 12px; font-weight: 600; color: #032D60; margin-bottom: 6px;">
+            <span id="gen-all-status">Generating images...</span>
+          </div>
+          <div style="width: 100%; height: 6px; background: #e5e7eb; border-radius: 3px; overflow: hidden;">
+            <div id="gen-all-bar" style="width: 0%; height: 100%; background: linear-gradient(90deg, #0176D3, #7C3AED); border-radius: 3px; transition: width 0.3s;"></div>
+          </div>
+          <div id="gen-all-detail" style="font-size: 11px; color: #888; margin-top: 4px;">0 of 15</div>
+        </div>
+        <div id="generated-assets-grid" style="padding: 16px 20px;">
+          <!-- Dynamically rendered by renderGeneratedAssets() -->
         </div>
       </div>
 
