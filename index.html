@@ -3571,7 +3571,19 @@ function renderGeneratedAssets() {
   // Merge standard + custom types — only include standard types for Retail
   const customTypes = currentItemData?.custom_asset_types || [];
   const standardTypes = isRetail ? GENERATED_ASSET_TYPES : [];
-  const allTypes = [...standardTypes, ...customTypes];
+
+  // Sort all types so items sharing a group are contiguous (standard first, then custom within same group)
+  const standardGroups = ['brand', 'card', 'product'];
+  const allTypes = [];
+  // First: add standard types grouped, interleaving custom items that match each standard group
+  for (const sg of standardGroups) {
+    const stdInGroup = standardTypes.filter(t => t.group === sg);
+    const customInGroup = customTypes.filter(t => t.group === sg);
+    allTypes.push(...stdInGroup, ...customInGroup);
+  }
+  // Then: add remaining custom types that don't match any standard group
+  const customOnly = customTypes.filter(t => !standardGroups.includes(t.group));
+  allTypes.push(...customOnly);
 
   // Assign colors and labels to custom groups
   let paletteIdx = 0;
@@ -3607,11 +3619,11 @@ function renderGeneratedAssets() {
     const isCustom = asset.key.startsWith('custom_');
     if (asset.group !== currentGroup) {
       currentGroup = asset.group;
-      const isCustomGroup = isCustom && !customGroupsSeen.has(asset.group);
-      if (isCustom) customGroupsSeen.add(asset.group);
+      const isStandardGroup = standardGroups.includes(asset.group);
       html += `<div style="font-size: 12px; font-weight: 700; color: ${groupColors[asset.group] || '#666'}; text-transform: uppercase; letter-spacing: 0.04em; margin: ${html ? '18px' : '0'} 0 10px; padding-bottom: 6px; border-bottom: 1px solid #f0f0f0; display: flex; align-items: center; justify-content: space-between;">`;
       html += `<span>${groupLabels[asset.group] || asset.group}</span>`;
-      if (isCustom) {
+      // Only show delete button for purely custom groups (not standard groups that have custom items added)
+      if (!isStandardGroup) {
         html += `<button onclick="deleteCustomGroup('${esc(asset.group)}')" class="cursor-pointer" title="Delete this group" style="font-size: 11px; color: #C23934; background: none; border: none; padding: 2px 6px;">🗑 Delete Group</button>`;
       }
       html += `</div>`;

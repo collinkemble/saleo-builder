@@ -1267,6 +1267,16 @@ Respond ONLY with a valid JSON array, no markdown, no explanation.`;
       if (m) nextNum = Math.max(nextNum, parseInt(m[1]) + 1);
     }
 
+    // Count existing items per group (standard + already-created custom)
+    const standardGroupCounts = { brand: 4, card: 7, product: 4 };
+    const existingGroupCounts = {};
+    for (const [gk, cnt] of Object.entries(standardGroupCounts)) {
+      existingGroupCounts[gk] = cnt;
+    }
+    for (const ct of (existingCustomTypes || [])) {
+      existingGroupCounts[ct.group] = (existingGroupCounts[ct.group] || 0) + 1;
+    }
+
     // Build the plan across all groups — client will generate images one at a time
     const plan = [];
     for (const group of groups) {
@@ -1277,14 +1287,20 @@ Respond ONLY with a valid JSON array, no markdown, no explanation.`;
       const h = group.height || 1024;
       const imagePrompts = group.image_prompts || [];
 
+      // Continue numbering from existing items in this group
+      const startNum = (existingGroupCounts[groupKey] || 0) + 1;
+
       for (let i = 0; i < count; i++) {
         const key = `custom_${String(nextNum).padStart(3, '0')}`;
         nextNum++;
         const imgPrompt = imagePrompts[i] || imagePrompts[0] || `Create a professional image for the brand "${brand}" ${brandInfo}. No text, no logos, no words. Photorealistic, high quality.`;
-        const num = String(i + 1).padStart(2, '0');
+        const num = String(startNum + i).padStart(2, '0');
         const label = `${groupName.toUpperCase().replace(/\s+IMAGES$/i, '')} ${num}`;
         plan.push({ key, label, group: groupKey, w, h, desc: groupName, prompt: imgPrompt });
       }
+
+      // Update count so subsequent groups referencing same key continue correctly
+      existingGroupCounts[groupKey] = (existingGroupCounts[groupKey] || 0) + count;
     }
 
     res.json({ plan });
