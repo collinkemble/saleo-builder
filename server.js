@@ -1372,7 +1372,7 @@ app.post('/api/items', async (req, res) => {
 // PUT /api/items/:id — update an item
 app.put('/api/items/:id', async (req, res) => {
   try {
-    const { email, data } = req.body;
+    const { email, data, name } = req.body;
     if (!email || !data) {
       return res.status(400).json({ error: 'Email and data required' });
     }
@@ -1385,10 +1385,18 @@ app.put('/api/items/:id', async (req, res) => {
       return res.status(404).json({ error: 'Item not found' });
     }
 
-    await query(
-      'UPDATE items SET data = ?, updated_at = NOW() WHERE id = ? AND user_id = ?',
-      [JSON.stringify(data), req.params.id, user.id]
-    );
+    // Update data and optionally the name
+    if (name && typeof name === 'string' && name.trim()) {
+      await query(
+        'UPDATE items SET name = ?, data = ?, updated_at = NOW() WHERE id = ? AND user_id = ?',
+        [name.trim(), JSON.stringify(data), req.params.id, user.id]
+      );
+    } else {
+      await query(
+        'UPDATE items SET data = ?, updated_at = NOW() WHERE id = ? AND user_id = ?',
+        [JSON.stringify(data), req.params.id, user.id]
+      );
+    }
 
     res.json({ success: true });
 

@@ -363,6 +363,10 @@
           </div>
         </div>
         <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+          <div style="grid-column: 1 / -1;">
+            <label class="block text-xs font-bold mb-1" style="color: #032D60;">Saleo Demo Name <span style="color: #ea001e;">*</span></label>
+            <input id="edit-demo-name" type="text" placeholder="e.g. Acme Corp Pipeline Demo" class="w-full px-3 py-2 rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none text-sm">
+          </div>
           <div>
             <label class="block text-xs font-bold mb-1" style="color: #032D60;">Brand Name <span style="color: #ea001e;">*</span></label>
             <input id="edit-brand" type="text" class="w-full px-3 py-2 rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none text-sm">
@@ -2179,6 +2183,7 @@ function renderDetail(item) {
   document.getElementById('detail-meta-updated').textContent = item.updated_at ? 'Updated: ' + new Date(item.updated_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : '';
 
   // Populate editable fields
+  document.getElementById('edit-demo-name').value = item.name || '';
   const meta = data.metadata || {};
   document.getElementById('edit-brand').value = meta.brand || '';
   document.getElementById('edit-brand-desc').value = meta.brand_desc || '';
@@ -2217,6 +2222,7 @@ function renderDetail(item) {
 
   // Store original values for change detection
   window._origSettings = {
+    demo_name: item.name || '',
     brand: meta.brand || '',
     brand_desc: meta.brand_desc || '',
     brand_url: meta.brand_url || '',
@@ -2300,6 +2306,7 @@ function checkSettingsChanged() {
   const orig = window._origSettings;
   if (!orig) return;
   const changed =
+    document.getElementById('edit-demo-name').value !== orig.demo_name ||
     document.getElementById('edit-brand').value !== orig.brand ||
     document.getElementById('edit-brand-desc').value !== orig.brand_desc ||
     document.getElementById('edit-website').value !== orig.brand_url ||
@@ -2321,6 +2328,7 @@ function hideSaveSettingsBar() {
 }
 
 async function saveViewSettings() {
+  const demoName = document.getElementById('edit-demo-name').value.trim();
   const brand = document.getElementById('edit-brand').value.trim();
   const brandDesc = document.getElementById('edit-brand-desc').value.trim();
   const brandUrl = document.getElementById('edit-website').value.trim();
@@ -2328,6 +2336,7 @@ async function saveViewSettings() {
   const industry = getResolvedIndustry('edit');
   const synopsis = document.getElementById('edit-synopsis').value.trim();
 
+  if (!demoName) { alert('Saleo Demo Name is required.'); return; }
   if (!brand) { alert('Brand name is required.'); return; }
   if (!industrySelect) { alert('Industry is required.'); return; }
   if (industrySelect === 'Other' && !industry) { alert('Please specify your industry.'); document.getElementById('edit-industry-custom').focus(); return; }
@@ -2362,16 +2371,20 @@ async function saveViewSettings() {
     const resp = await fetch(`/api/items/${currentItemId}`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email, data: currentItemData })
+      body: JSON.stringify({ email, name: demoName, data: currentItemData })
     });
     if (!resp.ok) throw new Error('Save failed');
 
     // Update original values to new state
-    window._origSettings = { brand, brand_desc: brandDesc, brand_url: brandUrl, industry, synopsis, color_primary: colorPrimary, color_secondary: colorSecondary, tone, visual_style: visualStyle };
+    window._origSettings = { demo_name: demoName, brand, brand_desc: brandDesc, brand_url: brandUrl, industry, synopsis, color_primary: colorPrimary, color_secondary: colorSecondary, tone, visual_style: visualStyle };
 
-    // Update the card title on home page
-    document.getElementById('detail-brand').textContent = brand;
-    document.getElementById('detail-breadcrumb').textContent = brand;
+    // Update the page header with new name
+    document.getElementById('detail-name').textContent = demoName;
+    // Also update the in-memory item so going back to list shows updated name
+    if (window.allItems) {
+      const listItem = window.allItems.find(i => i.id == currentItemId);
+      if (listItem) listItem.name = demoName;
+    }
 
     hideSaveSettingsBar();
     btn.textContent = '✓ Saved!';
@@ -2384,7 +2397,7 @@ async function saveViewSettings() {
 }
 
 // Attach change listeners to view settings fields
-['edit-brand', 'edit-brand-desc', 'edit-website', 'edit-industry', 'edit-industry-custom', 'edit-synopsis', 'edit-tone', 'edit-visual-style'].forEach(id => {
+['edit-demo-name', 'edit-brand', 'edit-brand-desc', 'edit-website', 'edit-industry', 'edit-industry-custom', 'edit-synopsis', 'edit-tone', 'edit-visual-style'].forEach(id => {
   const el = document.getElementById(id);
   if (el) el.addEventListener('input', checkSettingsChanged);
   if (el && el.tagName === 'SELECT') el.addEventListener('change', checkSettingsChanged);
