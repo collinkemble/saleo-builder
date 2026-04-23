@@ -435,8 +435,9 @@ app.post('/api/upload', upload.single('file'), async (req, res) => {
     let extractedText = '';
 
     if (ext === '.pdf' || mimetype === 'application/pdf') {
-      const pdfParse = require('pdf-parse');
-      const data = await pdfParse(buffer);
+      const { PDFParse } = require('pdf-parse');
+      const parser = new PDFParse({ data: buffer });
+      const data = await parser.getText();
       extractedText = data.text;
     } else if (ext === '.docx' || mimetype === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document') {
       const mammoth = require('mammoth');
