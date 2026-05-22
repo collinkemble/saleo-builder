@@ -11,8 +11,20 @@ const { migrate } = require('./src/db/migrate');
 const { uploadImage, deleteByUrl, deleteByUrls, extractAssetUrls } = require('./src/utils/r2');
 const { fetchBrandLogo } = require('./src/utils/logoFetcher');
 
+const fs = require('fs');
+
 const app = express();
 const PORT = process.env.PORT || 3000;
+
+// ─── Staging Banner ───
+const STAGING_BANNER_HTML = '<div style="background:#f59e0b;color:#000;text-align:center;padding:4px;font-size:12px;font-weight:700;position:fixed;top:0;left:0;right:0;z-index:99999;">⚠️ STAGING ENVIRONMENT</div><div style="height:28px;"></div>';
+let spaHtml = '';
+try {
+  spaHtml = fs.readFileSync(path.join(__dirname, 'index.html'), 'utf-8');
+  if (process.env.STAGING_BANNER === 'true') {
+    spaHtml = spaHtml.replace(/<body([^>]*)>/, '<body$1>' + STAGING_BANNER_HTML);
+  }
+} catch (e) { /* index.html loaded later via sendFile fallback */ }
 
 // ─── JWT Session Tokens ───
 const JWT_SECRET = process.env.JWT_SECRET || (process.env.MAGIC_LINK_SECRET
@@ -1586,7 +1598,9 @@ app.post('/api/items/:id/share/confirm', async (req, res) => {
 // Brand Kit Builder Proxy
 // ═══════════════════════════════════════════════
 
-const BRANDKIT_API_URL = 'https://brandkit-builder.aubreydemo.com/api';
+const BRANDKIT_API_URL = process.env.BRANDKIT_BUILDER_URL
+  ? `${process.env.BRANDKIT_BUILDER_URL}/api`
+  : 'https://brandkit-builder.aubreydemo.com/api';
 
 // GET /api/brandkit-builder/items?email=<user-email> — List brand kits for a user
 app.get('/api/brandkit-builder/items', async (req, res) => {
@@ -1634,7 +1648,9 @@ app.get('/api/brandkit-builder/items/:id', async (req, res) => {
 // Script Builder Proxy
 // ═══════════════════════════════════════════════
 
-const SCRIPT_API_URL = 'https://scriptwriter.aubreydemo.com/api';
+const SCRIPT_API_URL = process.env.SCRIPTWRITER_URL
+  ? `${process.env.SCRIPTWRITER_URL}/api`
+  : 'https://scriptwriter.aubreydemo.com/api';
 
 // GET /api/scriptwriter/scripts?email=<user-email> — List scripts for a user
 app.get('/api/scriptwriter/scripts', async (req, res) => {
@@ -1686,7 +1702,12 @@ app.get('/api/scriptwriter/scripts/:id', async (req, res) => {
 
 // SPA catch-all — serve index.html for any non-API route (enables /views/:id deep links)
 app.get('/{*splat}', (req, res) => {
-  res.sendFile(path.join(__dirname, 'index.html'));
+  if (spaHtml) {
+    res.set('Content-Type', 'text/html');
+    res.send(spaHtml);
+  } else {
+    res.sendFile(path.join(__dirname, 'index.html'));
+  }
 });
 
 // ═══════════════════════════════════════════════
