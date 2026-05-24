@@ -26,6 +26,24 @@ try {
   }
 } catch (e) { /* index.html loaded later via sendFile fallback */ }
 
+// ─── Dynamic App URLs (env-driven for staging/prod) ───
+const APP_URL_MAP = {
+  'https://demoforge.aubreydemo.com':        process.env.DEMOFORGE_URL        || 'https://demoforge.aubreydemo.com',
+  'https://brandkit-builder.aubreydemo.com': process.env.BRANDKIT_BUILDER_URL || 'https://brandkit-builder.aubreydemo.com',
+  'https://scriptwriter.aubreydemo.com':     process.env.SCRIPTWRITER_URL     || 'https://scriptwriter.aubreydemo.com',
+  'https://org-builder.aubreydemo.com':      process.env.ORGBUILDER_URL       || 'https://org-builder.aubreydemo.com',
+  'https://installer.aubreydemo.com':        process.env.INSTALLER_URL        || 'https://installer.aubreydemo.com',
+  'https://pocketsic.aubreydemo.com':        process.env.POCKETSIC_URL        || 'https://pocketsic.aubreydemo.com',
+  'https://saleo-builder.aubreydemo.com':    process.env.SALEOBUILDER_URL     || 'https://saleo-builder.aubreydemo.com',
+  'https://video-builder.aubreydemo.com':    process.env.VIDEO_BUILDER_URL    || 'https://video-builder.aubreydemo.com',
+  'https://leave-behind.aubreydemo.com':     process.env.LEAVE_BEHIND_URL     || 'https://leave-behind.aubreydemo.com',
+};
+if (spaHtml) {
+  for (const [prodUrl, envUrl] of Object.entries(APP_URL_MAP)) {
+    spaHtml = spaHtml.replaceAll(prodUrl, envUrl);
+  }
+}
+
 // ─── JWT Session Tokens ───
 const JWT_SECRET = process.env.JWT_SECRET || (process.env.MAGIC_LINK_SECRET
   ? crypto.createHash('sha256').update('saleo-session:' + process.env.MAGIC_LINK_SECRET).digest('hex')
