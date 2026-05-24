@@ -66,7 +66,7 @@ app.use(express.json({ limit: '1mb' }));
 const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 10 * 1024 * 1024 } });
 
 // Serve static files (index.html, etc.)
-app.use(express.static(path.join(__dirname)));
+app.use(express.static(path.join(__dirname), { index: false }));
 
 // ═══════════════════════════════════════════════
 // SHARED HELPERS (do not modify)
