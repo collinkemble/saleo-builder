@@ -62,6 +62,14 @@ function verifySessionToken(token) {
 app.use(cors());
 app.use(express.json({ limit: '1mb' }));
 
+// Force HTTPS in production (Heroku sets x-forwarded-proto)
+app.use((req, res, next) => {
+  if (req.headers['x-forwarded-proto'] === 'http') {
+    return res.redirect(301, `https://${req.headers.host}${req.url}`);
+  }
+  next();
+});
+
 // File upload config (in-memory, 10MB max)
 const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 10 * 1024 * 1024 } });
 
