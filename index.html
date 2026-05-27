@@ -314,6 +314,11 @@
     <!-- APP-SPECIFIC: Detail Page                      -->
     <!-- ═══════════════════════════════════════════════ -->
     <div id="item-detail" class="hidden" style="max-width: 912px; margin: 0 auto; padding: 32px 16px 0;">
+      <!-- Admin View Banner -->
+      <div id="admin-view-banner" style="display: none; background: linear-gradient(135deg, #7c3aed, #6d28d9); color: #fff; text-align: center; padding: 8px 16px; font-size: 13px; font-weight: 600; border-radius: 8px; margin-bottom: 16px;">
+        &#128065; Admin View &mdash; Viewing <span id="admin-view-owner"></span>'s project
+      </div>
+
       <!-- Breadcrumb -->
       <div style="margin-bottom: 20px;">
         <a href="#" onclick="showPage('items'); return false;" style="color: #0176D3; font-size: 13px; text-decoration: none; font-weight: 500;">← Back to Saleo Demos</a>
@@ -1874,17 +1879,25 @@ function renderUsersRows() {
 
   container.innerHTML = sorted.map(u => {
     const badgeBg = u.item_count > 0 ? 'background: #E8F5E9; color: #2E7D32;' : 'background: #eee; color: #888;';
+    const hasItems = u.item_count > 0;
+    const clickAttr = hasItems ? `onclick="toggleUserExpand(${u.id}, this)" style="padding: 12px 20px; background: white; border: 1px solid #d8dde6; border-radius: 8px; transition: box-shadow 0.15s, background 0.15s; cursor: pointer;" onmouseenter="this.style.background='#f8fafc'" onmouseleave="this.style.background='white'"` : `style="padding: 12px 20px; background: white; border: 1px solid #d8dde6; border-radius: 8px; transition: box-shadow 0.15s;"`;
     return `
-    <div style="padding: 12px 20px; background: white; border: 1px solid #d8dde6; border-radius: 8px; transition: box-shadow 0.15s;">
-      <div style="display: flex; align-items: center;">
-        <span style="flex: 2; font-size: 14px; color: #1C2024; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${esc(u.email)}</span>
-        <span style="flex: 1; font-size: 14px; color: rgba(0,7,20,0.624); overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${esc(u.name || '—')}</span>
-        <span style="width: 120px; font-size: 14px; color: rgba(0,7,20,0.624); text-align: center;">${fmtDate(u.created_at)}</span>
-        <span style="width: 120px; font-size: 14px; color: rgba(0,7,20,0.624); text-align: center;">${u.last_login_at ? fmtDate(u.last_login_at) : '—'}</span>
-        <div style="width: 80px; text-align: center;">
-          <span style="display: inline-block; ${badgeBg} padding: 2px 12px; border-radius: 999px; font-size: 12px; font-weight: 700;">${u.item_count}</span>
+    <div>
+      <div ${clickAttr}>
+        <div style="display: flex; align-items: center;">
+          <span style="flex: 2; font-size: 14px; color: #1C2024; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; display: flex; align-items: center; gap: 6px;">
+            ${hasItems ? '<span class="user-chevron" style="display: inline-block; transition: transform 0.2s; font-size: 10px; color: #9ca3af;">&#9654;</span>' : '<span style="display: inline-block; width: 16px;"></span>'}
+            ${esc(u.email)}
+          </span>
+          <span style="flex: 1; font-size: 14px; color: rgba(0,7,20,0.624); overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${esc(u.name || '—')}</span>
+          <span style="width: 120px; font-size: 14px; color: rgba(0,7,20,0.624); text-align: center;">${fmtDate(u.created_at)}</span>
+          <span style="width: 120px; font-size: 14px; color: rgba(0,7,20,0.624); text-align: center;">${u.last_login_at ? fmtDate(u.last_login_at) : '—'}</span>
+          <div style="width: 80px; text-align: center;">
+            <span style="display: inline-block; ${badgeBg} padding: 2px 12px; border-radius: 999px; font-size: 12px; font-weight: 700;">${u.item_count}</span>
+          </div>
         </div>
       </div>
+      <div id="user-items-${u.id}" style="display: none; background: #fafbfc; border: 1px solid #e5e7eb; border-top: none; border-radius: 0 0 8px 8px; margin-top: -8px; padding-top: 4px; padding-bottom: 4px;"></div>
     </div>`;
   }).join('');
 }
@@ -1909,6 +1922,45 @@ async function loadUsers() {
     renderUsersRows();
   } catch (err) {
     container.innerHTML = `<div style="padding: 24px; text-align: center; color: #ef4444;">${esc(err.message)}</div>`;
+  }
+}
+
+// ═══════════════════════════════════════════════
+// SHARED: Admin — Expand user items
+// ═══════════════════════════════════════════════
+async function toggleUserExpand(userId, rowEl) {
+  const panel = document.getElementById('user-items-' + userId);
+  const chevron = rowEl.querySelector('.user-chevron');
+  const isOpen = panel.style.display !== 'none';
+  if (isOpen) {
+    panel.style.display = 'none';
+    if (chevron) chevron.style.transform = 'rotate(0deg)';
+    return;
+  }
+  panel.style.display = 'block';
+  if (chevron) chevron.style.transform = 'rotate(90deg)';
+  if (panel.dataset.loaded) return;
+  panel.innerHTML = '<div style="padding: 12px 20px; font-size: 13px; color: #9ca3af;">Loading items...</div>';
+  try {
+    const email = document.getElementById('user-email').textContent;
+    const resp = await fetch(`/api/users/${userId}/items?email=${encodeURIComponent(email)}`);
+    if (!resp.ok) throw new Error('Failed to load');
+    const items = await resp.json();
+    if (items.length === 0) {
+      panel.innerHTML = '<div style="padding: 12px 20px; font-size: 13px; color: #9ca3af;">No items found.</div>';
+    } else {
+      panel.innerHTML = items.map(item => {
+        const displayName = esc(item.name || 'Untitled');
+        const fmtD = (d) => d ? new Date(d).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : '';
+        return `<div onclick="viewItem(${item.id})" style="padding: 8px 20px 8px 42px; font-size: 13px; color: #1C2024; cursor: pointer; display: flex; align-items: center; justify-content: space-between; transition: background 0.15s; border-bottom: 1px solid #f0f0f0;" onmouseenter="this.style.background='#eef2ff'" onmouseleave="this.style.background='transparent'">
+          <span style="overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${displayName}</span>
+          <span style="font-size: 12px; color: #9ca3af; white-space: nowrap; margin-left: 12px;">${fmtD(item.created_at)}</span>
+        </div>`;
+      }).join('');
+    }
+    panel.dataset.loaded = 'true';
+  } catch (err) {
+    panel.innerHTML = '<div style="padding: 12px 20px; font-size: 13px; color: #ef4444;">Failed to load items.</div>';
   }
 }
 
@@ -2167,6 +2219,16 @@ async function viewItem(id, skipPush) {
     currentItemId = item.id;
     currentItemName = item.name;
     currentItemData = item.data || {};
+
+    // Admin banner: show if viewing another user's item
+    const adminBanner = document.getElementById('admin-view-banner');
+    const adminOwnerSpan = document.getElementById('admin-view-owner');
+    if (item.owner_email && item.owner_email.toLowerCase() !== email.toLowerCase()) {
+      adminOwnerSpan.textContent = item.owner_name || item.owner_email;
+      adminBanner.style.display = 'block';
+    } else {
+      adminBanner.style.display = 'none';
+    }
 
     renderDetail(item);
     showPage('item-detail', true);

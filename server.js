@@ -338,6 +338,24 @@ app.get('/api/users', async (req, res) => {
   }
 });
 
+// GET /api/users/:userId/items — admin-only: list a user's items
+app.get('/api/users/:userId/items', async (req, res) => {
+  try {
+    const email = req.query.email;
+    if (!email || !isAdmin(email)) {
+      return res.status(403).json({ error: 'Admin access required' });
+    }
+    const rows = await query(
+      'SELECT id, name, created_at, updated_at FROM items WHERE user_id = ? ORDER BY created_at DESC',
+      [req.params.userId]
+    );
+    res.json(rows);
+  } catch (err) {
+    console.error('Error listing user items:', err);
+    res.status(500).json({ error: 'Failed to list user items' });
+  }
+});
+
 // ═══════════════════════════════════════════════
 // SHARED ROUTES — Gemini Streaming Proxy
 // ═══════════════════════════════════════════════
@@ -1038,10 +1056,15 @@ app.get('/api/items/:id', async (req, res) => {
     if (!email) return res.status(400).json({ error: 'Email required' });
 
     const user = await getOrCreateUser(email);
-    const rows = await query(
-      'SELECT * FROM items WHERE id = ? AND user_id = ?',
-      [req.params.id, user.id]
-    );
+    let rows;
+    if (isAdmin(email)) {
+      rows = await query(
+        'SELECT i.*, u.email AS owner_email, u.name AS owner_name FROM items i JOIN users u ON u.id = i.user_id WHERE i.id = ?',
+        [req.params.id]
+      );
+    } else {
+      rows = await query('SELECT * FROM items WHERE id = ? AND user_id = ?', [req.params.id, user.id]);
+    }
 
     if (rows.length === 0) {
       return res.status(404).json({ error: 'Item not found' });
