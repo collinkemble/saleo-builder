@@ -211,7 +211,7 @@
         <!-- Center — Navigation -->
         <div class="nav-desktop flex items-center gap-1">
           <button id="nav-items" onclick="showPage('items')" class="cursor-pointer" style="padding: 6px 16px; border-radius: 6px; background: rgba(255,255,255,0.12); border: none; color: #FFFFFF; font-size: 13px; font-weight: 700; transition: background 0.15s ease;">Saleo Demos</button>
-          <button id="nav-api-keys" onclick="showPage('api-keys')" class="cursor-pointer" style="padding: 6px 16px; border-radius: 6px; background: transparent; border: none; color: rgba(255,255,255,0.7); font-size: 13px; font-weight: 500; transition: background 0.15s ease;" onmouseenter="if(!this.dataset.active)this.style.background='rgba(255,255,255,0.07)'" onmouseleave="if(!this.dataset.active)this.style.background='transparent'">API Keys</button>
+          <button id="nav-api-keys" onclick="showPage('api-keys')" class="hidden cursor-pointer" style="padding: 6px 16px; border-radius: 6px; background: transparent; border: none; color: rgba(255,255,255,0.7); font-size: 13px; font-weight: 500; transition: background 0.15s ease;" onmouseenter="if(!this.dataset.active)this.style.background='rgba(255,255,255,0.07)'" onmouseleave="if(!this.dataset.active)this.style.background='transparent'">API Keys</button>
           <button id="nav-how-to" onclick="showPage('how-to')" class="cursor-pointer" style="padding: 6px 16px; border-radius: 6px; background: transparent; border: none; color: rgba(255,255,255,0.7); font-size: 13px; font-weight: 500; transition: background 0.15s ease;" onmouseenter="if(!this.dataset.active)this.style.background='rgba(255,255,255,0.07)'" onmouseleave="if(!this.dataset.active)this.style.background='transparent'">How to Use</button>
           <button id="nav-feedback" onclick="showPage('feedback')" class="hidden cursor-pointer" style="padding: 6px 16px; border-radius: 6px; background: transparent; border: none; color: rgba(255,255,255,0.7); font-size: 13px; font-weight: 500; transition: background 0.15s ease;" onmouseenter="if(!this.dataset.active)this.style.background='rgba(255,255,255,0.07)'" onmouseleave="if(!this.dataset.active)this.style.background='transparent'">Feedback</button>
           <button id="nav-users" onclick="showPage('users')" class="hidden cursor-pointer" style="padding: 6px 16px; border-radius: 6px; background: transparent; border: none; color: rgba(255,255,255,0.7); font-size: 13px; font-weight: 500; transition: background 0.15s ease;" onmouseenter="if(!this.dataset.active)this.style.background='rgba(255,255,255,0.07)'" onmouseleave="if(!this.dataset.active)this.style.background='transparent'">Users</button>
@@ -242,7 +242,7 @@
         <a href="https://org-builder.aubreydemo.com">🏗️ Org Builder</a>
         <a href="https://video-builder.aubreydemo.com">🎬 Video Builder</a>
         <div class="mobile-divider"></div>
-        <button id="mob-nav-api-keys" onclick="showPage('api-keys'); closeMobileMenu();">🔑 API Keys</button>
+        <button id="mob-nav-api-keys" onclick="showPage('api-keys'); closeMobileMenu();" style="display:none">🔑 API Keys</button>
         <button id="mob-nav-how-to" onclick="showPage('how-to'); closeMobileMenu();">📖 How to Use</button>
         <button onclick="openFeedbackDialog(); closeMobileMenu();">💬 Give Feedback</button>
         <button onclick="handleLogout(); closeMobileMenu();">🚪 Sign Out</button>
@@ -1444,6 +1444,8 @@ async function showApp(email) {
     const usersNav = document.getElementById('nav-users');
     if (feedbackNav) feedbackNav.classList.toggle('hidden', !data.isAdmin);
     if (usersNav) usersNav.classList.toggle('hidden', !data.isAdmin);
+    const apiKeysNav = document.getElementById('nav-api-keys');
+    if (apiKeysNav) apiKeysNav.classList.toggle('hidden', !data.isAdmin);
     syncMobileAdminNav();
   } catch (err) {
     console.log('Admin check failed:', err.message);
@@ -1552,6 +1554,11 @@ function syncMobileAdminNav() {
   }
   if (usersDesktop && usersMobile) {
     usersMobile.style.display = usersDesktop.classList.contains('hidden') ? 'none' : 'block';
+  }
+  const apiKeysDesktop = document.getElementById('nav-api-keys');
+  const apiKeysMobile = document.getElementById('mob-nav-api-keys');
+  if (apiKeysDesktop && apiKeysMobile) {
+    apiKeysMobile.style.display = apiKeysDesktop.classList.contains('hidden') ? 'none' : 'block';
   }
 }
 

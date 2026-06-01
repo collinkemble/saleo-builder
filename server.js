@@ -252,6 +252,7 @@ app.get('/api/api-keys', async (req, res) => {
   try {
     const email = req.query.email;
     if (!email) return res.status(400).json({ error: 'Email required' });
+    if (!isAdmin(email)) return res.status(403).json({ error: 'Admin access required' });
 
     const user = await getOrCreateUser(email);
     const keys = await query(
@@ -272,6 +273,7 @@ app.post('/api/api-keys', async (req, res) => {
     if (!email || !name || !name.trim()) {
       return res.status(400).json({ error: 'Email and key name are required' });
     }
+    if (!isAdmin(email)) return res.status(403).json({ error: 'Admin access required' });
 
     const user = await getOrCreateUser(email);
     const rawKey = generateApiKeyToken();
@@ -301,6 +303,7 @@ app.delete('/api/api-keys/:id', async (req, res) => {
   try {
     const email = req.query.email;
     if (!email) return res.status(400).json({ error: 'Email required' });
+    if (!isAdmin(email)) return res.status(403).json({ error: 'Admin access required' });
 
     const user = await getOrCreateUser(email);
     const result = await query(
