@@ -30,8 +30,10 @@ try {
 const APP_URL_MAP = {
   'https://demoforge.aubreydemo.com':        process.env.DEMOFORGE_URL        || 'https://demoforge.aubreydemo.com',
   'https://brandkit-builder.aubreydemo.com': process.env.BRANDKIT_BUILDER_URL || 'https://brandkit-builder.aubreydemo.com',
+  'https://deep-research.aubreydemo.com':     process.env.DEEP_RESEARCH_URL    || 'https://deep-research.aubreydemo.com',
   'https://scriptwriter.aubreydemo.com':     process.env.SCRIPTWRITER_URL     || 'https://scriptwriter.aubreydemo.com',
   'https://org-builder.aubreydemo.com':      process.env.ORGBUILDER_URL       || 'https://org-builder.aubreydemo.com',
+  'https://slide-generator.aubreydemo.com':  process.env.SLIDE_GENERATOR_URL  || 'https://slide-generator.aubreydemo.com',
   'https://installer.aubreydemo.com':        process.env.INSTALLER_URL        || 'https://installer.aubreydemo.com',
   'https://pocketsic.aubreydemo.com':        process.env.POCKETSIC_URL        || 'https://pocketsic.aubreydemo.com',
   'https://saleo-builder.aubreydemo.com':    process.env.SALEOBUILDER_URL     || 'https://saleo-builder.aubreydemo.com',
