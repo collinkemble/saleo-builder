@@ -386,7 +386,7 @@ app.post('/api/generate', async (req, res) => {
     return res.status(400).json({ error: 'Missing "contents" in request body' });
   }
 
-  const model = process.env.GEMINI_MODEL || 'gemini-2.5-flash';
+  const model = process.env.GEMINI_MODEL || 'gemini-3.6-flash';
   const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${model}:streamGenerateContent?alt=sse&key=${apiKey}`;
 
   // Set up SSE headers so Heroku sees data flowing
@@ -584,7 +584,7 @@ app.post('/api/upload', upload.single('file'), async (req, res) => {
       const apiKey = process.env.GEMINI_API_KEY;
       if (apiKey) {
         try {
-          const model = process.env.GEMINI_MODEL || 'gemini-2.5-flash';
+          const model = process.env.GEMINI_MODEL || 'gemini-3.6-flash';
           const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
           const geminiResp = await fetch(geminiUrl, {
             method: 'POST',
@@ -761,7 +761,7 @@ app.post('/api/images/generate', async (req, res) => {
     for (let attempt = 1; attempt <= 3; attempt++) {
       try {
         const response = await ai.models.generateContent({
-          model: 'gemini-2.5-flash-image',
+          model: process.env.GEMINI_IMAGE_MODEL || 'gemini-3.1-flash-image',
           contents: [{ text: typeDef.prompt }],
           config: { responseModalities: ['TEXT', 'IMAGE'] },
         });
@@ -849,7 +849,7 @@ app.post('/api/images/persona', async (req, res) => {
     if (synopsis && synopsis.trim()) {
       try {
         const extractResp = await ai.models.generateContent({
-          model: 'gemini-2.5-flash',
+          model: process.env.GEMINI_MODEL || 'gemini-3.6-flash',
           contents: [{ text: `From this demo synopsis, extract two things:
 1. The person's name (if one is mentioned). If no name is mentioned, leave it empty.
 2. A brief physical description suitable for generating a headshot photo (age range, gender, professional appearance).
@@ -892,7 +892,7 @@ Synopsis: ${synopsis}` }],
     const imagePrompt = `Generate a professional headshot photo of a ${genderDesc} named ${finalName}. ${personaDesc}. The person should look friendly, confident, and approachable. Clean background, professional lighting, business casual attire. Photorealistic portrait style, shoulders-up framing. No text or watermarks.`;
 
     const response = await ai.models.generateContent({
-      model: 'gemini-2.5-flash-image',
+      model: process.env.GEMINI_IMAGE_MODEL || 'gemini-3.1-flash-image',
       contents: [{ text: imagePrompt }],
       config: {
         responseModalities: ['TEXT', 'IMAGE'],
@@ -1145,7 +1145,7 @@ async function generateSingleImage(brand, meta, imageType, itemId, opts = {}) {
       console.log(`[BgImageGen] Generating ${imageType} for "${brand}" (attempt ${attempt}/3)`);
 
       const response = await ai.models.generateContent({
-        model: 'gemini-2.5-flash-image',
+        model: process.env.GEMINI_IMAGE_MODEL || 'gemini-3.1-flash-image',
         contents: [{ text: typeDef.prompt }],
         config: { responseModalities: ['TEXT', 'IMAGE'] },
       });
@@ -1308,7 +1308,7 @@ Respond ONLY with a valid JSON array, no markdown, no explanation.`;
 
     console.log(`[CustomImageGen] Interpreting prompt: "${prompt}"`);
     const interpretResp = await ai.models.generateContent({
-      model: 'gemini-2.5-flash',
+      model: process.env.GEMINI_MODEL || 'gemini-3.6-flash',
       contents: [{ text: interpretPrompt }],
     });
 
