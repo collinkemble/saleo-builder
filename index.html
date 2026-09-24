@@ -352,6 +352,24 @@
       <!-- Editable View Settings + Regenerate -->
       <div class="mb-6" style="background: white; border-radius: 12px; padding: 24px; border: 1px solid #e5e7eb; box-shadow: 0 1px 3px rgba(0,0,0,0.06);">
         <p class="font-bold mb-4" style="font-size: 15px; color: #032D60;">View Settings</p>
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 12px;">
+          <div>
+            <label class="block text-xs font-bold mb-1" style="color: #032D60;">Saleo Demo Name <span style="color: #ea001e;">*</span></label>
+            <input id="edit-demo-name" type="text" placeholder="e.g. Acme Corp Pipeline Demo" class="w-full px-3 py-2 rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none text-sm">
+          </div>
+          <div>
+            <label class="block text-xs font-bold mb-1" style="color: #032D60;">Brand Name <span style="color: #ea001e;">*</span></label>
+            <input id="edit-brand" type="text" class="w-full px-3 py-2 rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none text-sm">
+          </div>
+        </div>
+
+        <!-- Toggle for More Settings -->
+        <button id="toggle-more-settings" onclick="toggleMoreSettings()" class="cursor-pointer" style="background: none; border: none; color: #0176D3; font-size: 13px; font-weight: 600; padding: 4px 0; display: flex; align-items: center; gap: 6px; margin-bottom: 12px;">
+          <span id="toggle-more-settings-icon">▶</span> More Settings
+        </button>
+
+        <!-- Collapsible settings section -->
+        <div id="more-settings-section" style="display: none;">
         <!-- Brand Kit section (edit page) -->
         <div style="background: linear-gradient(135deg, #f0f7ff, #e8f2ff); border-radius: 10px; padding: 16px; border: 1px dashed #b0d4f1; margin-bottom: 14px;">
           <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 4px;">
@@ -385,14 +403,6 @@
           </div>
         </div>
         <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
-          <div>
-            <label class="block text-xs font-bold mb-1" style="color: #032D60;">Saleo Demo Name <span style="color: #ea001e;">*</span></label>
-            <input id="edit-demo-name" type="text" placeholder="e.g. Acme Corp Pipeline Demo" class="w-full px-3 py-2 rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none text-sm">
-          </div>
-          <div>
-            <label class="block text-xs font-bold mb-1" style="color: #032D60;">Brand Name <span style="color: #ea001e;">*</span></label>
-            <input id="edit-brand" type="text" class="w-full px-3 py-2 rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none text-sm">
-          </div>
           <div style="grid-column: 1 / -1;">
             <label class="block text-xs font-bold mb-1" style="color: #032D60;">Brand Website URL</label>
             <input id="edit-website" type="url" class="w-full px-3 py-2 rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none text-sm">
@@ -486,6 +496,7 @@
             <input id="edit-visual-style" type="text" placeholder="e.g. Clean, modern, and premium" class="w-full px-3 py-2 rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none text-sm">
           </div>
         </div>
+        </div><!-- end #more-settings-section -->
 
         <!-- Save Settings button (hidden until fields change) -->
         <div id="save-settings-bar" class="hidden" style="margin-top: 14px; display: none;">
@@ -2388,6 +2399,24 @@ async function savePrompt() {
 }
 
 // --- View Settings: Save & Change Detection ---
+// ═══════════════════════════════════════════════
+// Toggle More Settings
+// ═══════════════════════════════════════════════
+function toggleMoreSettings() {
+  const section = document.getElementById('more-settings-section');
+  const icon = document.getElementById('toggle-more-settings-icon');
+  const btn = document.getElementById('toggle-more-settings');
+  if (section.style.display === 'none') {
+    section.style.display = 'block';
+    icon.textContent = '▼';
+    btn.innerHTML = '<span id="toggle-more-settings-icon">▼</span> Hide Settings';
+  } else {
+    section.style.display = 'none';
+    icon.textContent = '▶';
+    btn.innerHTML = '<span id="toggle-more-settings-icon">▶</span> More Settings';
+  }
+}
+
 function checkSettingsChanged() {
   const orig = window._origSettings;
   if (!orig) return;
