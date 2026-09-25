@@ -1,12 +1,36 @@
 require('dotenv').config();
 const fs = require('fs').promises;
 const path = require('path');
-const { getPool } = require('./connection');
+const { getPool, isPostgres } = require('./connection');
 
 async function migrate() {
   try {
-    console.log('Starting database migration...');
+    console.log(`Starting database migration (${isPostgres ? 'PostgreSQL' : 'MySQL'})...`);
 
+    if (isPostgres) {
+      // ─── PostgreSQL path ───
+      const schemaPath = path.join(__dirname, 'schema-pg.sql');
+      const schema = await fs.readFile(schemaPath, 'utf-8');
+      const pool = getPool();
+      await pool.query(schema);
+      console.log('✓ PostgreSQL schema applied');
+
+      // Auto-promote admin users from ADMIN_EMAILS env var
+      const adminEmails = (process.env.ADMIN_EMAILS || '').split(',').map(e => e.trim()).filter(Boolean);
+      if (adminEmails.length > 0) {
+        const placeholders = adminEmails.map((_, i) => `$${i + 1}`).join(',');
+        await pool.query(
+          `UPDATE users SET is_admin = TRUE WHERE email IN (${placeholders})`,
+          adminEmails
+        );
+        console.log(`✓ Admin users promoted: ${adminEmails.join(', ')}`);
+      }
+
+      console.log('✓ Database migration completed successfully');
+      return true;
+    }
+
+    // ─── MySQL path (original) ───
     const schemaPath = path.join(__dirname, 'schema.sql');
     const schema = await fs.readFile(schemaPath, 'utf-8');
 

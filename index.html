@@ -1298,6 +1298,13 @@ async function initAndCheckAuth() {
     const magicKey = config.magicPublishableKey;
     cookieDomain = config.cookieDomain || null;
     if (magicKey) magic = new Magic(magicKey);
+
+    // Step 0: SSO auto-login — if the server detected x-forwarded-user, use the pre-minted token
+    if (config.ssoSessionToken && config.ssoEmail) {
+      setCookie('sessionToken', config.ssoSessionToken, cookieDomain);
+      showApp(config.ssoEmail);
+      return;
+    }
   } catch (err) {
     console.warn('Config fetch failed:', err.message);
   }
