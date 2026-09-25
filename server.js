@@ -38,7 +38,7 @@ const APP_URL_MAP = {
   'https://pocketsic.aubreydemo.com':        process.env.POCKETSIC_URL        || 'https://pocketsic.aubreydemo.com',
   'https://saleo-builder.aubreydemo.com':    process.env.SALEOBUILDER_URL     || 'https://saleo-builder.aubreydemo.com',
   'https://video-builder.aubreydemo.com':    process.env.VIDEO_BUILDER_URL    || 'https://video-builder.aubreydemo.com',
-  'https://leave-behind.aubreydemo.com':     process.env.LEAVE_BEHIND_URL     || 'https://leave-behind.aubreydemo.com',
+  'https://leave-behind-generator.aubreydemo.com': process.env.LEAVE_BEHIND_URL || 'https://leave-behind-generator.aubreydemo.com',
 };
 if (spaHtml) {
   for (const [prodUrl, envUrl] of Object.entries(APP_URL_MAP)) {
