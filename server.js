@@ -1152,7 +1152,7 @@ app.get('/api/items', async (req, res) => {
     const items = await query(
       `SELECT id, name, shared_by_email, shared_at, created_at, updated_at,
               JSON_UNQUOTE(JSON_EXTRACT(data, '$.images.logo')) AS logo_url
-       FROM items WHERE user_id = ? ORDER BY updated_at DESC`,
+       FROM items WHERE user_id = ? ORDER BY COALESCE(updated_at, created_at) DESC`,
       [user.id]
     );
     res.json({ items });
