@@ -13,6 +13,72 @@ const { fetchBrandLogo } = require('./src/utils/logoFetcher');
 
 const fs = require('fs');
 
+// ─── Gemini API: Retry + Fallback Model Chain ───
+// Primary model from env var, with automatic fallback to alternate models on 503/429/500
+const GEMINI_FALLBACK_MODELS = ['gemini-3.6-flash', 'gemini-3.5-flash'];
+
+/**
+ * Call Gemini API with retry + model fallback (non-streaming, direct HTTP).
+ * Use this for simple text generation calls.
+ */
+async function callGeminiWithRetry({ prompt, generationConfig = {}, timeoutMs = 270000, maxRetries = 3 }) {
+  const apiKey = process.env.GEMINI_API_KEY;
+  if (!apiKey) throw new Error('GEMINI_API_KEY not configured');
+
+  const primaryModel = process.env.GEMINI_MODEL || 'gemini-3.7-flash';
+  const modelsToTry = [primaryModel, ...GEMINI_FALLBACK_MODELS.filter(m => m !== primaryModel)];
+
+  for (const model of modelsToTry) {
+    for (let attempt = 1; attempt <= maxRetries; attempt++) {
+      try {
+        const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
+        const resp = await fetch(url, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            contents: [{ parts: [{ text: prompt }] }],
+            generationConfig,
+          }),
+          signal: AbortSignal.timeout(timeoutMs),
+        });
+
+        if (resp.ok) {
+          const data = await resp.json();
+          const text = data.candidates?.[0]?.content?.parts?.[0]?.text;
+          return { text, model };
+        }
+
+        if (resp.status !== 503 && resp.status !== 429 && resp.status !== 500) {
+          const errData = await resp.json().catch(() => ({}));
+          throw new Error(errData.error?.message || `Gemini API returned ${resp.status}`);
+        }
+
+        console.warn(`[Gemini] ${model} attempt ${attempt}/${maxRetries} got ${resp.status}, retrying...`);
+        if (attempt < maxRetries) {
+          await new Promise(r => setTimeout(r, attempt * 2000));
+        }
+      } catch (err) {
+        if (err.name === 'TimeoutError' || err.name === 'AbortError') {
+          console.warn(`[Gemini] ${model} attempt ${attempt}/${maxRetries} timed out`);
+          if (attempt < maxRetries) await new Promise(r => setTimeout(r, attempt * 2000));
+          continue;
+        }
+        throw err;
+      }
+    }
+    console.warn(`[Gemini] ${model} exhausted ${maxRetries} retries, trying next model...`);
+  }
+  throw new Error('All Gemini models failed after retries');
+}
+
+/**
+ * Get the ordered list of models to try (primary + fallbacks).
+ */
+function getGeminiModelsToTry() {
+  const primaryModel = process.env.GEMINI_MODEL || 'gemini-3.7-flash';
+  return [primaryModel, ...GEMINI_FALLBACK_MODELS.filter(m => m !== primaryModel)];
+}
+
 const app = express();
 const PORT = process.env.PORT || 3000;
 
@@ -373,8 +439,9 @@ app.get('/api/users/:userId/items', async (req, res) => {
 // SHARED ROUTES — Gemini Streaming Proxy
 // ═══════════════════════════════════════════════
 
-// POST /api/generate — SSE proxy to Gemini API
+// POST /api/generate — SSE proxy to Gemini API with retry + fallback
 // Streams from Gemini to keep Heroku's connection alive, then sends assembled response.
+// On 503/429/500, retries with backoff and falls back to alternate models.
 app.post('/api/generate', async (req, res) => {
   const apiKey = process.env.GEMINI_API_KEY;
   if (!apiKey) {
@@ -386,9 +453,6 @@ app.post('/api/generate', async (req, res) => {
     return res.status(400).json({ error: 'Missing "contents" in request body' });
   }
 
-  const model = process.env.GEMINI_MODEL || 'gemini-2.5-flash';
-  const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${model}:streamGenerateContent?alt=sse&key=${apiKey}`;
-
   // Set up SSE headers so Heroku sees data flowing
   res.setHeader('Content-Type', 'text/event-stream');
   res.setHeader('Cache-Control', 'no-cache');
@@ -398,86 +462,112 @@ app.post('/api/generate', async (req, res) => {
   // Send a keepalive comment immediately so Heroku knows we're alive
   res.write(': keepalive\n\n');
 
-  try {
-    const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 270000);
+  const modelsToTry = getGeminiModelsToTry();
+  const maxRetries = 3;
+  let lastError = null;
 
-    const geminiResp = await fetch(geminiUrl, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ contents, generationConfig }),
-      signal: controller.signal,
-    });
+  for (const model of modelsToTry) {
+    for (let attempt = 1; attempt <= maxRetries; attempt++) {
+      try {
+        const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${model}:streamGenerateContent?alt=sse&key=${apiKey}`;
+        const controller = new AbortController();
+        const timeout = setTimeout(() => controller.abort(), 270000);
 
-    clearTimeout(timeout);
+        const geminiResp = await fetch(geminiUrl, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ contents, generationConfig }),
+          signal: controller.signal,
+        });
 
-    if (!geminiResp.ok) {
-      const errData = await geminiResp.json().catch(() => ({}));
-      const errMsg = errData.error?.message || `Gemini API returned ${geminiResp.status}`;
-      res.write(`data: ${JSON.stringify({ error: errMsg })}\n\n`);
-      res.write('data: [DONE]\n\n');
-      return res.end();
-    }
+        clearTimeout(timeout);
 
-    // Collect all text parts to send a final assembled response
-    let allText = '';
-    const reader = geminiResp.body.getReader();
-    const decoder = new TextDecoder();
-    let buffer = '';
-
-    while (true) {
-      const { done, value } = await reader.read();
-      if (done) break;
-
-      buffer += decoder.decode(value, { stream: true });
-
-      const lines = buffer.split('\n');
-      buffer = lines.pop() || '';
-
-      for (const line of lines) {
-        if (line.startsWith('data: ')) {
-          const dataStr = line.slice(6).trim();
-          if (dataStr === '[DONE]') continue;
-
-          try {
-            const chunk = JSON.parse(dataStr);
-            const textPart = chunk.candidates?.[0]?.content?.parts?.[0]?.text || '';
-            if (textPart) {
-              allText += textPart;
-              res.write(`: chunk received\n\n`);
+        if (!geminiResp.ok) {
+          const status = geminiResp.status;
+          // Transient error — retry or fallback
+          if (status === 503 || status === 429 || status === 500) {
+            console.warn(`[Gemini SSE] ${model} attempt ${attempt}/${maxRetries} got ${status}, retrying...`);
+            res.write(`: retry ${model} attempt ${attempt}\n\n`);
+            if (attempt < maxRetries) {
+              await new Promise(r => setTimeout(r, attempt * 2000));
             }
-          } catch (e) {
-            // Skip non-JSON lines
+            continue;
+          }
+          // Non-transient error — fail immediately
+          const errData = await geminiResp.json().catch(() => ({}));
+          const errMsg = errData.error?.message || `Gemini API returned ${status}`;
+          res.write(`data: ${JSON.stringify({ error: errMsg })}\n\n`);
+          res.write('data: [DONE]\n\n');
+          return res.end();
+        }
+
+        // Success — collect all text parts to send a final assembled response
+        let allText = '';
+        const reader = geminiResp.body.getReader();
+        const decoder = new TextDecoder();
+        let buffer = '';
+
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+
+          buffer += decoder.decode(value, { stream: true });
+
+          const lines = buffer.split('\n');
+          buffer = lines.pop() || '';
+
+          for (const line of lines) {
+            if (line.startsWith('data: ')) {
+              const dataStr = line.slice(6).trim();
+              if (dataStr === '[DONE]') continue;
+
+              try {
+                const chunk = JSON.parse(dataStr);
+                const textPart = chunk.candidates?.[0]?.content?.parts?.[0]?.text || '';
+                if (textPart) {
+                  allText += textPart;
+                  res.write(`: chunk received\n\n`);
+                }
+              } catch (e) {
+                // Skip non-JSON lines
+              }
+            }
           }
         }
+
+        const finalResponse = {
+          candidates: [{
+            content: {
+              parts: [{ text: allText }],
+              role: 'model'
+            },
+            finishReason: 'STOP'
+          }]
+        };
+
+        res.write(`data: ${JSON.stringify(finalResponse)}\n\n`);
+        res.write('data: [DONE]\n\n');
+        return res.end();
+
+      } catch (err) {
+        if (err.name === 'AbortError' || err.name === 'TimeoutError') {
+          console.warn(`[Gemini SSE] ${model} attempt ${attempt}/${maxRetries} timed out`);
+          lastError = err;
+          if (attempt < maxRetries) await new Promise(r => setTimeout(r, attempt * 2000));
+          continue;
+        }
+        lastError = err;
+        throw err; // Non-retryable error
       }
     }
-
-    const finalResponse = {
-      candidates: [{
-        content: {
-          parts: [{ text: allText }],
-          role: 'model'
-        },
-        finishReason: 'STOP'
-      }]
-    };
-
-    res.write(`data: ${JSON.stringify(finalResponse)}\n\n`);
-    res.write('data: [DONE]\n\n');
-    res.end();
-
-  } catch (err) {
-    if (err.name === 'AbortError') {
-      console.error('[Gemini Proxy] Request timed out');
-      res.write(`data: ${JSON.stringify({ error: 'Request timed out. Try a shorter prompt.' })}\n\n`);
-    } else {
-      console.error('[Gemini Proxy] Error:', err.message);
-      res.write(`data: ${JSON.stringify({ error: 'Failed to reach Gemini API' })}\n\n`);
-    }
-    res.write('data: [DONE]\n\n');
-    res.end();
+    console.warn(`[Gemini SSE] ${model} exhausted ${maxRetries} retries, trying next model...`);
   }
+
+  // All models exhausted
+  console.error('[Gemini SSE] All models failed after retries');
+  res.write(`data: ${JSON.stringify({ error: lastError?.message || 'All Gemini models failed after retries' })}\n\n`);
+  res.write('data: [DONE]\n\n');
+  res.end();
 });
 
 // ═══════════════════════════════════════════════
@@ -579,29 +669,16 @@ app.post('/api/upload', upload.single('file'), async (req, res) => {
       }
     }
 
-    // If no synopsis found, use Gemini to generate one
+    // If no synopsis found, use Gemini to generate one (with retry + fallback)
     if (!synopsis) {
-      const apiKey = process.env.GEMINI_API_KEY;
-      if (apiKey) {
-        try {
-          const model = process.env.GEMINI_MODEL || 'gemini-2.5-flash';
-          const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
-          const geminiResp = await fetch(geminiUrl, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              contents: [{ parts: [{ text: `Read this demo script and write a 1 to 3 sentence synopsis of the demo story. Return ONLY the synopsis text, nothing else.\n\n${trimmedText.substring(0, 30000)}` }] }],
-              generationConfig: { maxOutputTokens: 200, temperature: 0.3 }
-            })
-          });
-          if (geminiResp.ok) {
-            const geminiData = await geminiResp.json();
-            const generated = geminiData.candidates?.[0]?.content?.parts?.[0]?.text?.trim();
-            if (generated) synopsis = generated;
-          }
-        } catch (e) {
-          console.warn('Synopsis generation failed, continuing without:', e.message);
-        }
+      try {
+        const result = await callGeminiWithRetry({
+          prompt: `Read this demo script and write a 1 to 3 sentence synopsis of the demo story. Return ONLY the synopsis text, nothing else.\n\n${trimmedText.substring(0, 30000)}`,
+          generationConfig: { maxOutputTokens: 200, temperature: 0.3 }
+        });
+        if (result.text?.trim()) synopsis = result.text.trim();
+      } catch (e) {
+        console.warn('Synopsis generation failed, continuing without:', e.message);
       }
     }
 
@@ -761,7 +838,7 @@ app.post('/api/images/generate', async (req, res) => {
     for (let attempt = 1; attempt <= 3; attempt++) {
       try {
         const response = await ai.models.generateContent({
-          model: 'gemini-2.5-flash-image',
+          model: process.env.GEMINI_IMAGE_MODEL || 'gemini-3.1-flash-image',
           contents: [{ text: typeDef.prompt }],
           config: { responseModalities: ['TEXT', 'IMAGE'] },
         });
@@ -849,7 +926,7 @@ app.post('/api/images/persona', async (req, res) => {
     if (synopsis && synopsis.trim()) {
       try {
         const extractResp = await ai.models.generateContent({
-          model: 'gemini-2.5-flash',
+          model: process.env.GEMINI_MODEL || 'gemini-3.7-flash',
           contents: [{ text: `From this demo synopsis, extract two things:
 1. The person's name (if one is mentioned). If no name is mentioned, leave it empty.
 2. A brief physical description suitable for generating a headshot photo (age range, gender, professional appearance).
@@ -892,7 +969,7 @@ Synopsis: ${synopsis}` }],
     const imagePrompt = `Generate a professional headshot photo of a ${genderDesc} named ${finalName}. ${personaDesc}. The person should look friendly, confident, and approachable. Clean background, professional lighting, business casual attire. Photorealistic portrait style, shoulders-up framing. No text or watermarks.`;
 
     const response = await ai.models.generateContent({
-      model: 'gemini-2.5-flash-image',
+      model: process.env.GEMINI_IMAGE_MODEL || 'gemini-3.1-flash-image',
       contents: [{ text: imagePrompt }],
       config: {
         responseModalities: ['TEXT', 'IMAGE'],
@@ -1145,7 +1222,7 @@ async function generateSingleImage(brand, meta, imageType, itemId, opts = {}) {
       console.log(`[BgImageGen] Generating ${imageType} for "${brand}" (attempt ${attempt}/3)`);
 
       const response = await ai.models.generateContent({
-        model: 'gemini-2.5-flash-image',
+        model: process.env.GEMINI_IMAGE_MODEL || 'gemini-3.1-flash-image',
         contents: [{ text: typeDef.prompt }],
         config: { responseModalities: ['TEXT', 'IMAGE'] },
       });
@@ -1308,7 +1385,7 @@ Respond ONLY with a valid JSON array, no markdown, no explanation.`;
 
     console.log(`[CustomImageGen] Interpreting prompt: "${prompt}"`);
     const interpretResp = await ai.models.generateContent({
-      model: 'gemini-2.5-flash',
+      model: process.env.GEMINI_MODEL || 'gemini-3.7-flash',
       contents: [{ text: interpretPrompt }],
     });
 
