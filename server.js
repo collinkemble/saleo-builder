@@ -1154,9 +1154,12 @@ app.get('/api/items', async (req, res) => {
     if (!email) return res.status(400).json({ error: 'Email required' });
 
     const user = await getOrCreateUser(email);
+    const logoCol = isPostgres
+      ? "data #>> '{images,logo}' AS logo_url"
+      : "JSON_UNQUOTE(JSON_EXTRACT(data, '$.images.logo')) AS logo_url";
     const items = await query(
       `SELECT id, name, shared_by_email, shared_at, created_at, updated_at,
-              JSON_UNQUOTE(JSON_EXTRACT(data, '$.images.logo')) AS logo_url
+              ${logoCol}
        FROM items WHERE user_id = ? ORDER BY COALESCE(updated_at, created_at, '1970-01-01') DESC`,
       [user.id]
     );
