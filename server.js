@@ -119,8 +119,8 @@ if (spaHtml) {
 }
 
 // ─── JWT Session Tokens ───
-const JWT_SECRET = process.env.JWT_SECRET || (process.env.MAGIC_LINK_SECRET
-  ? crypto.createHash('sha256').update('saleo-session:' + process.env.MAGIC_LINK_SECRET).digest('hex')
+const JWT_SECRET = process.env.JWT_SECRET || (process.env.SESSION_SECRET
+  ? crypto.createHash('sha256').update('saleo-session:' + process.env.SESSION_SECRET).digest('hex')
   : 'dev-jwt-secret');
 const JWT_EXPIRY = '30d';
 
@@ -211,7 +211,6 @@ app.get('/api/auth/config', async (req, res) => {
     );
   }
   res.json({
-    magicPublishableKey: process.env.MAGIC_PUBLISHABLE_KEY || process.env.VITE_MAGIC_LINK_KEY || null,
     cookieDomain: process.env.COOKIE_DOMAIN || null,
     ssoSessionToken: ssoSessionToken || null,
     ssoEmail: ssoEmail || null,
