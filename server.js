@@ -8,7 +8,21 @@ const jwt = require('jsonwebtoken');
 const multer = require('multer');
 const { query, getPool, isPostgres } = require('./src/db/connection');
 const { migrate } = require('./src/db/migrate');
-const { uploadImage, deleteByUrl, deleteByUrls, extractAssetUrls } = require('./src/utils/r2');
+const { uploadImage, deleteByUrl, deleteByUrls, extractAssetUrls, urlToKey, assertNoEmbeddedImages } = require('./src/utils/storage');
+
+// Only delete our own (views/) files that no OTHER item still references.
+// Shared copies point at the same image URLs, so deleting blindly would break the recipient's copy.
+async function unreferencedUrls(urls, excludeItemId) {
+  const out = [];
+  for (const url of urls) {
+    const key = urlToKey(url);
+    if (!key) continue;
+    const textCol = isPostgres ? 'data::text' : 'CAST(data AS CHAR)';
+    const rows = await query(`SELECT id FROM items WHERE id <> ? AND ${textCol} LIKE ? LIMIT 1`, [excludeItemId || 0, `%${key}%`]);
+    if (rows.length === 0) out.push(url);
+  }
+  return out;
+}
 const { fetchBrandLogo } = require('./src/utils/logoFetcher');
 
 const fs = require('fs');
@@ -736,7 +750,7 @@ app.post('/api/images/logo', async (req, res) => {
     if (!result.found || !result.url) return res.json(result);
 
     // Try to download and re-upload to R2; fall back to original URL if R2 fails
-    const { getR2Client } = require('./src/utils/r2');
+    const { getR2Client } = require('./src/utils/storage');
     if (getR2Client()) {
       try {
         const https = require('https');
@@ -1125,10 +1139,12 @@ app.get('/api/images/proxy', async (req, res) => {
 // POST /api/images/delete — Delete an R2 image by URL
 app.post('/api/images/delete', async (req, res) => {
   try {
-    const { url } = req.body;
+    const { url, itemId } = req.body;
     if (!url) return res.status(400).json({ error: 'url is required' });
-    await deleteByUrl(url);
-    res.json({ success: true });
+    // Own-prefix guard lives in the storage helper; also keep images other items still use.
+    const [safe] = await unreferencedUrls([url], itemId);
+    if (safe) await deleteByUrl(safe);
+    res.json({ success: true, deleted: !!safe });
   } catch (err) {
     console.error('Image delete failed:', err);
     res.status(500).json({ error: 'Image delete failed: ' + err.message });
@@ -1507,6 +1523,7 @@ app.post('/api/items', async (req, res) => {
     if (!email || !name) {
       return res.status(400).json({ error: 'Missing required fields: email, name' });
     }
+    try { assertNoEmbeddedImages(data); } catch (e) { return res.status(400).json({ error: e.message }); }
 
     const user = await getOrCreateUser(email);
     const result = await query(
@@ -1551,6 +1568,7 @@ app.put('/api/items/:id', async (req, res) => {
     if (!email || !data) {
       return res.status(400).json({ error: 'Email and data required' });
     }
+    try { assertNoEmbeddedImages(data); } catch (e) { return res.status(400).json({ error: e.message }); }
 
     const user = await getOrCreateUser(email);
 
@@ -1608,12 +1626,15 @@ app.delete('/api/items/:id', async (req, res) => {
       return res.status(404).json({ error: 'Item not found' });
     }
 
-    // Extract and delete R2 assets from item data
+    // Delete only OUR OWN (views/) files that no other item (e.g. a shared copy) still uses.
+    // Logos/personas owned by DemoForge or Brand Kit Builder are never touched.
     const itemData = typeof items[0].data === 'string' ? JSON.parse(items[0].data) : items[0].data;
     if (itemData) {
-      const assetUrls = extractAssetUrls(itemData);
-      if (assetUrls.length > 0) {
-        deleteByUrls(assetUrls).catch(err => console.warn('[R2] Item cleanup error:', err.message));
+      const ownUrls = extractAssetUrls(itemData, { ownOnly: true });
+      if (ownUrls.length > 0) {
+        unreferencedUrls(ownUrls, items[0].id)
+          .then(urls => urls.length && deleteByUrls(urls))
+          .catch(err => console.warn('[storage] Item cleanup error:', err.message));
       }
     }
 
