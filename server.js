@@ -852,9 +852,12 @@ ${tokenList}
 Respond with ONLY valid JSON:
 {"tokenValues": [{"tokenId": "...", "value": "..."}, ...]}`;
 
+    // Use shorter timeout and fewer retries to stay within Heroku's 30s router timeout
     const result = await callGeminiWithRetry({
       prompt,
-      generationConfig: { temperature: 0.7, maxOutputTokens: 16384 },
+      generationConfig: { temperature: 0.7, maxOutputTokens: 8192 },
+      timeoutMs: 25000,
+      maxRetries: 2,
     });
 
     let parsed;
