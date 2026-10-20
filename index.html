@@ -471,6 +471,10 @@
           </div>
           <!-- BK Fields (shown after BK applied) -->
           <div id="wizard-step-2-fields" style="display:none;">
+            <div id="bk-logo-preview" style="display:none;margin-bottom:12px;">
+              <label class="block text-xs font-bold mb-1" style="color:#032D60;">Logo</label>
+              <img id="bk-logo-img" src="" alt="Brand logo" style="max-height:48px;border-radius:6px;background:#f9f9f9;padding:4px;">
+            </div>
             <div class="grid grid-cols-2 gap-3">
               <div><label class="block text-xs font-bold mb-1" style="color:#032D60;">Brand Description</label><input id="new-brand-desc" class="w-full px-3 py-2 rounded-lg border border-gray-300 text-sm"></div>
               <div><label class="block text-xs font-bold mb-1" style="color:#032D60;">Website URL</label><input id="new-brand-url" class="w-full px-3 py-2 rounded-lg border border-gray-300 text-sm" placeholder="https://"></div>
@@ -481,11 +485,10 @@
             </div>
             <div class="grid grid-cols-2 gap-3 mt-3">
               <div><label class="block text-xs font-bold mb-1" style="color:#032D60;">Visual Style</label><input id="new-visual-style" class="w-full px-3 py-2 rounded-lg border border-gray-300 text-sm" readonly></div>
-              <div><label class="block text-xs font-bold mb-1" style="color:#032D60;">Primary Color</label><input id="new-primary-color" class="w-full px-3 py-2 rounded-lg border border-gray-300 text-sm" readonly></div>
-            </div>
-            <div id="bk-logo-preview" style="display:none;margin-top:10px;">
-              <label class="block text-xs font-bold mb-1" style="color:#032D60;">Logo</label>
-              <img id="bk-logo-img" src="" alt="Brand logo" style="max-height:48px;border-radius:6px;background:#f9f9f9;padding:4px;">
+              <div class="grid grid-cols-2 gap-2">
+                <div><label class="block text-xs font-bold mb-1" style="color:#032D60;">Primary Color</label><input id="new-primary-color" type="color" class="w-full h-9 rounded-lg border border-gray-300 cursor-pointer" readonly></div>
+                <div><label class="block text-xs font-bold mb-1" style="color:#032D60;">Secondary Color</label><input id="new-secondary-color" type="color" class="w-full h-9 rounded-lg border border-gray-300 cursor-pointer" readonly></div>
+              </div>
             </div>
           </div>
         </div>
@@ -1476,7 +1479,7 @@ let pendingScriptSource = null, pendingScriptId = null, pendingScriptSynopsis = 
 let wizardStep = 1;
 
 function openNewItemDialog() {
-  ['new-project-name','new-brand','new-brand-desc','new-brand-url','new-synopsis','new-elevator-pitch','new-tone','new-visual-style','new-primary-color'].forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
+  ['new-project-name','new-brand','new-brand-desc','new-brand-url','new-synopsis','new-elevator-pitch','new-tone','new-visual-style','new-primary-color','new-secondary-color'].forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
   const bkFields = document.getElementById('wizard-step-2-fields'); if (bkFields) bkFields.style.display = 'none';
   const bkLogoPrev = document.getElementById('bk-logo-preview'); if (bkLogoPrev) bkLogoPrev.style.display = 'none';
   const bkGenProg = document.getElementById('bk-gen-progress'); if (bkGenProg) bkGenProg.style.display = 'none';
@@ -1593,14 +1596,19 @@ function showBrandKitFields(bk) {
   const pitchEl = document.getElementById('new-elevator-pitch');
   if (pitchEl) pitchEl.value = bk.elevator_pitch || '';
   const toneEl = document.getElementById('new-tone');
-  if (toneEl) toneEl.value = bk.tone || '';
+  if (toneEl) toneEl.value = (typeof bk.tone === 'object' && bk.tone) ? (bk.tone.summary || '') : (bk.tone || '');
   const vsEl = document.getElementById('new-visual-style');
-  if (vsEl) vsEl.value = bk.visual_style || '';
+  if (vsEl) vsEl.value = (typeof bk.visual_style === 'object' && bk.visual_style) ? (bk.visual_style.summary || '') : (bk.visual_style || '');
   const colorEl = document.getElementById('new-primary-color');
-  if (colorEl) colorEl.value = bk.primary_color || '';
+  const primaryColor = bk.primary_color || (bk.visual_style && bk.visual_style.primary_color) || '#000000';
+  if (colorEl) colorEl.value = primaryColor;
+  const secColorEl = document.getElementById('new-secondary-color');
+  const secondaryColor = bk.secondary_color || (bk.visual_style && bk.visual_style.secondary_color) || '#666666';
+  if (secColorEl) secColorEl.value = secondaryColor;
+  const logoUrl = bk.logo_url || (bk.visual_style && bk.visual_style.logo_url) || '';
   const logoPreview = document.getElementById('bk-logo-preview');
   const logoImg = document.getElementById('bk-logo-img');
-  if (logoPreview && logoImg && bk.logo_url) { logoImg.src = bk.logo_url; logoPreview.style.display = 'block'; }
+  if (logoPreview && logoImg && logoUrl) { logoImg.src = logoUrl; logoPreview.style.display = 'block'; }
   else if (logoPreview) logoPreview.style.display = 'none';
 }
 
