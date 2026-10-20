@@ -137,12 +137,30 @@
     </header>
 
     <!-- ITEMS HOME -->
-    <div id="items-home" style="max-width: 912px; margin: 0 auto; padding: 32px 16px 0;">
-      <div class="flex items-center justify-between mb-6">
-        <h1 class="text-2xl font-bold" style="color: #032D60;">Your Saleo Demos</h1>
+    <div id="items-home" style="max-width: 1120px; margin: 0 auto; padding: 32px 16px 0;">
+      <!-- Hero Banner -->
+      <div style="background: linear-gradient(135deg, #032D60 0%, #0176D3 100%); border-radius: 16px; padding: 32px; margin-bottom: 28px; position: relative; overflow: hidden;">
+        <div style="position: absolute; top: -40px; right: -40px; width: 200px; height: 200px; border-radius: 50%; background: rgba(255,255,255,0.05);"></div>
+        <div style="position: absolute; bottom: -60px; left: -30px; width: 160px; height: 160px; border-radius: 50%; background: rgba(255,255,255,0.04);"></div>
+        <div style="position: relative; z-index: 1;">
+          <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 12px;">
+            <img src="https://saleo.io/wp-content/uploads/2022/03/Saleo-logo-only.png" alt="Saleo" style="width: 28px; height: 28px; object-fit: contain;">
+            <h2 style="font-size: 22px; font-weight: 700; color: #fff; margin: 0; letter-spacing: -0.02em;">AI-Powered Saleo Demos, Built in Seconds</h2>
+          </div>
+          <p style="font-size: 14px; line-height: 22px; color: rgba(255,255,255,0.8); margin: 0; max-width: 700px;">Saleo Builder, from Aubrey Demo AI, generates personalized Saleo demo prompts and brand imagery using AI. Just enter a brand name, choose an industry, and optionally add a demo story synopsis &mdash; and get a fully crafted Saleo prompt with AI-generated product images and logos ready to drop into the Saleo platform.</p>
+        </div>
+      </div>
+
+      <!-- Section header -->
+      <div class="flex items-center justify-between mb-2">
+        <div>
+          <h2 style="font-size: 22px; font-weight: 700; color: #032D60; margin: 0;">Saleo Demos</h2>
+          <p style="font-size: 13px; color: #888; margin: 4px 0 0 0;">AI-generated prompts for the Saleo platform</p>
+        </div>
         <button onclick="openNewItemDialog()" class="cursor-pointer" style="padding: 10px 20px; background: #0176D3; color: white; border: none; border-radius: 8px; font-size: 14px; font-weight: 700;">+ New Saleo Demo</button>
       </div>
-      <div id="items-grid" style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 16px;"></div>
+      <div style="height: 1px; background: #e5e7eb; margin-bottom: 20px;"></div>
+      <div id="items-grid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 16px;"></div>
       <div id="items-empty" class="hidden text-center py-16">
         <p class="text-gray-400 text-lg mb-2">No Saleo demos yet</p>
         <p class="text-gray-400 text-sm">Click "+ New Saleo Demo" to create your first personalized Saleo view.</p>
@@ -372,85 +390,131 @@
 
   <!-- NEW ITEM DIALOG -->
   <div id="new-item-dialog" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4" style="background: rgba(0,0,0,0.5);">
-    <div style="background: white; border-radius: 16px; width: 100%; max-width: 600px; max-height: 90vh; overflow-y: auto; box-shadow: 0 20px 60px rgba(0,0,0,0.3);">
-      <div style="padding: 24px 24px 0;">
-        <div class="flex items-center justify-between mb-5">
+    <div style="background: white; border-radius: 16px; width: 100%; max-width: 600px; max-height: 90vh; display: flex; flex-direction: column; box-shadow: 0 20px 60px rgba(0,0,0,0.3);">
+      <!-- Header -->
+      <div style="padding: 20px 24px 0; flex-shrink: 0;">
+        <div class="flex items-center justify-between mb-2">
           <h2 class="text-lg font-bold" style="color:#032D60;">New Saleo Demo</h2>
           <button onclick="closeNewItemDialog()" class="cursor-pointer" style="background:none;border:none;font-size:20px;color:#999;padding:4px;">&times;</button>
         </div>
-
+        <p style="font-size:13px;color:#888;margin:0 0 14px;">Let's set up your Saleo demo in a few quick steps.</p>
+        <!-- Step indicator -->
+        <div style="display:flex;align-items:center;gap:0;margin-bottom:16px;">
+          <div id="wiz-step-1-dot" style="width:24px;height:24px;border-radius:50%;background:#0176D3;color:white;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;">1</div>
+          <span id="wiz-label-1" style="font-size:11px;font-weight:600;color:#0176D3;margin:0 8px;">Basics</span>
+          <div style="flex:1;height:2px;background:#e5e7eb;"></div>
+          <div id="wiz-step-2-dot" style="width:24px;height:24px;border-radius:50%;background:#e5e7eb;color:#9ca3af;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;">2</div>
+          <span id="wiz-label-2" style="font-size:11px;font-weight:600;color:#9ca3af;margin:0 8px;">Brand Identity</span>
+          <div style="flex:1;height:2px;background:#e5e7eb;"></div>
+          <div id="wiz-step-3-dot" style="width:24px;height:24px;border-radius:50%;background:#e5e7eb;color:#9ca3af;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;">3</div>
+          <span id="wiz-label-3" style="font-size:11px;font-weight:600;color:#9ca3af;margin:0 0 0 8px;">Finalize</span>
+        </div>
         <div id="new-validation-error" class="hidden mb-3" style="background:#FEF2F2;border:1px solid #FECACA;border-radius:8px;padding:10px 14px;font-size:13px;color:#991B1B;"></div>
-
-        <!-- Brand Kit Picker (required) -->
-        <div id="bk-picker-container" class="mb-4">
-          <label class="text-xs font-semibold text-gray-500 mb-1 block">Brand Kit <span class="text-red-500">*</span></label>
-          <button onclick="openBrandKitPicker('')" class="cursor-pointer w-full" style="padding:10px 14px;background:#F5F3FF;border:1px solid #DDD6FE;border-radius:8px;font-size:13px;color:#7C3AED;font-weight:600;text-align:left;">Select Brand Kit...</button>
-          <span id="bk-source-badge" style="display:none;font-size:11px;color:#6D28D9;font-weight:600;margin-top:4px;display:inline-block;"></span>
-          <div id="bk-picker-dropdown" style="display:none;position:relative;background:white;border:1px solid #DDD6FE;border-radius:10px;box-shadow:0 4px 16px rgba(0,0,0,0.1);margin-top:4px;max-height:200px;overflow-y:auto;z-index:100;">
-            <div id="bk-picker-content"></div>
-          </div>
-        </div>
-
-        <!-- Project Name -->
-        <div class="mb-3"><label class="text-xs font-semibold text-gray-500 mb-1 block">Project Name <span class="text-red-500">*</span></label><input id="new-project-name" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm" placeholder="e.g. Acme Corp Spring Demo" oninput="clearFieldError('new-project-name')"></div>
-
-        <!-- Brand Name + Industry -->
-        <div class="grid grid-cols-2 gap-3 mb-3">
-          <div><label class="text-xs font-semibold text-gray-500 mb-1 block">Brand Name <span class="text-red-500">*</span></label><input id="new-brand" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm" oninput="clearFieldError('new-brand')"></div>
+      </div>
+      <!-- Scrollable body -->
+      <div style="flex:1;overflow-y:auto;padding:0 24px;">
+        <!-- STEP 1: Basics -->
+        <div id="wizard-step-1" style="display:flex;flex-direction:column;gap:12px;">
+          <div><label class="block text-xs font-bold mb-1" style="color:#032D60;">Saleo Demo Name <span style="color:#ea001e;">*</span></label><input id="new-project-name" type="text" placeholder="e.g. Acme Corp Spring Demo" oninput="clearFieldError('new-project-name')" class="w-full px-3 py-2 rounded-lg border border-gray-300 text-sm"></div>
+          <div><label class="block text-xs font-bold mb-1" style="color:#032D60;">Brand Name <span style="color:#ea001e;">*</span></label><input id="new-brand" type="text" placeholder="e.g. Sephora" oninput="clearFieldError('new-brand')" class="w-full px-3 py-2 rounded-lg border border-gray-300 text-sm"></div>
           <div>
-            <label class="text-xs font-semibold text-gray-500 mb-1 block">Industry <span class="text-red-500">*</span></label>
-            <select id="new-industry" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm" onchange="toggleCustomIndustry('new'); clearFieldError('new-industry');">
+            <label class="block text-xs font-bold mb-1" style="color:#032D60;">Industry <span style="color:#ea001e;">*</span></label>
+            <select id="new-industry" class="w-full px-3 py-2 rounded-lg border border-gray-300 text-sm" onchange="toggleCustomIndustry('new'); clearFieldError('new-industry');">
               <option value="">Select...</option>
-              <option>Retail</option><option>Financial Services</option><option>Healthcare</option><option>Manufacturing</option><option>Technology</option><option>Media</option><option>Education</option><option>Automotive</option><option>Energy</option><option>Telecommunications</option><option>Travel & Hospitality</option><option>Non-Profit</option><option>Government</option><option>Real Estate</option><option>Other</option>
+              <option>Retail</option><option>Financial Services</option><option>Healthcare</option><option>Manufacturing</option><option>Technology</option><option>Media</option><option>Education</option><option>Automotive</option><option>Energy</option><option>Telecommunications</option><option>Travel &amp; Hospitality</option><option>Non-Profit</option><option>Government</option><option>Real Estate</option><option>Other</option>
             </select>
-            <div id="new-custom-industry-wrapper" class="hidden mt-1"><input id="new-industry-custom" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm" placeholder="Specify industry"></div>
+            <div id="new-custom-industry-wrapper" class="hidden mt-1"><input id="new-industry-custom" class="w-full px-3 py-2 rounded-lg border border-gray-300 text-sm" placeholder="Specify industry"></div>
+          </div>
+          <div>
+            <label class="block text-xs font-bold mb-1" style="color:#032D60;">Output Language</label>
+            <select id="new-language" class="w-full px-3 py-2 rounded-lg border border-gray-300 text-sm" style="background:white;">
+              <option value="Arabic">Arabic</option><option value="Bulgarian">Bulgarian</option><option value="Chinese">Chinese</option><option value="Croatian">Croatian</option><option value="Czech">Czech</option><option value="Danish">Danish</option><option value="Dutch">Dutch</option><option value="English" selected>English</option><option value="Filipino">Filipino</option><option value="Finnish">Finnish</option><option value="French">French</option><option value="German">German</option><option value="Greek">Greek</option><option value="Hindi">Hindi</option><option value="Indonesian">Indonesian</option><option value="Italian">Italian</option><option value="Japanese">Japanese</option><option value="Korean">Korean</option><option value="Malay">Malay</option><option value="Polish">Polish</option><option value="Portuguese">Portuguese</option><option value="Romanian">Romanian</option><option value="Russian">Russian</option><option value="Slovak">Slovak</option><option value="Spanish">Spanish</option><option value="Swedish">Swedish</option><option value="Tamil">Tamil</option><option value="Turkish">Turkish</option><option value="Ukrainian">Ukrainian</option>
+            </select>
+            <p style="font-size:11px;color:#9ca3af;margin:6px 0 0 0;">All generated content will be in this language.</p>
           </div>
         </div>
-
-        <!-- Brand Desc + Website -->
-        <div class="grid grid-cols-2 gap-3 mb-3">
-          <div><label class="text-xs font-semibold text-gray-500 mb-1 block">Brand Description</label><input id="new-brand-desc" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm"></div>
-          <div><label class="text-xs font-semibold text-gray-500 mb-1 block">Website URL</label><input id="new-brand-url" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm" placeholder="https://"></div>
-        </div>
-
-        <!-- Synopsis Input Modes -->
-        <div class="mb-4">
-          <label class="text-xs font-semibold text-gray-500 mb-2 block">Demo Synopsis / Script</label>
-          <div class="flex gap-1 mb-2">
-            <button id="mode-synopsis" onclick="switchInputMode('synopsis')" class="cursor-pointer" style="padding:5px 14px;border-radius:6px;font-size:12px;font-weight:600;background:#0176D3;color:white;border:none;">Synopsis</button>
-            <button id="mode-script" onclick="switchInputMode('script')" class="cursor-pointer" style="padding:5px 14px;border-radius:6px;font-size:12px;font-weight:600;background:transparent;color:#666;border:none;">Script</button>
-            <button id="mode-upload" onclick="switchInputMode('upload')" class="cursor-pointer" style="padding:5px 14px;border-radius:6px;font-size:12px;font-weight:600;background:transparent;color:#666;border:none;">Upload</button>
+        <!-- STEP 2: Brand Identity -->
+        <div id="wizard-step-2" style="display:none;flex-direction:column;gap:12px;">
+          <div style="background:linear-gradient(135deg,#FFFBEB,#FEF3C7);border-radius:10px;padding:14px 16px;border:1px solid rgba(245,158,11,0.25);">
+            <p style="margin:0;font-size:12px;color:#92400E;line-height:1.5;"><strong>Why do I need a brand kit?</strong> Saleo Builder uses your brand kit to personalize demo token values &mdash; product names, company details, and metrics will match your brand automatically.</p>
           </div>
-          <div id="synopsis-section"><textarea id="new-synopsis" rows="3" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm" placeholder="Describe the demo scenario..."></textarea></div>
-          <div id="script-section" class="hidden">
-            <div id="sb-picker-container">
-              <button onclick="openScriptPicker('')" class="cursor-pointer w-full" style="padding:10px 14px;background:#F5F3FF;border:1px solid #DDD6FE;border-radius:8px;font-size:13px;color:#7C3AED;font-weight:600;text-align:left;">Select Script...</button>
-              <span id="sb-source-badge" style="display:none;font-size:11px;color:#6D28D9;font-weight:600;margin-top:4px;"></span>
-              <div id="sb-picker-dropdown" style="display:none;position:relative;background:white;border:1px solid #DDD6FE;border-radius:10px;box-shadow:0 4px 16px rgba(0,0,0,0.1);margin-top:4px;max-height:200px;overflow-y:auto;z-index:100;">
-                <div id="sb-picker-content"></div>
+          <div id="bk-picker-container" style="margin-bottom:4px;">
+            <div style="background:linear-gradient(135deg,#f0f7ff,#e8f2ff);border-radius:10px;padding:16px;border:1px dashed #b0d4f1;">
+              <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px;"><span style="font-size:16px;">&#127912;</span><span style="font-size:13px;font-weight:700;color:#032D60;">Brand Kit <span style="color:#ea001e;">*</span></span></div>
+              <p style="font-size:12px;color:#5a6f85;margin:0 0 12px;line-height:1.4;">Select an existing brand kit or create one in Brand Kit Builder.</p>
+              <div id="bk-applied-badge" style="display:none;margin-bottom:12px;padding:10px 14px;border-radius:8px;background:#E8F5E9;border:1px solid #A5D6A7;">
+                <div style="display:flex;align-items:center;gap:8px;justify-content:space-between;">
+                  <div style="display:flex;align-items:center;gap:8px;"><span>&#10003;</span><span id="bk-applied-name" style="font-size:12px;font-weight:700;color:#2E7D32;"></span></div>
+                  <button type="button" onclick="wizardChangeBrandKit()" style="padding:4px 10px;font-size:11px;font-weight:600;color:#5a6f85;background:white;border:1px solid #d1d5db;border-radius:6px;cursor:pointer;">Change</button>
+                </div>
+              </div>
+              <div id="bk-buttons-row" style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
+                <button type="button" onclick="openBrandKitPicker('')" style="padding:7px 14px;font-size:12px;font-weight:600;color:#0176D3;background:rgba(255,255,255,0.85);border:1px solid #b0d4f1;border-radius:7px;cursor:pointer;">&#127912; Select from Brand Kit Builder</button>
+                <span style="font-size:12px;color:#9ca3af;font-weight:600;">or</span>
+                <a href="https://brandkit-builder.aubreydemo.com/" target="_blank" rel="noopener noreferrer" style="padding:7px 14px;font-size:12px;font-weight:700;color:#fff;background:linear-gradient(135deg,#0176D3,#014486);border:none;border-radius:7px;cursor:pointer;text-decoration:none;">+ Create New Brand Kit</a>
+              </div>
+              <div id="bk-picker-dropdown" style="display:none;position:relative;background:white;border:1px solid #DDD6FE;border-radius:10px;box-shadow:0 4px 16px rgba(0,0,0,0.1);margin-top:8px;max-height:200px;overflow-y:auto;z-index:100;">
+                <div id="bk-picker-content"></div>
+              </div>
+              <span id="bk-source-badge" style="display:none;"></span>
+            </div>
+          </div>
+          <div class="grid grid-cols-2 gap-3">
+            <div><label class="block text-xs font-bold mb-1" style="color:#032D60;">Brand Description</label><input id="new-brand-desc" class="w-full px-3 py-2 rounded-lg border border-gray-300 text-sm"></div>
+            <div><label class="block text-xs font-bold mb-1" style="color:#032D60;">Website URL</label><input id="new-brand-url" class="w-full px-3 py-2 rounded-lg border border-gray-300 text-sm" placeholder="https://"></div>
+          </div>
+        </div>
+        <!-- STEP 3: Finalize -->
+        <div id="wizard-step-3" style="display:none;flex-direction:column;gap:12px;">
+          <!-- Already have a script section -->
+          <div style="background:linear-gradient(135deg,#faf5ff,#f3e8ff);border-radius:10px;padding:16px;border:1px dashed #c4b5fd;">
+            <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px;"><span style="font-size:16px;">&#128221;</span><span style="font-size:13px;font-weight:700;color:#032D60;">Already Have a Script?</span></div>
+            <p style="font-size:12px;color:#5a6f85;margin:0 0 12px;line-height:1.4;">Select a script from Script Writer or upload a script file. We'll use its synopsis for token generation.</p>
+            <div id="script-applied-badge" style="display:none;margin-bottom:12px;padding:10px 14px;border-radius:8px;background:#F3E8FF;border:1px solid #C4B5FD;">
+              <div style="display:flex;align-items:center;gap:8px;justify-content:space-between;">
+                <div style="display:flex;align-items:center;gap:8px;"><span>&#10003;</span><span id="script-applied-name" style="font-size:12px;font-weight:700;color:#6D28D9;"></span></div>
+                <button type="button" onclick="clearSelectedScript()" style="padding:4px 10px;font-size:11px;font-weight:600;color:#5a6f85;background:white;border:1px solid #d1d5db;border-radius:6px;cursor:pointer;">Remove</button>
               </div>
             </div>
-            <div id="script-selected" style="display:none;margin-top:8px;padding:8px 12px;background:#E8F5E9;border-radius:8px;font-size:12px;color:#2E7D32;align-items:center;gap:8px;">
+            <div id="script-buttons-row" style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
+              <div style="position:relative;display:inline-block;" id="sb-picker-container">
+                <button type="button" onclick="openScriptPicker('')" style="padding:7px 14px;font-size:12px;font-weight:600;color:#6d28d9;background:rgba(255,255,255,0.85);border:1px solid #c4b5fd;border-radius:7px;cursor:pointer;">&#128203; Select from Script Writer</button>
+                <div id="sb-picker-dropdown" style="display:none;position:absolute;bottom:100%;left:0;margin-bottom:6px;width:300px;max-height:240px;overflow-y:auto;background:#fff;border-radius:10px;box-shadow:0 8px 30px rgba(0,0,0,0.18);border:1px solid #e5e7eb;z-index:100;">
+                  <div id="sb-picker-content"></div>
+                </div>
+              </div>
+              <span style="font-size:12px;color:#9ca3af;font-weight:600;">or</span>
+              <button type="button" onclick="document.getElementById('file-input').click()" style="padding:7px 14px;font-size:12px;font-weight:600;color:#0176D3;background:rgba(255,255,255,0.85);border:1px solid #b0d4f1;border-radius:7px;cursor:pointer;">&#128196; Upload Script</button>
+              <input id="file-input" type="file" accept=".pdf,.doc,.docx" onchange="handleFileSelect(this)" style="display:none;">
+            </div>
+            <div id="script-selected" style="display:none;margin-top:8px;padding:8px 12px;background:#E8F5E9;border-radius:8px;font-size:12px;color:#2E7D32;display:flex;align-items:center;gap:8px;">
               <span id="script-selected-name"></span>
               <button onclick="clearSelectedScript()" class="cursor-pointer" style="background:none;border:none;color:#C23934;font-size:14px;margin-left:auto;">&times;</button>
-            </div>
-          </div>
-          <div id="upload-section" class="hidden">
-            <div id="drop-zone" style="border:2px dashed #d1d5db;border-radius:8px;padding:24px;text-align:center;cursor:pointer;" onclick="document.getElementById('file-input').click()" ondragover="event.preventDefault();this.style.borderColor='#0176D3';" ondragleave="this.style.borderColor='#d1d5db';" ondrop="event.preventDefault();this.style.borderColor='#d1d5db';handleFileDrop(event);">
-              <p class="text-sm text-gray-500">Drop PDF or DOCX here, or click to browse</p>
-              <input id="file-input" type="file" accept=".pdf,.doc,.docx" onchange="handleFileSelect(this)" style="display:none;">
             </div>
             <div id="file-selected" class="hidden" style="padding:8px 12px;background:#E8F4FD;border-radius:8px;font-size:12px;color:#0176D3;display:flex;align-items:center;gap:8px;margin-top:8px;">
               <span id="file-selected-name"></span>
               <button onclick="clearFile()" class="cursor-pointer" style="background:none;border:none;color:#C23934;font-size:14px;margin-left:auto;">&times;</button>
             </div>
+            <span id="sb-source-badge" style="display:none;"></span>
           </div>
+          <!-- Synopsis -->
+          <div style="display:flex;align-items:center;gap:10px;margin:4px 0;">
+            <div style="flex:1;height:1px;background:#e5e7eb;"></div>
+            <span style="font-size:11px;font-weight:600;color:#9ca3af;text-transform:uppercase;letter-spacing:0.05em;">Or enter a synopsis manually</span>
+            <div style="flex:1;height:1px;background:#e5e7eb;"></div>
+          </div>
+          <div><textarea id="new-synopsis" rows="3" class="w-full px-3 py-2 rounded-lg border border-gray-300 text-sm" placeholder="Optional: describe the demo scenario..."></textarea></div>
         </div>
       </div>
-
-      <div style="padding: 16px 24px; border-top: 1px solid #f0f0f0; display: flex; justify-content: flex-end; gap: 10px;">
-        <button onclick="closeNewItemDialog()" class="cursor-pointer" style="padding:10px 20px;background:#f3f4f6;color:#666;border:none;border-radius:8px;font-size:14px;font-weight:600;">Cancel</button>
-        <button id="generate-btn" onclick="createNewItem()" class="cursor-pointer" style="padding:10px 24px;background:#0176D3;color:white;border:none;border-radius:8px;font-size:14px;font-weight:700;">Create Saleo Demo</button>
+      <!-- Footer -->
+      <div style="padding:16px 24px;border-top:1px solid #f0f0f0;display:flex;justify-content:space-between;flex-shrink:0;">
+        <button id="wiz-back-btn" onclick="wizardBack()" class="cursor-pointer" style="display:none;padding:10px 20px;background:#f3f4f6;color:#666;border:none;border-radius:8px;font-size:14px;font-weight:600;">Back</button>
+        <div style="flex:1;"></div>
+        <div style="display:flex;gap:10px;">
+          <button onclick="closeNewItemDialog()" class="cursor-pointer" style="padding:10px 20px;background:#f3f4f6;color:#666;border:none;border-radius:8px;font-size:14px;font-weight:600;">Cancel</button>
+          <button id="wiz-next-btn" onclick="wizardNext()" class="cursor-pointer" style="padding:10px 24px;background:#0176D3;color:white;border:none;border-radius:8px;font-size:14px;font-weight:700;">Next</button>
+          <button id="generate-btn" onclick="createNewItem()" class="cursor-pointer" style="display:none;padding:10px 24px;background:linear-gradient(135deg,#0176D3,#014486);color:white;border:none;border-radius:8px;font-size:14px;font-weight:700;">Create Saleo Demo</button>
+        </div>
       </div>
     </div>
   </div>
@@ -1026,7 +1090,7 @@ async function generateTokenValues(autoCreate = false) {
     // Generate values with AI (SSE — server sends keepalive pings during Gemini call)
     const genResp = await fetch('/api/saleo/generate-values', {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ brand: meta.brand, industry: meta.industry, brandDesc: meta.brand_desc, synopsis: meta.synopsis, tokens })
+      body: JSON.stringify({ brand: meta.brand, industry: meta.industry, brandDesc: meta.brand_desc, synopsis: meta.synopsis, language: meta.language || 'English', tokens })
     });
     if (!genResp.ok) {
       let errMsg = `Server error (${genResp.status})`;
@@ -1382,37 +1446,84 @@ function clearValidationErrors() {
 }
 function clearFieldError(id) { const el = document.getElementById(id); if (el) el.style.border = '1px solid #d1d5db'; }
 
-let currentInputMode = 'synopsis';
 let pendingBrandKitSource = null, pendingBrandKitId = null;
 let pendingScriptSource = null, pendingScriptId = null, pendingScriptSynopsis = null;
+let wizardStep = 1;
 
 function openNewItemDialog() {
-  ['new-project-name','new-brand','new-brand-desc','new-brand-url','new-synopsis'].forEach(id => document.getElementById(id).value = '');
-  document.getElementById('new-industry').value = '';
-  document.getElementById('new-industry-custom').value = '';
-  document.getElementById('new-custom-industry-wrapper').classList.add('hidden');
+  ['new-project-name','new-brand','new-brand-desc','new-brand-url','new-synopsis'].forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
+  const indEl = document.getElementById('new-industry'); if (indEl) indEl.value = '';
+  const indCust = document.getElementById('new-industry-custom'); if (indCust) indCust.value = '';
+  const indWrap = document.getElementById('new-custom-industry-wrapper'); if (indWrap) indWrap.classList.add('hidden');
+  const langEl = document.getElementById('new-language'); if (langEl) langEl.value = 'English';
   pendingBrandKitSource = null; pendingBrandKitId = null;
   pendingScriptSource = null; pendingScriptId = null; pendingScriptSynopsis = null;
-  const bkBadge = document.getElementById('bk-source-badge'); if (bkBadge) bkBadge.style.display = 'none';
-  const sbBadge = document.getElementById('sb-source-badge'); if (sbBadge) sbBadge.style.display = 'none';
+  const bkApplied = document.getElementById('bk-applied-badge'); if (bkApplied) bkApplied.style.display = 'none';
+  const bkButtons = document.getElementById('bk-buttons-row'); if (bkButtons) bkButtons.style.display = 'flex';
+  const scriptApplied = document.getElementById('script-applied-badge'); if (scriptApplied) scriptApplied.style.display = 'none';
+  const scriptBtns = document.getElementById('script-buttons-row'); if (scriptBtns) scriptBtns.style.display = 'flex';
   const scriptSel = document.getElementById('script-selected'); if (scriptSel) scriptSel.style.display = 'none';
+  const fileSel = document.getElementById('file-selected'); if (fileSel) fileSel.classList.add('hidden');
   clearValidationErrors();
-  clearFile();
-  switchInputMode('synopsis');
+  wizardStep = 1;
+  updateWizardUI();
   document.getElementById('new-item-dialog').classList.remove('hidden');
 }
 function closeNewItemDialog() { document.getElementById('new-item-dialog').classList.add('hidden'); }
 
-function switchInputMode(mode) {
-  currentInputMode = mode;
-  ['synopsis','script','upload'].forEach(m => {
-    const btn = document.getElementById('mode-' + m);
-    const sec = document.getElementById(m + '-section');
-    if (btn) { btn.style.background = m === mode ? '#0176D3' : 'transparent'; btn.style.color = m === mode ? 'white' : '#666'; }
-    if (sec) sec.classList.toggle('hidden', m !== mode);
+function updateWizardUI() {
+  [1,2,3].forEach(s => {
+    const step = document.getElementById('wizard-step-' + s);
+    if (step) step.style.display = s === wizardStep ? 'flex' : 'none';
+    const dot = document.getElementById('wiz-step-' + s + '-dot');
+    const label = document.getElementById('wiz-label-' + s);
+    if (dot) {
+      if (s < wizardStep) { dot.style.background = '#059669'; dot.style.color = 'white'; }
+      else if (s === wizardStep) { dot.style.background = '#0176D3'; dot.style.color = 'white'; }
+      else { dot.style.background = '#e5e7eb'; dot.style.color = '#9ca3af'; }
+    }
+    if (label) { label.style.color = s <= wizardStep ? '#0176D3' : '#9ca3af'; }
   });
-  if (mode === 'synopsis') clearFile();
+  document.getElementById('wiz-back-btn').style.display = wizardStep > 1 ? '' : 'none';
+  document.getElementById('wiz-next-btn').style.display = wizardStep < 3 ? '' : 'none';
+  document.getElementById('generate-btn').style.display = wizardStep === 3 ? '' : 'none';
 }
+
+function wizardNext() {
+  clearValidationErrors();
+  if (wizardStep === 1) {
+    const name = document.getElementById('new-project-name').value.trim();
+    const brand = document.getElementById('new-brand').value.trim();
+    const industry = document.getElementById('new-industry').value;
+    const missing = [];
+    if (!name) missing.push({ id: 'new-project-name', label: 'Saleo Demo Name' });
+    if (!brand) missing.push({ id: 'new-brand', label: 'Brand Name' });
+    if (!industry) missing.push({ id: 'new-industry', label: 'Industry' });
+    if (missing.length > 0) {
+      missing.forEach(f => { const el = document.getElementById(f.id); if (el) el.style.border = '2px solid #e5534b'; });
+      const errDiv = document.getElementById('new-validation-error');
+      errDiv.innerHTML = '<strong>Required:</strong> ' + missing.map(f => f.label).join(', ');
+      errDiv.classList.remove('hidden');
+      return;
+    }
+  }
+  wizardStep = Math.min(wizardStep + 1, 3);
+  updateWizardUI();
+}
+
+function wizardBack() {
+  clearValidationErrors();
+  wizardStep = Math.max(wizardStep - 1, 1);
+  updateWizardUI();
+}
+
+function wizardChangeBrandKit() {
+  pendingBrandKitSource = null; pendingBrandKitId = null;
+  document.getElementById('bk-applied-badge').style.display = 'none';
+  document.getElementById('bk-buttons-row').style.display = 'flex';
+}
+
+// switchInputMode removed — wizard handles input sections
 
 function handleFileSelect(input) { if (input.files?.[0]) setSelectedFile(input.files[0]); }
 function handleFileDrop(event) { if (event.dataTransfer.files?.[0]) setSelectedFile(event.dataTransfer.files[0]); }
@@ -1433,6 +1544,7 @@ async function createNewItem() {
   const brand = document.getElementById('new-brand').value.trim();
   const industrySelect = document.getElementById('new-industry').value;
   const industry = getResolvedIndustry('new');
+  const language = document.getElementById('new-language')?.value || 'English';
   const synopsis = document.getElementById('new-synopsis').value.trim();
   const hasFile = document.getElementById('file-input').files?.[0];
 
@@ -1455,10 +1567,11 @@ async function createNewItem() {
   btn.disabled = true; btn.style.opacity = '0.6';
 
   try {
-    let synopsisText = '';
-    if (currentInputMode === 'synopsis') synopsisText = synopsis;
-    else if (currentInputMode === 'script') synopsisText = pendingScriptSynopsis || '';
-    else if (currentInputMode === 'upload' && hasFile) {
+    let synopsisText = synopsis;
+    // Use script synopsis if a script was selected
+    if (pendingScriptSynopsis) synopsisText = pendingScriptSynopsis;
+    // Extract from uploaded file if present
+    if (hasFile) {
       const fd = new FormData(); fd.append('file', hasFile);
       const ur = await fetch('/api/upload', { method: 'POST', body: fd });
       if (!ur.ok) { const e = await ur.json(); throw new Error(e.error || 'Upload failed'); }
@@ -1470,7 +1583,7 @@ async function createNewItem() {
       metadata: {
         project_name: projectName, brand, brand_desc: document.getElementById('new-brand-desc').value.trim() || null,
         brand_url: document.getElementById('new-brand-url').value.trim() || null, industry,
-        synopsis: synopsisText || null,
+        language: language || 'English', synopsis: synopsisText || null,
         brand_kit_source: pendingBrandKitSource || null, brand_kit_id: pendingBrandKitId || null,
         script_source: pendingScriptSource || null, script_id: pendingScriptId || null,
       }
@@ -1534,8 +1647,13 @@ async function selectBrandKit(itemId, sfx, kitName) {
 
     pendingBrandKitSource = kitName || 'Brand Kit';
     pendingBrandKitId = String(itemId);
-    const badge = document.getElementById('bk-source-badge');
-    if (badge) { badge.textContent = '\u2713 ' + pendingBrandKitSource; badge.style.display = 'inline'; }
+
+    // Show applied badge, hide buttons
+    const appliedBadge = document.getElementById('bk-applied-badge');
+    const appliedName = document.getElementById('bk-applied-name');
+    const buttonsRow = document.getElementById('bk-buttons-row');
+    if (appliedBadge && appliedName) { appliedName.textContent = pendingBrandKitSource + ' applied'; appliedBadge.style.display = 'block'; }
+    if (buttonsRow) buttonsRow.style.display = 'none';
 
     document.getElementById('bk-picker-dropdown' + sfx).style.display = 'none';
     bkPickerOpen = false;
@@ -1581,11 +1699,13 @@ async function selectScript(itemId, sfx, scriptName) {
     const script = d?.script || {};
     pendingScriptSynopsis = script.synopsis || script.summary || script.content || '';
     pendingScriptSource = scriptName; pendingScriptId = String(itemId);
-    const selEl = document.getElementById('script-selected');
-    const nameEl = document.getElementById('script-selected-name');
-    if (selEl && nameEl) { nameEl.textContent = scriptName; selEl.style.display = 'flex'; }
-    const badge = document.getElementById('sb-source-badge');
-    if (badge) { badge.textContent = '\u2713 ' + scriptName; badge.style.display = 'inline'; }
+
+    // Show applied badge, hide buttons
+    const appliedBadge = document.getElementById('script-applied-badge');
+    const appliedName = document.getElementById('script-applied-name');
+    const scriptBtns = document.getElementById('script-buttons-row');
+    if (appliedBadge && appliedName) { appliedName.textContent = scriptName + ' applied'; appliedBadge.style.display = 'block'; }
+    if (scriptBtns) scriptBtns.style.display = 'none';
     document.getElementById('sb-picker-dropdown' + sfx).style.display = 'none';
     sbPickerOpen = false;
     showToast('Script applied!');
@@ -1595,7 +1715,9 @@ async function selectScript(itemId, sfx, scriptName) {
 function clearSelectedScript() {
   pendingScriptSynopsis = null; pendingScriptSource = null; pendingScriptId = null;
   const sel = document.getElementById('script-selected'); if (sel) sel.style.display = 'none';
-  const badge = document.getElementById('sb-source-badge'); if (badge) badge.style.display = 'none';
+  const appliedBadge = document.getElementById('script-applied-badge'); if (appliedBadge) appliedBadge.style.display = 'none';
+  const scriptBtns = document.getElementById('script-buttons-row'); if (scriptBtns) scriptBtns.style.display = 'flex';
+  const fileSel = document.getElementById('file-selected'); if (fileSel) fileSel.classList.add('hidden');
 }
 
 document.addEventListener('click', e => {

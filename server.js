@@ -426,7 +426,7 @@ app.get('/api/users/:userId/items', async (req, res) => {
 // ═══════════════════════════════════════════════
 
 app.get('/api/version', (req, res) => {
-  res.json({ version: '2.0.11', app: 'saleo-builder', mode: 'saleo-api' });
+  res.json({ version: '2.1.0', app: 'saleo-builder', mode: 'saleo-api' });
 });
 
 // ═══════════════════════════════════════════════
@@ -832,7 +832,7 @@ app.post('/api/saleo/generate-values', async (req, res) => {
   const keepalive = setInterval(() => res.write(': keepalive\n\n'), 10000);
 
   try {
-    const { brand, industry, brandDesc, synopsis, tokens } = req.body;
+    const { brand, industry, brandDesc, synopsis, tokens, language } = req.body;
     if (!brand || !tokens || !Array.isArray(tokens)) {
       res.write(`data: ${JSON.stringify({ error: 'brand and tokens[] are required' })}\n\n`);
       res.write('data: [DONE]\n\n');
@@ -847,9 +847,11 @@ app.post('/api/saleo/generate-values', async (req, res) => {
       return `{"id":"${id}","label":"${label.substring(0, 60)}"}`;
     }).join(',');
 
+    const langInstr = language && language !== 'English' ? `\nIMPORTANT: Generate ALL values in ${language}.` : '';
+
     const prompt = `Generate personalized Saleo demo token values for "${brand}" (${industry || 'General'}${brandDesc ? ', ' + brandDesc.substring(0, 100) : ''}).
 
-For each token, generate a realistic value matching the label's implied type. Company names → "${brand}", currency → realistic figures, percentages → realistic metrics, person names → realistic names, etc.
+For each token, generate a realistic value matching the label's implied type. Company names → "${brand}", currency → realistic figures, percentages → realistic metrics, person names → realistic names, etc.${langInstr}
 ${synopsis ? 'Synopsis: ' + synopsis.substring(0, 300) : ''}
 
 Tokens: [${tokenList}]
