@@ -854,7 +854,7 @@ Respond with ONLY valid JSON:
 
     const result = await callGeminiWithRetry({
       prompt,
-      generationConfig: { temperature: 0.7, maxOutputTokens: 16384, responseMimeType: 'application/json' },
+      generationConfig: { temperature: 0.7, maxOutputTokens: 16384 },
     });
 
     let parsed;
