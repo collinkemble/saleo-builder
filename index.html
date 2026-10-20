@@ -991,14 +991,14 @@ async function generateTokenValues() {
     // Get golden demo
     if (!goldenDemoId) {
       const tResp = await fetch('/api/saleo/templates');
+      if (!tResp.ok) { let m = 'Failed to find golden demo'; try { m = (await tResp.json()).error || m; } catch(_){} throw new Error(m); }
       const tData = await tResp.json();
-      if (!tResp.ok) throw new Error(tData.error || 'Failed to find golden demo');
       goldenDemoId = tData.demo.id;
     }
     // Get tokens
     const tokResp = await fetch(`/api/saleo/tokens/${goldenDemoId}`);
+    if (!tokResp.ok) { let m = 'Failed to get tokens'; try { m = (await tokResp.json()).error || m; } catch(_){} throw new Error(m); }
     const tokData = await tokResp.json();
-    if (!tokResp.ok) throw new Error(tokData.error || 'Failed to get tokens');
     const tokens = tokData.tokens || tokData.data || [];
     if (tokens.length === 0) throw new Error('No tokens found in the golden demo template');
 
@@ -1007,8 +1007,12 @@ async function generateTokenValues() {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ brand: meta.brand, industry: meta.industry, brandDesc: meta.brand_desc, synopsis: meta.synopsis, tokens })
     });
+    if (!genResp.ok) {
+      let errMsg = `Server error (${genResp.status})`;
+      try { const e = await genResp.json(); errMsg = e.error || errMsg; } catch (_) {}
+      throw new Error(errMsg);
+    }
     const genData = await genResp.json();
-    if (!genResp.ok) throw new Error(genData.error || 'Failed to generate values');
 
     // Merge: keep token labels from the template, values from AI
     const valMap = {};

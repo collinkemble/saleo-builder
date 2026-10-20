@@ -1363,6 +1363,12 @@ app.get('/api/scriptwriter/scripts/:id', async (req, res) => {
   }
 });
 
+// Global error handler — always return JSON for API routes
+app.use('/api', (err, req, res, next) => {
+  console.error(`[API Error] ${req.method} ${req.path}:`, err.message || err);
+  res.status(err.status || 500).json({ error: err.message || 'Internal server error' });
+});
+
 // SPA catch-all
 app.get('/{*splat}', (req, res) => {
   if (spaHtml) {
