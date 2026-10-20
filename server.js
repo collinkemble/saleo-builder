@@ -824,18 +824,27 @@ app.post('/api/saleo/generate-values', async (req, res) => {
       return res.status(400).json({ error: 'brand and tokens[] are required' });
     }
 
-    const tokenList = tokens.map(t =>
-      `- tokenId: "${t.tokenId}", label: "${t.name || t.label || t.tokenId}", currentValue: "${(t.value || t.currentValue || '').substring(0, 200)}"`
-    ).join('\n');
+    const tokenList = tokens.map(t => {
+      const label = t.name || t.label || t.tokenId;
+      const currentVal = (t.value || t.currentValue || '').substring(0, 200);
+      return `- tokenId: "${t.tokenId}", label: "${label}", exampleFormat: "${currentVal}"`;
+    }).join('\n');
 
-    const prompt = `You are a Salesforce demo personalization expert. Given brand context and a list of Saleo template tokens, generate realistic, specific values for each token.
+    const prompt = `You are a Salesforce demo personalization expert. You MUST generate brand-specific values for "${brand}" — a ${industry || 'business'} company.
 
-Brand: ${brand}
+CRITICAL: Do NOT copy or reuse the example values. The examples show the FORMAT and TYPE of value expected (e.g. if the example is a company name, generate "${brand}" or a related name; if it's a dollar amount, generate a realistic dollar amount for ${brand}; if it's a percentage, generate a realistic percentage for ${brand}'s industry).
+
+Target Brand: ${brand}
 Industry: ${industry || 'General'}
 Description: ${brandDesc || 'N/A'}
 Synopsis: ${synopsis || 'N/A'}
 
-For each token below, generate a value that matches its type (company name, currency figure, percentage, person name, date, etc.) based on the brand context. Keep values \u22641000 characters. No markdown formatting.
+RULES:
+1. EVERY value must be personalized for "${brand}" — replace ALL company names, product names, person names, metrics, and descriptions
+2. The "exampleFormat" shows what TYPE of value to generate (string, number, currency, percentage, name, etc.) — match the format but change the content to be about "${brand}"
+3. If a token's example contains a company name like "Cirrus" or any other brand, replace it with "${brand}" or a relevant ${brand} entity
+4. Generate realistic, specific data: real-sounding revenue figures, growth percentages, employee counts, product names, etc. that fit ${brand}'s ${industry || 'business'} industry
+5. Keep values ≤1000 characters. No markdown formatting.
 
 Tokens:
 ${tokenList}
