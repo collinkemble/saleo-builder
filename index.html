@@ -1002,7 +1002,7 @@ async function generateTokenValues() {
     const tokens = tokData.tokens || tokData.data || [];
     if (tokens.length === 0) throw new Error('No tokens found in the golden demo template');
 
-    // Generate values with AI
+    // Generate values with AI (SSE — server sends keepalive pings during Gemini call)
     const genResp = await fetch('/api/saleo/generate-values', {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ brand: meta.brand, industry: meta.industry, brandDesc: meta.brand_desc, synopsis: meta.synopsis, tokens })
@@ -1012,7 +1012,25 @@ async function generateTokenValues() {
       try { const e = await genResp.json(); errMsg = e.error || errMsg; } catch (_) {}
       throw new Error(errMsg);
     }
-    const genData = await genResp.json();
+    // Read SSE stream to get the final JSON result
+    const reader = genResp.body.getReader();
+    const decoder = new TextDecoder();
+    let sseBuffer = '';
+    let genData = null;
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      sseBuffer += decoder.decode(value, { stream: true });
+      const lines = sseBuffer.split('\n');
+      sseBuffer = lines.pop() || '';
+      for (const line of lines) {
+        if (line.startsWith('data: ') && line !== 'data: [DONE]') {
+          try { genData = JSON.parse(line.slice(6)); } catch (_) {}
+        }
+      }
+    }
+    if (!genData) throw new Error('No response from AI');
+    if (genData.error) throw new Error(genData.error);
 
     // Merge: keep token labels from the template, values from AI
     const valMap = {};

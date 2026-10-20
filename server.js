@@ -426,7 +426,7 @@ app.get('/api/users/:userId/items', async (req, res) => {
 // ═══════════════════════════════════════════════
 
 app.get('/api/version', (req, res) => {
-  res.json({ version: '2.0.8', app: 'saleo-builder', mode: 'saleo-api' });
+  res.json({ version: '2.0.9', app: 'saleo-builder', mode: 'saleo-api' });
 });
 
 // ═══════════════════════════════════════════════
@@ -819,16 +819,28 @@ app.get('/api/saleo/tokens/:demoId', async (req, res) => {
   }
 });
 
-// POST /api/saleo/generate-values — Use Gemini to fill token values
+// POST /api/saleo/generate-values — Use Gemini to fill token values (SSE to avoid Heroku timeout)
 app.post('/api/saleo/generate-values', async (req, res) => {
+  // Use SSE to keep connection alive while Gemini processes 102 tokens
+  res.setHeader('Content-Type', 'text/event-stream');
+  res.setHeader('Cache-Control', 'no-cache');
+  res.setHeader('Connection', 'keep-alive');
+  res.flushHeaders();
+  res.write(': keepalive\n\n');
+
+  // Send keepalive every 10s to prevent Heroku H12 timeout
+  const keepalive = setInterval(() => res.write(': keepalive\n\n'), 10000);
+
   try {
     const { brand, industry, brandDesc, synopsis, tokens } = req.body;
     if (!brand || !tokens || !Array.isArray(tokens)) {
-      return res.status(400).json({ error: 'brand and tokens[] are required' });
+      res.write(`data: ${JSON.stringify({ error: 'brand and tokens[] are required' })}\n\n`);
+      res.write('data: [DONE]\n\n');
+      clearInterval(keepalive);
+      return res.end();
     }
 
-    // Keep prompt small — only send token IDs and short labels, not full example values
-    // Saleo API returns tokens with 'id' field, frontend may send as 'tokenId' or 'id'
+    // Build compact prompt
     const tokenList = tokens.map(t => {
       const id = t.tokenId || t.id;
       const label = (t.name || t.label || id || '').replace(/"/g, '');
@@ -844,11 +856,12 @@ Tokens: [${tokenList}]
 
 Return ONLY: {"tokenValues":[{"tokenId":"...","value":"..."},...]}`
 
-    // Direct single-model call — no fallbacks, no retries — must finish within Heroku's 30s
     const geminiKey = process.env.GEMINI_API_KEY;
     if (!geminiKey) throw new Error('GEMINI_API_KEY not configured');
     const model = process.env.GEMINI_MODEL || 'gemini-3.7-flash';
     const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${geminiKey}`;
+
+    console.log(`[Saleo] Calling Gemini (${model}) with ${tokens.length} tokens for "${brand}"...`);
 
     const geminiResp = await Promise.race([
       fetch(geminiUrl, {
@@ -856,10 +869,10 @@ Return ONLY: {"tokenValues":[{"tokenId":"...","value":"..."},...]}`
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           contents: [{ parts: [{ text: prompt }] }],
-          generationConfig: { temperature: 0.7, maxOutputTokens: 4096 },
+          generationConfig: { temperature: 0.7, maxOutputTokens: 8192 },
         }),
       }),
-      new Promise((_, reject) => setTimeout(() => reject(new Error('Gemini timed out (25s)')), 25000)),
+      new Promise((_, reject) => setTimeout(() => reject(new Error('Gemini timed out (120s)')), 120000)),
     ]);
 
     if (!geminiResp.ok) {
@@ -868,51 +881,44 @@ Return ONLY: {"tokenValues":[{"tokenId":"...","value":"..."},...]}`
     }
 
     const geminiData = await geminiResp.json();
-    const result = { text: geminiData.candidates?.[0]?.content?.parts?.[0]?.text };
+    const rawText = geminiData.candidates?.[0]?.content?.parts?.[0]?.text || '';
+    console.log(`[Saleo] Gemini returned ${rawText.length} chars`);
 
     let parsed;
     try {
-      let text = (result.text || '').trim();
-      // Strip markdown fences if present
-      text = text.replace(/^```(?:json)?\s*\n?/i, '').replace(/\n?```\s*$/i, '').trim();
-      // Try to find the JSON object if there's surrounding text
+      let text = rawText.trim().replace(/^```(?:json)?\s*\n?/i, '').replace(/\n?```\s*$/i, '').trim();
       const jsonStart = text.indexOf('{');
       const jsonEnd = text.lastIndexOf('}');
-      if (jsonStart >= 0 && jsonEnd > jsonStart) {
-        text = text.substring(jsonStart, jsonEnd + 1);
-      }
+      if (jsonStart >= 0 && jsonEnd > jsonStart) text = text.substring(jsonStart, jsonEnd + 1);
       parsed = JSON.parse(text);
     } catch (e) {
-      console.error('[Saleo] Failed to parse Gemini response. Error:', e.message);
-      console.error('[Saleo] Raw response (first 1000 chars):', (result.text || '').substring(0, 1000));
-      return res.status(500).json({ error: 'Failed to parse AI response. Try again.' });
+      console.error('[Saleo] Parse error:', e.message, 'Raw:', rawText.substring(0, 500));
+      throw new Error('Failed to parse AI response. Try again.');
     }
 
-    // Validate and clean token values
-    // Accept both 'tokenId' and 'id' from AI response
+    // Validate and clean
     const validTokenIds = new Set(tokens.map(t => t.tokenId || t.id));
     const tokenValues = (parsed.tokenValues || [])
       .filter(tv => validTokenIds.has(tv.tokenId || tv.id))
-      .map(tv => ({
-        tokenId: tv.tokenId || tv.id,
-        value: String(tv.value || '').substring(0, 1000),
-      }));
+      .map(tv => ({ tokenId: tv.tokenId || tv.id, value: String(tv.value || '').substring(0, 1000) }));
 
-    // Fill missing tokens with their current values
     for (const t of tokens) {
       const tid = t.tokenId || t.id;
       if (!tokenValues.find(tv => tv.tokenId === tid)) {
-        tokenValues.push({
-          tokenId: tid,
-          value: t.value || t.currentValue || '',
-        });
+        tokenValues.push({ tokenId: tid, value: t.value || t.currentValue || '' });
       }
     }
 
-    res.json({ tokenValues });
+    console.log(`[Saleo] Generated ${tokenValues.length} token values for "${brand}"`);
+    res.write(`data: ${JSON.stringify({ tokenValues })}\n\n`);
+    res.write('data: [DONE]\n\n');
   } catch (err) {
-    console.error('Token value generation failed:', err);
-    res.status(500).json({ error: 'Token value generation failed: ' + err.message });
+    console.error('Token value generation failed:', err.message);
+    res.write(`data: ${JSON.stringify({ error: err.message })}\n\n`);
+    res.write('data: [DONE]\n\n');
+  } finally {
+    clearInterval(keepalive);
+    res.end();
   }
 });
 
