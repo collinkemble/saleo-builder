@@ -426,7 +426,7 @@ app.get('/api/users/:userId/items', async (req, res) => {
 // ═══════════════════════════════════════════════
 
 app.get('/api/version', (req, res) => {
-  res.json({ version: '2.0.0', app: 'saleo-builder', mode: 'saleo-api' });
+  res.json({ version: '2.0.7', app: 'saleo-builder', mode: 'saleo-api', commit: '97540da' });
 });
 
 // ═══════════════════════════════════════════════
@@ -809,7 +809,10 @@ app.get('/api/saleo/templates', async (req, res) => {
 app.get('/api/saleo/tokens/:demoId', async (req, res) => {
   try {
     const result = await saleo.getTokens(req.params.demoId);
-    res.json(result);
+    // Saleo API returns a flat array of tokens, wrap it for the frontend
+    const tokens = Array.isArray(result) ? result : (result.tokens || result.data || []);
+    console.log(`[Saleo] get_demo_tokens returned ${tokens.length} tokens for ${req.params.demoId}`);
+    res.json({ tokens });
   } catch (err) {
     console.error('Failed to get tokens:', err.message);
     res.status(500).json({ error: err.message });
