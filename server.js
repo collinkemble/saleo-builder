@@ -426,7 +426,7 @@ app.get('/api/users/:userId/items', async (req, res) => {
 // ═══════════════════════════════════════════════
 
 app.get('/api/version', (req, res) => {
-  res.json({ version: '2.0.7', app: 'saleo-builder', mode: 'saleo-api', commit: '97540da' });
+  res.json({ version: '2.0.8', app: 'saleo-builder', mode: 'saleo-api' });
 });
 
 // ═══════════════════════════════════════════════
@@ -844,13 +844,31 @@ Tokens: [${tokenList}]
 
 Return ONLY: {"tokenValues":[{"tokenId":"...","value":"..."},...]}`
 
-    // Single attempt, fast timeout to stay within Heroku's 30s router limit
-    const result = await callGeminiWithRetry({
-      prompt,
-      generationConfig: { temperature: 0.7, maxOutputTokens: 4096 },
-      timeoutMs: 25000,
-      maxRetries: 1,
-    });
+    // Direct single-model call — no fallbacks, no retries — must finish within Heroku's 30s
+    const geminiKey = process.env.GEMINI_API_KEY;
+    if (!geminiKey) throw new Error('GEMINI_API_KEY not configured');
+    const model = process.env.GEMINI_MODEL || 'gemini-3.7-flash';
+    const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${geminiKey}`;
+
+    const geminiResp = await Promise.race([
+      fetch(geminiUrl, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          contents: [{ parts: [{ text: prompt }] }],
+          generationConfig: { temperature: 0.7, maxOutputTokens: 4096 },
+        }),
+      }),
+      new Promise((_, reject) => setTimeout(() => reject(new Error('Gemini timed out (25s)')), 25000)),
+    ]);
+
+    if (!geminiResp.ok) {
+      const errBody = await geminiResp.text().catch(() => '');
+      throw new Error(`Gemini API returned ${geminiResp.status}: ${errBody.substring(0, 200)}`);
+    }
+
+    const geminiData = await geminiResp.json();
+    const result = { text: geminiData.candidates?.[0]?.content?.parts?.[0]?.text };
 
     let parsed;
     try {
