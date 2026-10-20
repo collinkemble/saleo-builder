@@ -426,7 +426,7 @@ app.get('/api/users/:userId/items', async (req, res) => {
 // ═══════════════════════════════════════════════
 
 app.get('/api/version', (req, res) => {
-  res.json({ version: '2.0.10', app: 'saleo-builder', mode: 'saleo-api' });
+  res.json({ version: '2.0.11', app: 'saleo-builder', mode: 'saleo-api' });
 });
 
 // ═══════════════════════════════════════════════

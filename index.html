@@ -142,7 +142,7 @@
         <h1 class="text-2xl font-bold" style="color: #032D60;">Your Saleo Demos</h1>
         <button onclick="openNewItemDialog()" class="cursor-pointer" style="padding: 10px 20px; background: #0176D3; color: white; border: none; border-radius: 8px; font-size: 14px; font-weight: 700;">+ New Saleo Demo</button>
       </div>
-      <div id="items-grid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 16px;"></div>
+      <div id="items-grid" style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 16px;"></div>
       <div id="items-empty" class="hidden text-center py-16">
         <p class="text-gray-400 text-lg mb-2">No Saleo demos yet</p>
         <p class="text-gray-400 text-sm">Click "+ New Saleo Demo" to create your first personalized Saleo view.</p>
@@ -940,16 +940,23 @@ async function renderDetail(item) {
   [notConfigured, stepGenerate, tokenReview, viewStatus, legacySection].forEach(el => el.classList.add('hidden'));
 
   if (data.saleo && data.saleo.viewId) {
-    // View already created — show status
+    // View already created — show status + editable token table
     renderSaleoStatus(data.saleo);
     viewStatus.classList.remove('hidden');
-    // Also load token values for editing
     currentTokenValues = data.saleo.tokenValues || [];
-    if (currentTokenValues.length > 0) renderTokenTable(currentTokenValues);
+    if (currentTokenValues.length > 0) {
+      renderTokenTable(currentTokenValues);
+      tokenReview.classList.remove('hidden');
+      // Hide "Create Saleo View" button, show "Update in Saleo" instead
+      const createBtn = document.getElementById('create-view-btn');
+      if (createBtn) createBtn.style.display = 'none';
+    }
   } else if (!saleoConfigured) {
     notConfigured.classList.remove('hidden');
   } else {
+    // Auto-start: generate tokens immediately, then auto-create view
     stepGenerate.classList.remove('hidden');
+    generateTokenValues(true); // true = auto-create after
   }
 
   // Legacy prompt (old items)
@@ -992,7 +999,7 @@ function showGenerateError(msg) {
 }
 function hideGenerateError() { document.getElementById('saleo-error').classList.add('hidden'); }
 
-async function generateTokenValues() {
+async function generateTokenValues(autoCreate = false) {
   const meta = currentItemData?.metadata || {};
   if (!meta.brand) { showToast('Set a brand name first.'); return; }
 
@@ -1058,8 +1065,13 @@ async function generateTokenValues() {
     renderTokenTable(currentTokenValues);
     document.getElementById('saleo-step-generate').classList.add('hidden');
     document.getElementById('saleo-token-review').classList.remove('hidden');
-    showToast('Token values generated!');
     hideGenerateError();
+    if (autoCreate) {
+      showToast('Tokens generated — creating Saleo view...');
+      await createSaleoView();
+    } else {
+      showToast('Token values generated!');
+    }
   } catch (e) {
     showGenerateError(e.message);
   } finally {
@@ -1109,7 +1121,9 @@ async function createSaleoView() {
       status: d.shareStatus, error: d.shareError, createdAt: new Date().toISOString()
     };
 
-    document.getElementById('saleo-token-review').classList.add('hidden');
+    // Keep token table visible for editing, hide the Create button
+    const createBtn = document.getElementById('create-view-btn');
+    if (createBtn) createBtn.style.display = 'none';
     renderSaleoStatus(currentItemData.saleo);
     document.getElementById('saleo-view-status').classList.remove('hidden');
     showToast(d.shareStatus === 'shared' ? 'Saleo view created and shared!' : 'View created but sharing failed.');
