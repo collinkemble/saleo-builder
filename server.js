@@ -9,6 +9,7 @@ const multer = require('multer');
 const { query, getPool, isPostgres } = require('./src/db/connection');
 const { migrate } = require('./src/db/migrate');
 const { uploadImage, deleteByUrl, deleteByUrls, extractAssetUrls, urlToKey, assertNoEmbeddedImages } = require('./src/utils/storage');
+const saleo = require('./src/services/saleo');
 
 // Only delete our own (views/) files that no OTHER item still references.
 // Shared copies point at the same image URLs, so deleting blindly would break the recipient's copy.
@@ -85,19 +86,11 @@ async function callGeminiWithRetry({ prompt, generationConfig = {}, timeoutMs = 
   throw new Error('All Gemini models failed after retries');
 }
 
-/**
- * Get the ordered list of models to try (primary + fallbacks).
- */
-function getGeminiModelsToTry() {
-  const primaryModel = process.env.GEMINI_MODEL || 'gemini-3.7-flash';
-  return [primaryModel, ...GEMINI_FALLBACK_MODELS.filter(m => m !== primaryModel)];
-}
-
 const app = express();
 const PORT = process.env.PORT || 3000;
 
 // ─── Staging Banner ───
-const STAGING_BANNER_HTML = '<div style="background:#f59e0b;color:#000;text-align:center;padding:4px;font-size:12px;font-weight:700;position:fixed;top:0;left:0;right:0;z-index:99999;">⚠️ STAGING ENVIRONMENT</div><div style="height:28px;"></div>';
+const STAGING_BANNER_HTML = '<div style="background:#f59e0b;color:#000;text-align:center;padding:4px;font-size:12px;font-weight:700;position:fixed;top:0;left:0;right:0;z-index:99999;">\u26a0\ufe0f STAGING ENVIRONMENT</div><div style="height:28px;"></div>';
 let spaHtml = '';
 try {
   spaHtml = fs.readFileSync(path.join(__dirname, 'index.html'), 'utf-8');
@@ -202,8 +195,6 @@ async function getOrCreateUser(email) {
 // SHARED ROUTES — Auth Config
 // ═══════════════════════════════════════════════
 
-// Returns public app configuration for the frontend (Magic key, cookie domain).
-// No auth required — the frontend fetches this on load.
 app.get('/api/auth/config', async (req, res) => {
   const rawSsoEmail = req.headers['x-forwarded-user'];
   const ssoEmail = rawSsoEmail ? rawSsoEmail.trim().toLowerCase() : null;
@@ -231,7 +222,6 @@ app.get('/api/auth/config', async (req, res) => {
   });
 });
 
-// Check if current user is admin
 app.get('/api/is-admin', (req, res) => {
   const email = req.query.email;
   res.json({ isAdmin: isAdmin(email) });
@@ -241,7 +231,6 @@ app.get('/api/is-admin', (req, res) => {
 // SHARED ROUTES — Session Auth
 // ═══════════════════════════════════════════════
 
-// POST /api/auth/login — exchange email for a long-lived JWT session token
 app.post('/api/auth/login', async (req, res) => {
   try {
     const { email } = req.body;
@@ -257,7 +246,6 @@ app.post('/api/auth/login', async (req, res) => {
   }
 });
 
-// POST /api/auth/validate — check if a JWT session token is still valid
 app.post('/api/auth/validate', async (req, res) => {
   try {
     const { token } = req.body;
@@ -277,29 +265,21 @@ app.post('/api/auth/validate', async (req, res) => {
 // SHARED ROUTES — Feedback
 // ═══════════════════════════════════════════════
 
-// POST /api/feedback — submit feedback (any user)
 app.post('/api/feedback', async (req, res) => {
   try {
     const { name, email, subject, body } = req.body;
     if (!name || !email || !subject || !body) {
       return res.status(400).json({ error: 'All fields are required: name, email, subject, body' });
     }
-
     const user = await getOrCreateUser(email);
-
     const result = await query(
       'INSERT INTO feedback (user_id, name, email, subject, body) VALUES (?, ?, ?, ?, ?)',
       [user.id, name.trim(), email.trim(), subject.trim(), body.trim()]
     );
-
     res.status(201).json({
       feedback: {
-        id: result.insertId,
-        name: name.trim(),
-        email: email.trim(),
-        subject: subject.trim(),
-        body: body.trim(),
-        created_at: new Date().toISOString(),
+        id: result.insertId, name: name.trim(), email: email.trim(),
+        subject: subject.trim(), body: body.trim(), created_at: new Date().toISOString(),
       },
     });
   } catch (err) {
@@ -308,13 +288,10 @@ app.post('/api/feedback', async (req, res) => {
   }
 });
 
-// GET /api/feedback — list all feedback (admin only)
 app.get('/api/feedback', async (req, res) => {
   try {
     const email = req.query.email;
-    if (!email || !isAdmin(email)) {
-      return res.status(403).json({ error: 'Admin access required' });
-    }
+    if (!email || !isAdmin(email)) return res.status(403).json({ error: 'Admin access required' });
     const rows = await query('SELECT * FROM feedback ORDER BY created_at DESC');
     res.json({ feedback: rows });
   } catch (err) {
@@ -323,17 +300,12 @@ app.get('/api/feedback', async (req, res) => {
   }
 });
 
-// DELETE /api/feedback/:id — delete feedback (admin only)
 app.delete('/api/feedback/:id', async (req, res) => {
   try {
     const email = req.query.email;
-    if (!email || !isAdmin(email)) {
-      return res.status(403).json({ error: 'Admin access required' });
-    }
+    if (!email || !isAdmin(email)) return res.status(403).json({ error: 'Admin access required' });
     const result = await query('DELETE FROM feedback WHERE id = ?', [req.params.id]);
-    if (result.affectedRows === 0) {
-      return res.status(404).json({ error: 'Feedback not found' });
-    }
+    if (result.affectedRows === 0) return res.status(404).json({ error: 'Feedback not found' });
     res.json({ success: true });
   } catch (err) {
     console.error('Failed to delete feedback:', err);
@@ -345,7 +317,6 @@ app.delete('/api/feedback/:id', async (req, res) => {
 // SHARED ROUTES — API Keys
 // ═══════════════════════════════════════════════
 
-// sleo — Change this to your app's prefix (e.g. "dsw_", "dmb_")
 const API_KEY_PREFIX = 'sleo';
 
 function generateApiKeyToken() {
@@ -357,13 +328,11 @@ function hashApiKey(key) {
   return crypto.createHash('sha256').update(key).digest('hex');
 }
 
-// GET /api/api-keys — list keys for a user
 app.get('/api/api-keys', async (req, res) => {
   try {
     const email = req.query.email;
     if (!email) return res.status(400).json({ error: 'Email required' });
     if (!isAdmin(email)) return res.status(403).json({ error: 'Admin access required' });
-
     const user = await getOrCreateUser(email);
     const keys = await query(
       'SELECT id, name, key_prefix, last_used_at, created_at FROM api_keys WHERE user_id = ? ORDER BY created_at DESC',
@@ -376,31 +345,22 @@ app.get('/api/api-keys', async (req, res) => {
   }
 });
 
-// POST /api/api-keys — create a new API key
 app.post('/api/api-keys', async (req, res) => {
   try {
     const { email, name } = req.body;
-    if (!email || !name || !name.trim()) {
-      return res.status(400).json({ error: 'Email and key name are required' });
-    }
+    if (!email || !name || !name.trim()) return res.status(400).json({ error: 'Email and key name are required' });
     if (!isAdmin(email)) return res.status(403).json({ error: 'Admin access required' });
-
     const user = await getOrCreateUser(email);
     const rawKey = generateApiKeyToken();
     const keyHash = hashApiKey(rawKey);
-    const keyPrefix = rawKey.substring(0, API_KEY_PREFIX.length + 4); // prefix + first 4 hex chars
-
+    const keyPrefix = rawKey.substring(0, API_KEY_PREFIX.length + 4);
     await query(
       'INSERT INTO api_keys (user_id, name, key_prefix, key_hash) VALUES (?, ?, ?, ?)',
       [user.id, name.trim(), keyPrefix, keyHash]
     );
-
     res.status(201).json({
-      success: true,
-      apiKey: rawKey,
-      name: name.trim(),
-      keyPrefix,
-      message: 'Save this key — it will not be shown again.'
+      success: true, apiKey: rawKey, name: name.trim(), keyPrefix,
+      message: 'Save this key \u2014 it will not be shown again.'
     });
   } catch (err) {
     console.error('Failed to create API key:', err);
@@ -408,23 +368,14 @@ app.post('/api/api-keys', async (req, res) => {
   }
 });
 
-// DELETE /api/api-keys/:id — revoke an API key
 app.delete('/api/api-keys/:id', async (req, res) => {
   try {
     const email = req.query.email;
     if (!email) return res.status(400).json({ error: 'Email required' });
     if (!isAdmin(email)) return res.status(403).json({ error: 'Admin access required' });
-
     const user = await getOrCreateUser(email);
-    const result = await query(
-      'DELETE FROM api_keys WHERE id = ? AND user_id = ?',
-      [req.params.id, user.id]
-    );
-
-    if (result.affectedRows === 0) {
-      return res.status(404).json({ error: 'API key not found' });
-    }
-
+    const result = await query('DELETE FROM api_keys WHERE id = ? AND user_id = ?', [req.params.id, user.id]);
+    if (result.affectedRows === 0) return res.status(404).json({ error: 'API key not found' });
     res.json({ success: true });
   } catch (err) {
     console.error('Failed to revoke API key:', err);
@@ -436,14 +387,10 @@ app.delete('/api/api-keys/:id', async (req, res) => {
 // SHARED ROUTES — Users (admin only)
 // ═══════════════════════════════════════════════
 
-// GET /api/users — admin-only: list all users with asset counts
-// NOTE: Update the LEFT JOIN to match your app-specific asset table
 app.get('/api/users', async (req, res) => {
   try {
     const email = req.query.email;
-    if (!email || !isAdmin(email)) {
-      return res.status(403).json({ error: 'Admin access required' });
-    }
+    if (!email || !isAdmin(email)) return res.status(403).json({ error: 'Admin access required' });
     const rows = await query(`
       SELECT u.id, u.email, u.name, u.created_at, u.last_login_at,
              COUNT(i.id) AS item_count
@@ -459,13 +406,10 @@ app.get('/api/users', async (req, res) => {
   }
 });
 
-// GET /api/users/:userId/items — admin-only: list a user's items
 app.get('/api/users/:userId/items', async (req, res) => {
   try {
     const email = req.query.email;
-    if (!email || !isAdmin(email)) {
-      return res.status(403).json({ error: 'Admin access required' });
-    }
+    if (!email || !isAdmin(email)) return res.status(403).json({ error: 'Admin access required' });
     const rows = await query(
       'SELECT id, name, created_at, updated_at FROM items WHERE user_id = ? ORDER BY created_at DESC',
       [req.params.userId]
@@ -478,150 +422,20 @@ app.get('/api/users/:userId/items', async (req, res) => {
 });
 
 // ═══════════════════════════════════════════════
-// SHARED ROUTES — Gemini Streaming Proxy
+// APP-SPECIFIC: Version
 // ═══════════════════════════════════════════════
 
-// POST /api/generate — SSE proxy to Gemini API with retry + fallback
-// Streams from Gemini to keep Heroku's connection alive, then sends assembled response.
-// On 503/429/500, retries with backoff and falls back to alternate models.
-app.post('/api/generate', async (req, res) => {
-  const apiKey = process.env.GEMINI_API_KEY;
-  if (!apiKey) {
-    return res.status(500).json({ error: 'GEMINI_API_KEY not configured on server' });
-  }
-
-  const { contents, generationConfig } = req.body;
-  if (!contents) {
-    return res.status(400).json({ error: 'Missing "contents" in request body' });
-  }
-
-  // Set up SSE headers so Heroku sees data flowing
-  res.setHeader('Content-Type', 'text/event-stream');
-  res.setHeader('Cache-Control', 'no-cache');
-  res.setHeader('Connection', 'keep-alive');
-  res.flushHeaders();
-
-  // Send a keepalive comment immediately so Heroku knows we're alive
-  res.write(': keepalive\n\n');
-
-  const modelsToTry = getGeminiModelsToTry();
-  const maxRetries = 3;
-  let lastError = null;
-
-  for (const model of modelsToTry) {
-    for (let attempt = 1; attempt <= maxRetries; attempt++) {
-      try {
-        const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${model}:streamGenerateContent?alt=sse&key=${apiKey}`;
-        const controller = new AbortController();
-        const timeout = setTimeout(() => controller.abort(), 270000);
-
-        const geminiResp = await fetch(geminiUrl, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ contents, generationConfig }),
-          signal: controller.signal,
-        });
-
-        clearTimeout(timeout);
-
-        if (!geminiResp.ok) {
-          const status = geminiResp.status;
-          // Transient error — retry or fallback
-          if (status === 503 || status === 429 || status === 500) {
-            console.warn(`[Gemini SSE] ${model} attempt ${attempt}/${maxRetries} got ${status}, retrying...`);
-            res.write(`: retry ${model} attempt ${attempt}\n\n`);
-            if (attempt < maxRetries) {
-              await new Promise(r => setTimeout(r, attempt * 2000));
-            }
-            continue;
-          }
-          // Non-transient error — fail immediately
-          const errData = await geminiResp.json().catch(() => ({}));
-          const errMsg = errData.error?.message || `Gemini API returned ${status}`;
-          res.write(`data: ${JSON.stringify({ error: errMsg })}\n\n`);
-          res.write('data: [DONE]\n\n');
-          return res.end();
-        }
-
-        // Success — collect all text parts to send a final assembled response
-        let allText = '';
-        const reader = geminiResp.body.getReader();
-        const decoder = new TextDecoder();
-        let buffer = '';
-
-        while (true) {
-          const { done, value } = await reader.read();
-          if (done) break;
-
-          buffer += decoder.decode(value, { stream: true });
-
-          const lines = buffer.split('\n');
-          buffer = lines.pop() || '';
-
-          for (const line of lines) {
-            if (line.startsWith('data: ')) {
-              const dataStr = line.slice(6).trim();
-              if (dataStr === '[DONE]') continue;
-
-              try {
-                const chunk = JSON.parse(dataStr);
-                const textPart = chunk.candidates?.[0]?.content?.parts?.[0]?.text || '';
-                if (textPart) {
-                  allText += textPart;
-                  res.write(`: chunk received\n\n`);
-                }
-              } catch (e) {
-                // Skip non-JSON lines
-              }
-            }
-          }
-        }
-
-        const finalResponse = {
-          candidates: [{
-            content: {
-              parts: [{ text: allText }],
-              role: 'model'
-            },
-            finishReason: 'STOP'
-          }]
-        };
-
-        res.write(`data: ${JSON.stringify(finalResponse)}\n\n`);
-        res.write('data: [DONE]\n\n');
-        return res.end();
-
-      } catch (err) {
-        if (err.name === 'AbortError' || err.name === 'TimeoutError') {
-          console.warn(`[Gemini SSE] ${model} attempt ${attempt}/${maxRetries} timed out`);
-          lastError = err;
-          if (attempt < maxRetries) await new Promise(r => setTimeout(r, attempt * 2000));
-          continue;
-        }
-        lastError = err;
-        throw err; // Non-retryable error
-      }
-    }
-    console.warn(`[Gemini SSE] ${model} exhausted ${maxRetries} retries, trying next model...`);
-  }
-
-  // All models exhausted
-  console.error('[Gemini SSE] All models failed after retries');
-  res.write(`data: ${JSON.stringify({ error: lastError?.message || 'All Gemini models failed after retries' })}\n\n`);
-  res.write('data: [DONE]\n\n');
-  res.end();
+app.get('/api/version', (req, res) => {
+  res.json({ version: '2.0.0', app: 'saleo-builder', mode: 'saleo-api' });
 });
 
 // ═══════════════════════════════════════════════
 // APP-SPECIFIC: File Upload & Document Extraction
 // ═══════════════════════════════════════════════
 
-// POST /api/upload — Upload PDF/DOCX, extract text
 app.post('/api/upload', upload.single('file'), async (req, res) => {
   try {
-    if (!req.file) {
-      return res.status(400).json({ error: 'No file uploaded' });
-    }
+    if (!req.file) return res.status(400).json({ error: 'No file uploaded' });
 
     const { originalname, mimetype, buffer } = req.file;
     const ext = path.extname(originalname).toLowerCase();
@@ -637,7 +451,6 @@ app.post('/api/upload', upload.single('file'), async (req, res) => {
       const result = await mammoth.extractRawText({ buffer });
       extractedText = result.value;
     } else if (ext === '.doc') {
-      // .doc is legacy — try mammoth, it handles some .doc files
       const mammoth = require('mammoth');
       try {
         const result = await mammoth.extractRawText({ buffer });
@@ -650,18 +463,16 @@ app.post('/api/upload', upload.single('file'), async (req, res) => {
     }
 
     if (!extractedText || extractedText.trim().length === 0) {
-      return res.status(400).json({ error: 'Could not extract any text from the file. The file may be empty or contain only images.' });
+      return res.status(400).json({ error: 'Could not extract any text from the file.' });
     }
 
-    // Truncate to ~50k chars to stay within Gemini context limits
     if (extractedText.length > 50000) {
-      extractedText = extractedText.substring(0, 50000) + '\n\n[Document truncated — first 50,000 characters shown]';
+      extractedText = extractedText.substring(0, 50000) + '\n\n[Document truncated]';
     }
 
     const trimmedText = extractedText.trim();
 
     // Try to find an existing synopsis in the document
-    // Match headings like "Synopsis", "Script Synopsis", "Demo Synopsis", etc.
     let synopsis = null;
     const topSection = trimmedText.substring(0, 5000);
     const lines = topSection.split('\n');
@@ -669,14 +480,9 @@ app.post('/api/upload', upload.single('file'), async (req, res) => {
 
     for (let i = 0; i < lines.length; i++) {
       const line = lines[i].trim();
-      // Match any line ending with "synopsis" (e.g. "Script Synopsis", "Synopsis:", "Demo Synopsis")
-      if (/\bsynopsis[\s:;\-–—]*$/i.test(line)) {
-        synopsisStartIdx = i + 1;
-        break;
-      }
-      // Match "Synopsis: some text here" on the same line
-      if (/\bsynopsis[\s:;\-–—]+\S/i.test(line)) {
-        const afterLabel = line.replace(/^.*?\bsynopsis[\s:;\-–—]*/i, '').trim();
+      if (/\bsynopsis[\s:;\-\u2013\u2014]*$/i.test(line)) { synopsisStartIdx = i + 1; break; }
+      if (/\bsynopsis[\s:;\-\u2013\u2014]+\S/i.test(line)) {
+        const afterLabel = line.replace(/^.*?\bsynopsis[\s:;\-\u2013\u2014]*/i, '').trim();
         if (afterLabel.length > 10) {
           const parts = [afterLabel];
           for (let j = i + 1; j < lines.length; j++) {
@@ -693,25 +499,18 @@ app.post('/api/upload', upload.single('file'), async (req, res) => {
       }
     }
 
-    // Collect the paragraph(s) after the synopsis heading
     if (!synopsis && synopsisStartIdx >= 0) {
       const parts = [];
       let hitContent = false;
       for (let j = synopsisStartIdx; j < lines.length; j++) {
         const line = lines[j].trim();
-        if (!line) {
-          if (hitContent) break; // blank line after content = end of synopsis
-          continue; // skip leading blank lines
-        }
+        if (!line) { if (hitContent) break; continue; }
         hitContent = true;
         parts.push(line);
       }
-      if (parts.length > 0) {
-        synopsis = parts.join(' ');
-      }
+      if (parts.length > 0) synopsis = parts.join(' ');
     }
 
-    // If no synopsis found, use Gemini to generate one (with retry + fallback)
     if (!synopsis) {
       try {
         const result = await callGeminiWithRetry({
@@ -724,12 +523,7 @@ app.post('/api/upload', upload.single('file'), async (req, res) => {
       }
     }
 
-    res.json({
-      text: trimmedText,
-      synopsis: synopsis || null,
-      filename: originalname,
-      charCount: trimmedText.length
-    });
+    res.json({ text: trimmedText, synopsis: synopsis || null, filename: originalname, charCount: trimmedText.length });
   } catch (err) {
     console.error('File upload failed:', err);
     res.status(500).json({ error: 'Failed to process file: ' + (err.message || 'Unknown error') });
@@ -737,10 +531,10 @@ app.post('/api/upload', upload.single('file'), async (req, res) => {
 });
 
 // ═══════════════════════════════════════════════
-// IMAGE GENERATION & LOGO ROUTES
+// APP-SPECIFIC: Logo & Persona Image Routes
 // ═══════════════════════════════════════════════
 
-// POST /api/images/logo — Fetch brand logo, copy to R2, return R2 URL
+// POST /api/images/logo — Fetch brand logo, upload to S3, return URL
 app.post('/api/images/logo', async (req, res) => {
   try {
     const { brand, websiteUrl, viewId } = req.body;
@@ -749,7 +543,7 @@ app.post('/api/images/logo', async (req, res) => {
     const result = await fetchBrandLogo(brand, websiteUrl);
     if (!result.found || !result.url) return res.json(result);
 
-    // Try to download and re-upload to R2; fall back to original URL if R2 fails
+    // Try to download and re-upload to storage
     const { getR2Client } = require('./src/utils/storage');
     if (getR2Client()) {
       try {
@@ -778,16 +572,15 @@ app.post('/api/images/logo', async (req, res) => {
         const folder = `views/${viewId || 'tmp'}/logo`;
         const slug = brand.replace(/[^a-zA-Z0-9]/g, '-').toLowerCase();
         const filename = `${slug}-logo`;
-        const r2Url = await uploadImage(imageBuffer.buffer.toString('base64'), mimeType, folder, filename);
+        const storageUrl = await uploadImage(imageBuffer.buffer.toString('base64'), mimeType, folder, filename);
 
-        console.log(`[Logo] Copied ${result.source} logo for "${brand}" to R2: ${r2Url}`);
-        return res.json({ found: true, url: r2Url, source: result.source });
-      } catch (r2Err) {
-        console.warn(`[Logo] R2 upload failed for "${brand}", using original URL:`, r2Err.message);
+        console.log(`[Logo] Copied ${result.source} logo for "${brand}" to storage: ${storageUrl}`);
+        return res.json({ found: true, url: storageUrl, source: result.source });
+      } catch (storageErr) {
+        console.warn(`[Logo] Storage upload failed for "${brand}", using original URL:`, storageErr.message);
       }
     }
 
-    // Fallback: return the original Clearbit/Google URL directly
     console.log(`[Logo] Returning ${result.source} logo for "${brand}" directly: ${result.url}`);
     res.json({ found: true, url: result.url, source: result.source });
   } catch (err) {
@@ -796,165 +589,17 @@ app.post('/api/images/logo', async (req, res) => {
   }
 });
 
-// POST /api/images/generate — Generate AI image via Gemini and upload to R2
-// Supports all Saleo image types: brand_01, brand_02, brand_03, brand_hero, card_01-07, product_01-04
-app.post('/api/images/generate', async (req, res) => {
-  try {
-    const { brand, brandDesc, industry, imageType, viewId, tone, visualStyle, colorPrimary, colorSecondary, websiteUrl } = req.body;
-    if (!brand) return res.status(400).json({ error: 'brand is required' });
-
-    const { GoogleGenAI } = require('@google/genai');
-    const apiKey = process.env.GEMINI_API_KEY;
-    if (!apiKey) return res.status(500).json({ error: 'GEMINI_API_KEY not configured' });
-
-    const ai = new GoogleGenAI({ apiKey });
-
-    // Build brand context string for prompts
-    const brandCtx = [];
-    if (brandDesc) brandCtx.push(`(${brandDesc})`);
-    if (industry && industry !== 'Other') brandCtx.push(`in the ${industry} industry`);
-    if (tone) brandCtx.push(`Brand tone: ${tone}.`);
-    if (visualStyle) brandCtx.push(`Visual style: ${visualStyle}.`);
-    if (colorPrimary && colorPrimary !== '#032D60') brandCtx.push(`Primary brand color: ${colorPrimary}.`);
-    if (colorSecondary && colorSecondary !== '#0176D3') brandCtx.push(`Secondary brand color: ${colorSecondary}.`);
-    const brandInfo = brandCtx.join(' ');
-
-    // Image type definitions: prompt builder and dimensions
-    const imageTypes = {
-      brand_01: {
-        prompt: `Create a professional, wide site banner image for the brand "${brand}" ${brandInfo}. This is a cover image for a website — think sweeping, cinematic, aspirational. Show environments, landscapes, or abstract scenes that evoke the brand's industry and values. No text, no logos, no words. Ultra-wide aspect ratio. Photorealistic, high quality.`,
-        w: 1984, h: 481
-      },
-      brand_02: {
-        prompt: `Create a professional site section background image for the brand "${brand}" ${brandInfo}. Subtle, atmospheric, slightly blurred or abstract. Could be a texture, gradient scene, or environmental shot that works well behind overlaid text. No text, no logos, no words. Photorealistic.`,
-        w: 1134, h: 552
-      },
-      brand_03: {
-        prompt: `Create another professional site section background image for the brand "${brand}" ${brandInfo}. Different from the previous one — try a different color palette or subject. Subtle, atmospheric, works well as a background behind text content. No text, no logos, no words. Photorealistic.`,
-        w: 1134, h: 552
-      },
-      brand_hero: {
-        prompt: `Create a stunning hero section background image for the brand "${brand}" ${brandInfo}. This is the main hero banner — it should be the most visually striking image. Show the essence of the brand through environment, activity, or lifestyle. Bold, aspirational, high impact. No text, no logos, no words. Photorealistic.`,
-        w: 1134, h: 552
-      },
-    };
-
-    // CARD images (01-07): lifestyle shots relating to the brand
-    for (let i = 1; i <= 7; i++) {
-      const num = String(i).padStart(2, '0');
-      const variation = [
-        'a lifestyle scene showing people using or enjoying the brand',
-        'a close-up detail shot related to the brand experience',
-        'an environment or location scene related to the brand',
-        'a group or social scene related to the brand lifestyle',
-        'an action or activity shot related to the brand',
-        'a behind-the-scenes or process shot related to the brand',
-        'an aspirational or inspirational scene related to the brand'
-      ][i - 1];
-      imageTypes[`card_${num}`] = {
-        prompt: `Create a professional lifestyle or product shot for the brand "${brand}" ${brandInfo}. This is card image ${i} of 7 for a website — ${variation}. High quality, editorial style photography. No text, no logos, no words. Photorealistic.${i === 1 ? ' This image will overlay on a background, so it should be vibrant and stand out.' : ''}`,
-        w: 2551, h: 1524
-      };
-    }
-
-    // PRODUCT images (01-04): realistic product shots
-    for (let i = 1; i <= 4; i++) {
-      const num = String(i).padStart(2, '0');
-      imageTypes[`product_${num}`] = {
-        prompt: `Create a clean, professional product photograph for the brand "${brand}" ${brandInfo}.${websiteUrl ? ` The brand website is ${websiteUrl} — generate a realistic product that this brand would sell.` : ''} This is product ${i} of 4. Show a single realistic product on a clean, minimal background. The product should look like something this brand actually sells. Studio lighting, high-end e-commerce photography style. No text, no logos, no watermarks. Clean white or light gradient background. 400x400 square crop.`,
-        w: 400, h: 400
-      };
-    }
-
-    const typeDef = imageTypes[imageType];
-    if (!typeDef) {
-      return res.status(400).json({ error: `Unknown imageType: ${imageType}. Valid types: ${Object.keys(imageTypes).join(', ')}` });
-    }
-
-    console.log(`[ImageGen] Generating ${imageType} for "${brand}" (${typeDef.w}x${typeDef.h})`);
-
-    // Retry up to 3 attempts for Gemini failures
-    let imageBase64 = null;
-    let mimeType = 'image/png';
-    let lastGenErr;
-    for (let attempt = 1; attempt <= 3; attempt++) {
-      try {
-        const response = await ai.models.generateContent({
-          model: process.env.GEMINI_IMAGE_MODEL || 'gemini-3.1-flash-image',
-          contents: [{ text: typeDef.prompt }],
-          config: { responseModalities: ['TEXT', 'IMAGE'] },
-        });
-
-        for (const part of response.candidates?.[0]?.content?.parts || []) {
-          if (part.inlineData) {
-            imageBase64 = part.inlineData.data;
-            mimeType = part.inlineData.mimeType || 'image/png';
-            break;
-          }
-        }
-        if (imageBase64) break;
-        throw new Error('Gemini did not return an image');
-      } catch (genErr) {
-        lastGenErr = genErr;
-        console.warn(`[ImageGen] ${imageType} attempt ${attempt}/3 failed: ${genErr.message}`);
-        if (attempt < 3) await new Promise(r => setTimeout(r, attempt === 1 ? 2000 : 5000));
-      }
-    }
-
-    if (!imageBase64) {
-      return res.status(500).json({ error: `Image generation failed after 3 attempts: ${lastGenErr?.message || 'No image returned'}` });
-    }
-
-    // Resize to exact specified dimensions using sharp
-    // Two-step: resize to cover the target area, then extract (crop) to exact dims
-    const sharp = require('sharp');
-    const rawBuffer = Buffer.from(imageBase64, 'base64');
-    const metadata = await sharp(rawBuffer).metadata();
-    const srcW = metadata.width || 1024;
-    const srcH = metadata.height || 1024;
-
-    // Calculate scale factor to cover target dimensions (no padding)
-    const scaleX = typeDef.w / srcW;
-    const scaleY = typeDef.h / srcH;
-    const scale = Math.max(scaleX, scaleY);
-    const scaledW = Math.round(srcW * scale);
-    const scaledH = Math.round(srcH * scale);
-
-    // Scale up to cover, then crop to exact target size from center
-    const resizedBuffer = await sharp(rawBuffer)
-      .resize(scaledW, scaledH, { fit: 'fill' })
-      .extract({
-        left: Math.round((scaledW - typeDef.w) / 2),
-        top: Math.round((scaledH - typeDef.h) / 2),
-        width: typeDef.w,
-        height: typeDef.h
-      })
-      .jpeg({ quality: 92 })
-      .toBuffer();
-    const resizedBase64 = resizedBuffer.toString('base64');
-    mimeType = 'image/jpeg';
-
-    console.log(`[ImageGen] Resized ${imageType} from ${srcW}×${srcH} → ${typeDef.w}×${typeDef.h}`);
-
-    // Upload to R2
-    const folder = `views/${viewId || 'tmp'}/generated`;
-    const slug = brand.replace(/[^a-zA-Z0-9]/g, '-').toLowerCase();
-    const filename = `${slug}-${imageType}`;
-    const url = await uploadImage(resizedBase64, mimeType, folder, filename);
-
-    console.log(`[ImageGen] ${imageType} for "${brand}" uploaded: ${url}`);
-    res.json({ url, mimeType, imageType });
-  } catch (err) {
-    console.error('Image generation failed:', err);
-    res.status(500).json({ error: 'Image generation failed: ' + err.message });
-  }
-});
-
 // POST /api/images/persona — Generate a persona headshot via Gemini
 app.post('/api/images/persona', async (req, res) => {
   try {
-    const { brand, brandDesc, industry, synopsis, personaName: inputPersonaName, viewId } = req.body;
+    const { brand, brandDesc, industry, synopsis, personaName: inputPersonaName, viewId, personaImageUrl } = req.body;
     if (!brand) return res.status(400).json({ error: 'brand is required' });
+
+    // If DemoForge passed a persona image URL, use it directly
+    if (personaImageUrl) {
+      console.log(`[Persona] Using provided persona image URL for "${brand}": ${personaImageUrl}`);
+      return res.json({ url: personaImageUrl, source: 'provided' });
+    }
 
     const { GoogleGenAI } = require('@google/genai');
     const apiKey = process.env.GEMINI_API_KEY;
@@ -962,7 +607,7 @@ app.post('/api/images/persona', async (req, res) => {
 
     const ai = new GoogleGenAI({ apiKey });
 
-    // Step 1: Try to extract a persona from the synopsis using Gemini text
+    // Step 1: Extract persona from synopsis
     let personaDesc = '';
     let extractedName = '';
     if (synopsis && synopsis.trim()) {
@@ -989,36 +634,29 @@ Synopsis: ${synopsis}` }],
         } catch (parseErr) {
           personaDesc = rawText;
         }
-        console.log(`[Persona] Extracted: name="${extractedName}", desc="${personaDesc}"`);
       } catch (extractErr) {
         console.warn('[Persona] Extraction failed, using fallback:', extractErr.message);
       }
     }
 
-    // Determine persona name and gender
     const finalName = inputPersonaName || extractedName || 'Rachel Morris';
     const inferredGender = inferPersonaGender(finalName);
     const genderDesc = inferredGender === 'female' ? 'woman' : 'man';
 
-    // Fallback: generate a generic persona for the brand/industry
     if (!personaDesc) {
       personaDesc = `A professional-looking ${genderDesc} named ${finalName} who would be a typical customer of ${brand}`;
       if (brandDesc) personaDesc += `, ${brandDesc}`;
       if (industry && industry !== 'Other') personaDesc += `, in the ${industry} industry`;
     }
 
-    // Step 2: Generate headshot image — explicitly include gender
     const imagePrompt = `Generate a professional headshot photo of a ${genderDesc} named ${finalName}. ${personaDesc}. The person should look friendly, confident, and approachable. Clean background, professional lighting, business casual attire. Photorealistic portrait style, shoulders-up framing. No text or watermarks.`;
 
     const response = await ai.models.generateContent({
       model: process.env.GEMINI_IMAGE_MODEL || 'gemini-3.1-flash-image',
       contents: [{ text: imagePrompt }],
-      config: {
-        responseModalities: ['TEXT', 'IMAGE'],
-      },
+      config: { responseModalities: ['TEXT', 'IMAGE'] },
     });
 
-    // Extract image
     let imageBase64 = null;
     let mimeType = 'image/png';
     for (const part of response.candidates?.[0]?.content?.parts || []) {
@@ -1029,11 +667,9 @@ Synopsis: ${synopsis}` }],
       }
     }
 
-    if (!imageBase64) {
-      return res.status(500).json({ error: 'Gemini did not return an image. Try again.' });
-    }
+    if (!imageBase64) return res.status(500).json({ error: 'Gemini did not return an image. Try again.' });
 
-    // Upload to R2
+    // Upload to storage
     const folder = `views/${viewId || 'tmp'}/persona`;
     const slug = brand.replace(/[^a-zA-Z0-9]/g, '-').toLowerCase();
     const filename = `${slug}-persona`;
@@ -1043,20 +679,6 @@ Synopsis: ${synopsis}` }],
   } catch (err) {
     console.error('Persona image generation failed:', err);
     res.status(500).json({ error: 'Persona generation failed: ' + err.message });
-  }
-});
-
-// POST /api/images/upload — Upload a base64 image to R2
-app.post('/api/images/upload', async (req, res) => {
-  try {
-    const { imageBase64, mimeType, folder, filename } = req.body;
-    if (!imageBase64) return res.status(400).json({ error: 'imageBase64 is required' });
-
-    const url = await uploadImage(imageBase64, mimeType || 'image/png', folder || 'views/tmp', filename || null);
-    res.json({ url });
-  } catch (err) {
-    console.error('Image upload failed:', err);
-    res.status(500).json({ error: 'Image upload failed: ' + err.message });
   }
 });
 
@@ -1091,17 +713,16 @@ function inferPersonaGender(name) {
   return 'female'; // default
 }
 
-// GET /api/images/proxy — Proxy-fetch an R2 image to avoid CORS issues
+// GET /api/images/proxy — Proxy-fetch an image to avoid CORS issues
 app.get('/api/images/proxy', async (req, res) => {
   try {
     const url = req.query.url;
     if (!url) return res.status(400).json({ error: 'url query param is required' });
 
-    // Only allow proxying our own R2 URLs for security
-    const { getPublicUrl } = require('./src/utils/r2');
-    const r2Base = getPublicUrl();
-    if (!r2Base || !url.startsWith(r2Base)) {
-      return res.status(403).json({ error: 'Only R2 asset URLs can be proxied' });
+    const { getPublicUrl } = require('./src/utils/storage');
+    const storageBase = getPublicUrl();
+    if (!storageBase || !url.startsWith(storageBase)) {
+      return res.status(403).json({ error: 'Only storage asset URLs can be proxied' });
     }
 
     const https = require('https');
@@ -1136,12 +757,11 @@ app.get('/api/images/proxy', async (req, res) => {
   }
 });
 
-// POST /api/images/delete — Delete an R2 image by URL
+// POST /api/images/delete — Delete a storage image by URL
 app.post('/api/images/delete', async (req, res) => {
   try {
     const { url, itemId } = req.body;
     if (!url) return res.status(400).json({ error: 'url is required' });
-    // Own-prefix guard lives in the storage helper; also keep images other items still use.
     const [safe] = await unreferencedUrls([url], itemId);
     if (safe) await deleteByUrl(safe);
     res.json({ success: true, deleted: !!safe });
@@ -1152,16 +772,269 @@ app.post('/api/images/delete', async (req, res) => {
 });
 
 // ═══════════════════════════════════════════════
-// APP-SPECIFIC ROUTES
+// APP-SPECIFIC: Saleo API Routes
 // ═══════════════════════════════════════════════
-//
-// GET  /api/items              — list items for user
-// GET  /api/items/:id          — get single item
-// POST /api/items              — create item
-// PUT  /api/items/:id          — update item
-// DELETE /api/items/:id        — delete item
-// POST /api/items/:id/share    — share item
-// POST /api/items/:id/share/confirm — replace or send new copy
+
+// GET /api/saleo/status — Check if Saleo API is configured
+app.get('/api/saleo/status', (req, res) => {
+  res.json({ configured: saleo.isConfigured() });
+});
+
+// GET /api/saleo/templates — Find the golden demo template
+app.get('/api/saleo/templates', async (req, res) => {
+  try {
+    const demo = await saleo.findGoldenDemo();
+    res.json({ demo: { id: demo.id, name: demo.name } });
+  } catch (err) {
+    console.error('Failed to find golden demo:', err.message);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// GET /api/saleo/tokens/:demoId — Get text tokens for a demo
+app.get('/api/saleo/tokens/:demoId', async (req, res) => {
+  try {
+    const result = await saleo.getTokens(req.params.demoId);
+    res.json(result);
+  } catch (err) {
+    console.error('Failed to get tokens:', err.message);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// POST /api/saleo/generate-values — Use Gemini to fill token values
+app.post('/api/saleo/generate-values', async (req, res) => {
+  try {
+    const { brand, industry, brandDesc, synopsis, tokens } = req.body;
+    if (!brand || !tokens || !Array.isArray(tokens)) {
+      return res.status(400).json({ error: 'brand and tokens[] are required' });
+    }
+
+    const tokenList = tokens.map(t =>
+      `- tokenId: "${t.tokenId}", label: "${t.name || t.label || t.tokenId}", currentValue: "${(t.value || t.currentValue || '').substring(0, 200)}"`
+    ).join('\n');
+
+    const prompt = `You are a Salesforce demo personalization expert. Given brand context and a list of Saleo template tokens, generate realistic, specific values for each token.
+
+Brand: ${brand}
+Industry: ${industry || 'General'}
+Description: ${brandDesc || 'N/A'}
+Synopsis: ${synopsis || 'N/A'}
+
+For each token below, generate a value that matches its type (company name, currency figure, percentage, person name, date, etc.) based on the brand context. Keep values \u22641000 characters. No markdown formatting.
+
+Tokens:
+${tokenList}
+
+Respond with ONLY valid JSON:
+{"tokenValues": [{"tokenId": "...", "value": "..."}, ...]}`;
+
+    const result = await callGeminiWithRetry({
+      prompt,
+      generationConfig: { temperature: 0.7, maxOutputTokens: 8192 },
+    });
+
+    let parsed;
+    try {
+      const text = (result.text || '').replace(/```json\s*\n?/g, '').replace(/```\s*$/g, '').trim();
+      parsed = JSON.parse(text);
+    } catch (e) {
+      console.error('[Saleo] Failed to parse Gemini response:', result.text?.substring(0, 500));
+      return res.status(500).json({ error: 'Failed to parse AI response. Try again.' });
+    }
+
+    // Validate and clean token values
+    const validTokenIds = new Set(tokens.map(t => t.tokenId));
+    const tokenValues = (parsed.tokenValues || [])
+      .filter(tv => validTokenIds.has(tv.tokenId))
+      .map(tv => ({
+        tokenId: tv.tokenId,
+        value: String(tv.value || '').substring(0, 1000),
+      }));
+
+    // Fill missing tokens with their current values
+    for (const t of tokens) {
+      if (!tokenValues.find(tv => tv.tokenId === t.tokenId)) {
+        tokenValues.push({
+          tokenId: t.tokenId,
+          value: t.value || t.currentValue || '',
+        });
+      }
+    }
+
+    res.json({ tokenValues });
+  } catch (err) {
+    console.error('Token value generation failed:', err);
+    res.status(500).json({ error: 'Token value generation failed: ' + err.message });
+  }
+});
+
+// POST /api/saleo/views — Create a Saleo view and share with user
+app.post('/api/saleo/views', async (req, res) => {
+  try {
+    const { email, itemId, demoId, projectName, tokenValues } = req.body;
+    if (!email || !demoId || !projectName) {
+      return res.status(400).json({ error: 'email, demoId, and projectName are required' });
+    }
+
+    // Build view name: "Aubrey Demo - <Project Name> - [dd/mm/yyyy]"
+    const now = new Date();
+    const dateStr = `${String(now.getDate()).padStart(2, '0')}/${String(now.getMonth() + 1).padStart(2, '0')}/${now.getFullYear()}`;
+    const viewName = `Aubrey Demo - ${projectName} - ${dateStr}`;
+
+    console.log(`[Saleo] Creating view "${viewName}" for ${email}`);
+
+    // Step 1: Create the view
+    const viewResult = await saleo.createView(demoId, viewName, tokenValues || []);
+    const viewId = viewResult.viewId || viewResult.id || viewResult.view?.id;
+
+    if (!viewId) {
+      console.error('[Saleo] create_personalized_view returned no viewId:', JSON.stringify(viewResult));
+      return res.status(500).json({ error: 'View created but no viewId returned', result: viewResult });
+    }
+
+    console.log(`[Saleo] View created: ${viewId}`);
+
+    // Step 2: Resolve user's Saleo ID
+    let saleoUserId = null;
+    let shareStatus = 'pending';
+    let shareError = null;
+
+    try {
+      const userResult = await saleo.getUserId(email);
+      saleoUserId = userResult.userId || userResult.id || userResult.user?.id;
+
+      if (saleoUserId) {
+        // Step 3: Share with user (edit access)
+        await saleo.shareView(viewId, [{ userId: saleoUserId, canEdit: true }]);
+        shareStatus = 'shared';
+        console.log(`[Saleo] View ${viewId} shared with ${email} (userId: ${saleoUserId})`);
+      } else {
+        shareStatus = 'share_failed';
+        shareError = 'Could not resolve your Saleo user ID. You may not be on the Saleo team.';
+      }
+    } catch (shareErr) {
+      shareStatus = 'share_failed';
+      shareError = shareErr.message;
+      console.warn(`[Saleo] Failed to share view with ${email}:`, shareErr.message);
+    }
+
+    // Step 4: Save Saleo data to the item's JSONB
+    if (itemId) {
+      try {
+        const items = await query('SELECT data FROM items WHERE id = ?', [itemId]);
+        if (items.length > 0) {
+          let data = typeof items[0].data === 'string' ? JSON.parse(items[0].data) : (items[0].data || {});
+          data.saleo = {
+            demoId,
+            viewId,
+            viewName,
+            tokenValues: tokenValues || [],
+            sharedWith: saleoUserId ? [{ email, userId: saleoUserId, canEdit: true, sharedAt: new Date().toISOString() }] : [],
+            status: shareStatus,
+            error: shareError,
+            createdAt: new Date().toISOString(),
+          };
+          await query('UPDATE items SET data = ?, updated_at = NOW() WHERE id = ?', [JSON.stringify(data), itemId]);
+        }
+      } catch (dbErr) {
+        console.warn('[Saleo] Failed to save view data to item:', dbErr.message);
+      }
+    }
+
+    res.json({
+      viewId,
+      viewName,
+      shareStatus,
+      shareError,
+      saleoUserId,
+    });
+  } catch (err) {
+    console.error('Saleo view creation failed:', err);
+    res.status(500).json({ error: 'Failed to create Saleo view: ' + err.message });
+  }
+});
+
+// POST /api/saleo/views/:viewId/tokens — Re-push edited token values
+app.post('/api/saleo/views/:viewId/tokens', async (req, res) => {
+  try {
+    const { email, itemId, tokenValues } = req.body;
+    if (!email || !tokenValues) {
+      return res.status(400).json({ error: 'email and tokenValues are required' });
+    }
+
+    // Verify ownership
+    if (itemId) {
+      const user = await getOrCreateUser(email);
+      const items = await query('SELECT id FROM items WHERE id = ? AND user_id = ?', [itemId, user.id]);
+      if (items.length === 0) return res.status(404).json({ error: 'Item not found' });
+    }
+
+    await saleo.updateViewTokens(req.params.viewId, tokenValues);
+
+    // Update stored token values
+    if (itemId) {
+      try {
+        const items = await query('SELECT data FROM items WHERE id = ?', [itemId]);
+        if (items.length > 0) {
+          let data = typeof items[0].data === 'string' ? JSON.parse(items[0].data) : (items[0].data || {});
+          if (data.saleo) {
+            data.saleo.tokenValues = tokenValues;
+          }
+          await query('UPDATE items SET data = ?, updated_at = NOW() WHERE id = ?', [JSON.stringify(data), itemId]);
+        }
+      } catch (dbErr) {
+        console.warn('[Saleo] Failed to update token values in DB:', dbErr.message);
+      }
+    }
+
+    res.json({ success: true });
+  } catch (err) {
+    console.error('Token update failed:', err);
+    res.status(500).json({ error: 'Failed to update tokens: ' + err.message });
+  }
+});
+
+// POST /api/saleo/views/:viewId/share — Share view with additional colleagues
+app.post('/api/saleo/views/:viewId/share', async (req, res) => {
+  try {
+    const { emails, canEdit = false } = req.body;
+    if (!emails || !Array.isArray(emails) || emails.length === 0) {
+      return res.status(400).json({ error: 'emails[] is required' });
+    }
+
+    const results = [];
+    const usersToShare = [];
+
+    for (const email of emails) {
+      try {
+        const userResult = await saleo.getUserId(email);
+        const userId = userResult.userId || userResult.id;
+        if (userId) {
+          usersToShare.push({ userId, canEdit });
+          results.push({ email, status: 'resolved', userId });
+        } else {
+          results.push({ email, status: 'not_found', error: 'User not on Saleo team' });
+        }
+      } catch (err) {
+        results.push({ email, status: 'error', error: err.message });
+      }
+    }
+
+    if (usersToShare.length > 0) {
+      await saleo.shareView(req.params.viewId, usersToShare);
+    }
+
+    res.json({ results, shared: usersToShare.length });
+  } catch (err) {
+    console.error('Share failed:', err);
+    res.status(500).json({ error: 'Failed to share view: ' + err.message });
+  }
+});
+
+// ═══════════════════════════════════════════════
+// APP-SPECIFIC: Items CRUD
+// ═══════════════════════════════════════════════
 
 // GET /api/items — list items for a user
 app.get('/api/items', async (req, res) => {
@@ -1173,9 +1046,12 @@ app.get('/api/items', async (req, res) => {
     const logoCol = isPostgres
       ? "data #>> '{images,logo}' AS logo_url"
       : "JSON_UNQUOTE(JSON_EXTRACT(data, '$.images.logo')) AS logo_url";
+    const saleoStatusCol = isPostgres
+      ? "data #>> '{saleo,status}' AS saleo_status"
+      : "JSON_UNQUOTE(JSON_EXTRACT(data, '$.saleo.status')) AS saleo_status";
     const items = await query(
       `SELECT id, name, shared_by_email, shared_at, created_at, updated_at,
-              ${logoCol}
+              ${logoCol}, ${saleoStatusCol}
        FROM items WHERE user_id = ? ORDER BY COALESCE(updated_at, created_at, '1970-01-01') DESC`,
       [user.id]
     );
@@ -1203,15 +1079,10 @@ app.get('/api/items/:id', async (req, res) => {
       rows = await query('SELECT * FROM items WHERE id = ? AND user_id = ?', [req.params.id, user.id]);
     }
 
-    if (rows.length === 0) {
-      return res.status(404).json({ error: 'Item not found' });
-    }
+    if (rows.length === 0) return res.status(404).json({ error: 'Item not found' });
 
     const item = rows[0];
-    // Parse data if it's a string
-    if (typeof item.data === 'string') {
-      item.data = JSON.parse(item.data);
-    }
+    if (typeof item.data === 'string') item.data = JSON.parse(item.data);
 
     res.json({ item });
   } catch (err) {
@@ -1220,309 +1091,11 @@ app.get('/api/items/:id', async (req, res) => {
   }
 });
 
-// ─── Server-side image generation (background) ───
-// Generates a single image with up to 2 retries on failure
-async function generateSingleImage(brand, meta, imageType, itemId, opts = {}) {
-  const { GoogleGenAI } = require('@google/genai');
-  const sharp = require('sharp');
-  const apiKey = process.env.GEMINI_API_KEY;
-  if (!apiKey) throw new Error('GEMINI_API_KEY not configured');
-
-  const ai = new GoogleGenAI({ apiKey });
-
-  const brandCtx = [];
-  if (meta.brand_desc) brandCtx.push(`(${meta.brand_desc})`);
-  if (meta.industry && meta.industry !== 'Other') brandCtx.push(`in the ${meta.industry} industry`);
-  if (meta.tone) brandCtx.push(`Brand tone: ${meta.tone}.`);
-  if (meta.visual_style) brandCtx.push(`Visual style: ${meta.visual_style}.`);
-  if (meta.color_primary && meta.color_primary !== '#032D60') brandCtx.push(`Primary brand color: ${meta.color_primary}.`);
-  if (meta.color_secondary && meta.color_secondary !== '#0176D3') brandCtx.push(`Secondary brand color: ${meta.color_secondary}.`);
-  const brandInfo = brandCtx.join(' ');
-
-  // Build image type definitions (same as in /api/images/generate)
-  const imageTypes = {
-    brand_01: { prompt: `Create a professional, wide site banner image for the brand "${brand}" ${brandInfo}. This is a cover image for a website — think sweeping, cinematic, aspirational. Show environments, landscapes, or abstract scenes that evoke the brand's industry and values. No text, no logos, no words. Ultra-wide aspect ratio. Photorealistic, high quality.`, w: 1984, h: 481 },
-    brand_02: { prompt: `Create a professional site section background image for the brand "${brand}" ${brandInfo}. Subtle, atmospheric, slightly blurred or abstract. Could be a texture, gradient scene, or environmental shot that works well behind overlaid text. No text, no logos, no words. Photorealistic.`, w: 1134, h: 552 },
-    brand_03: { prompt: `Create another professional site section background image for the brand "${brand}" ${brandInfo}. Different from the previous one — try a different color palette or subject. Subtle, atmospheric, works well as a background behind text content. No text, no logos, no words. Photorealistic.`, w: 1134, h: 552 },
-    brand_hero: { prompt: `Create a stunning hero section background image for the brand "${brand}" ${brandInfo}. This is the main hero banner — it should be the most visually striking image. Show the essence of the brand through environment, activity, or lifestyle. Bold, aspirational, high impact. No text, no logos, no words. Photorealistic.`, w: 1134, h: 552 },
-  };
-  for (let i = 1; i <= 7; i++) {
-    const num = String(i).padStart(2, '0');
-    const variation = ['a lifestyle scene showing people using or enjoying the brand','a close-up detail shot related to the brand experience','an environment or location scene related to the brand','a group or social scene related to the brand lifestyle','an action or activity shot related to the brand','a behind-the-scenes or process shot related to the brand','an aspirational or inspirational scene related to the brand'][i - 1];
-    imageTypes[`card_${num}`] = { prompt: `Create a professional lifestyle or product shot for the brand "${brand}" ${brandInfo}. This is card image ${i} of 7 for a website — ${variation}. High quality, editorial style photography. No text, no logos, no words. Photorealistic.${i === 1 ? ' This image will overlay on a background, so it should be vibrant and stand out.' : ''}`, w: 2551, h: 1524 };
-  }
-  for (let i = 1; i <= 4; i++) {
-    const num = String(i).padStart(2, '0');
-    imageTypes[`product_${num}`] = { prompt: `Create a clean, professional product photograph for the brand "${brand}" ${brandInfo}.${meta.brand_url ? ` The brand website is ${meta.brand_url} — generate a realistic product that this brand would sell.` : ''} This is product ${i} of 4. Show a single realistic product on a clean, minimal background. The product should look like something this brand actually sells. Studio lighting, high-end e-commerce photography style. No text, no logos, no watermarks. Clean white or light gradient background. 400x400 square crop.`, w: 400, h: 400 };
-  }
-
-  // Support custom prompt/dimensions via opts, or fall back to hardcoded types
-  const typeDef = opts.customPrompt
-    ? { prompt: opts.customPrompt, w: opts.w || 1024, h: opts.h || 1024 }
-    : imageTypes[imageType];
-  if (!typeDef) throw new Error(`Unknown imageType: ${imageType}`);
-
-  // Retry up to 3 attempts
-  let lastErr;
-  for (let attempt = 1; attempt <= 3; attempt++) {
-    try {
-      console.log(`[BgImageGen] Generating ${imageType} for "${brand}" (attempt ${attempt}/3)`);
-
-      const response = await ai.models.generateContent({
-        model: process.env.GEMINI_IMAGE_MODEL || 'gemini-3.1-flash-image',
-        contents: [{ text: typeDef.prompt }],
-        config: { responseModalities: ['TEXT', 'IMAGE'] },
-      });
-
-      let imageBase64 = null;
-      let mimeType = 'image/png';
-      for (const part of response.candidates?.[0]?.content?.parts || []) {
-        if (part.inlineData) {
-          imageBase64 = part.inlineData.data;
-          mimeType = part.inlineData.mimeType || 'image/png';
-          break;
-        }
-      }
-      if (!imageBase64) throw new Error('Gemini did not return an image');
-
-      // Resize to exact dimensions
-      const rawBuffer = Buffer.from(imageBase64, 'base64');
-      const metadata = await sharp(rawBuffer).metadata();
-      const srcW = metadata.width || 1024;
-      const srcH = metadata.height || 1024;
-      const scaleX = typeDef.w / srcW;
-      const scaleY = typeDef.h / srcH;
-      const scale = Math.max(scaleX, scaleY);
-      const scaledW = Math.round(srcW * scale);
-      const scaledH = Math.round(srcH * scale);
-
-      const resizedBuffer = await sharp(rawBuffer)
-        .resize(scaledW, scaledH, { fit: 'fill' })
-        .extract({
-          left: Math.round((scaledW - typeDef.w) / 2),
-          top: Math.round((scaledH - typeDef.h) / 2),
-          width: typeDef.w,
-          height: typeDef.h
-        })
-        .jpeg({ quality: 92 })
-        .toBuffer();
-
-      const folder = `views/${itemId}/generated`;
-      const slug = brand.replace(/[^a-zA-Z0-9]/g, '-').toLowerCase();
-      const filename = `${slug}-${imageType}`;
-      const url = await uploadImage(resizedBuffer.toString('base64'), 'image/jpeg', folder, filename);
-
-      console.log(`[BgImageGen] ${imageType} for "${brand}" uploaded: ${url}`);
-      return url;
-    } catch (err) {
-      lastErr = err;
-      console.warn(`[BgImageGen] ${imageType} attempt ${attempt} failed: ${err.message}`);
-      if (attempt < 3) {
-        // Wait before retry: 2s, then 5s
-        await new Promise(r => setTimeout(r, attempt === 1 ? 2000 : 5000));
-      }
-    }
-  }
-  throw lastErr;
-}
-
-// Background job: generate all missing images for an item
-async function backgroundGenerateImages(itemId, email) {
-  try {
-    // Fetch the item
-    const items = await query('SELECT * FROM items WHERE id = ?', [itemId]);
-    if (items.length === 0) return;
-    const item = items[0];
-    let data = typeof item.data === 'string' ? JSON.parse(item.data) : (item.data || {});
-    const meta = data.metadata || {};
-    const brand = meta.brand;
-    if (!brand) { console.log(`[BgImageGen] Item ${itemId}: no brand, skipping`); return; }
-
-    // Only auto-generate standard images for Retail industry
-    const industry = (meta.industry || '').toLowerCase();
-    if (industry !== 'retail') { console.log(`[BgImageGen] Item ${itemId}: industry "${meta.industry}" is not Retail, skipping standard image gen`); return; }
-
-    const images = data.images || {};
-    const allTypes = [
-      'brand_01', 'brand_02', 'brand_03', 'brand_hero',
-      'card_01', 'card_02', 'card_03', 'card_04', 'card_05', 'card_06', 'card_07',
-      'product_01', 'product_02', 'product_03', 'product_04'
-    ];
-    const missing = allTypes.filter(t => !images[t] || !images[t].startsWith('http'));
-    if (missing.length === 0) { console.log(`[BgImageGen] Item ${itemId}: all images present`); return; }
-
-    console.log(`[BgImageGen] Item ${itemId}: generating ${missing.length} missing images for "${brand}"`);
-
-    let generated = 0;
-    let failed = 0;
-    for (const imageType of missing) {
-      try {
-        const url = await generateSingleImage(brand, meta, imageType, itemId);
-        if (!data.images) data.images = {};
-        data.images[imageType] = url;
-        generated++;
-
-        // Save progress after each image
-        await query('UPDATE items SET data = ?, updated_at = NOW() WHERE id = ?', [JSON.stringify(data), itemId]);
-      } catch (err) {
-        console.error(`[BgImageGen] Item ${itemId}: ${imageType} failed after retries: ${err.message}`);
-        failed++;
-      }
-    }
-
-    console.log(`[BgImageGen] Item ${itemId}: done — ${generated} generated, ${failed} failed`);
-  } catch (err) {
-    console.error(`[BgImageGen] Item ${itemId}: background generation error:`, err.message);
-  }
-}
-
-// POST /api/images/interpret-prompt — AI interprets a prompt and returns a generation plan (fast, no image gen)
-app.post('/api/images/interpret-prompt', async (req, res) => {
-  try {
-    const { prompt, brand, brandDesc, industry, tone, visualStyle, colorPrimary, colorSecondary, websiteUrl, existingCustomTypes } = req.body;
-    if (!prompt) return res.status(400).json({ error: 'prompt is required' });
-    if (!brand) return res.status(400).json({ error: 'brand is required' });
-
-    const apiKey = process.env.GEMINI_API_KEY;
-    if (!apiKey) return res.status(500).json({ error: 'GEMINI_API_KEY not configured' });
-
-    const { GoogleGenAI } = require('@google/genai');
-    const ai = new GoogleGenAI({ apiKey });
-
-    // Build brand context
-    const brandCtx = [];
-    if (brandDesc) brandCtx.push(`(${brandDesc})`);
-    if (industry && industry !== 'Other') brandCtx.push(`in the ${industry} industry`);
-    if (tone) brandCtx.push(`Brand tone: ${tone}.`);
-    if (visualStyle) brandCtx.push(`Visual style: ${visualStyle}.`);
-    if (colorPrimary && colorPrimary !== '#032D60') brandCtx.push(`Primary brand color: ${colorPrimary}.`);
-    if (colorSecondary && colorSecondary !== '#0176D3') brandCtx.push(`Secondary brand color: ${colorSecondary}.`);
-    const brandInfo = brandCtx.join(' ');
-
-    const existingGroups = ['brand', 'card', 'product'];
-    const customGroups = (existingCustomTypes || []).map(t => t.group).filter((g, i, a) => a.indexOf(g) === i);
-    const allGroups = [...existingGroups, ...customGroups];
-
-    const interpretPrompt = `You are a helper that interprets image generation requests for a brand demo platform.
-
-The brand is "${brand}" ${brandInfo}.
-${websiteUrl ? `Brand website: ${websiteUrl}` : ''}
-
-Existing image groups: ${allGroups.join(', ')}
-
-The user says: "${prompt}"
-
-The user may request MULTIPLE types of images in a single request (e.g. "4 product images, an email banner, and a mobile hero"). You MUST parse this into a JSON array where EACH distinct type of image is a separate object.
-
-Return a JSON array (NOT an object, an ARRAY) of group objects, one per distinct image type. Each object has:
-- count: number of images for this type (1-10, default 1)
-- group_name: human-readable group name (e.g. "Email Banners", "Mobile App Heroes", "Product Images"). Use existing group names if the request matches (brand → "Brand Images", card → "Card Images", product → "Product Images").
-- group_key: snake_case key for the group (e.g. "email_banner", "mobile_app_hero", "product"). Use existing group keys if the request matches.
-- width: image width in pixels for this type
-- height: image height in pixels for this type
-- image_prompts: array of individual image generation prompts (one per count). Each should be a detailed, professional prompt for an AI image generator. Include the brand name and context. Always end with "No text, no logos, no words. Photorealistic, high quality." Each prompt should be different/varied.
-
-If the user mentions specific dimensions like "600x300", use those. Otherwise use sensible defaults for the type (e.g. product images = 400x400, banners = 1200x400, email banners = 600x300, mobile heroes = 1080x1920, social posts = 1080x1080).
-
-Examples:
-- "Generate 4 more product images" → [{"count":4,"group_name":"Product Images","group_key":"product","width":400,"height":400,"image_prompts":["...", "...", "...", "..."]}]
-- "Create an email banner at 600x300 and 2 social media posts" → [{"count":1,"group_name":"Email Banners","group_key":"email_banner","width":600,"height":300,"image_prompts":["..."]}, {"count":2,"group_name":"Social Media Posts","group_key":"social_media","width":1080,"height":1080,"image_prompts":["...", "..."]}]
-
-Respond ONLY with a valid JSON array, no markdown, no explanation.`;
-
-    console.log(`[CustomImageGen] Interpreting prompt: "${prompt}"`);
-    const interpretResp = await ai.models.generateContent({
-      model: process.env.GEMINI_MODEL || 'gemini-3.7-flash',
-      contents: [{ text: interpretPrompt }],
-    });
-
-    let groups;
-    try {
-      let text = interpretResp.candidates?.[0]?.content?.parts?.[0]?.text || '';
-      console.log(`[CustomImageGen] Raw Gemini response: ${text.substring(0, 800)}`);
-      text = text.replace(/^```(?:json)?\s*\n?/i, '').replace(/\n?```\s*$/i, '').trim();
-      const parsed = JSON.parse(text);
-      // Normalize: if AI returned a single object instead of array, wrap it
-      groups = Array.isArray(parsed) ? parsed : [parsed];
-      console.log(`[CustomImageGen] Parsed ${groups.length} group(s): ${groups.map(g => `${g.count}x ${g.group_name}`).join(', ')}`);
-    } catch (e) {
-      console.error('[CustomImageGen] Failed to parse interpretation:', e.message);
-      return res.status(500).json({ error: 'Failed to interpret prompt. Try rephrasing.' });
-    }
-
-    // Compute next available custom key number
-    const existingKeys = (existingCustomTypes || []).map(t => t.key);
-    let nextNum = 1;
-    for (const k of existingKeys) {
-      const m = k.match(/^custom_(\d+)$/);
-      if (m) nextNum = Math.max(nextNum, parseInt(m[1]) + 1);
-    }
-
-    // Count existing items per group (standard + already-created custom)
-    const standardGroupCounts = { brand: 4, card: 7, product: 4 };
-    const existingGroupCounts = {};
-    for (const [gk, cnt] of Object.entries(standardGroupCounts)) {
-      existingGroupCounts[gk] = cnt;
-    }
-    for (const ct of (existingCustomTypes || [])) {
-      existingGroupCounts[ct.group] = (existingGroupCounts[ct.group] || 0) + 1;
-    }
-
-    // Build the plan across all groups — client will generate images one at a time
-    const plan = [];
-    for (const group of groups) {
-      const count = Math.min(Math.max(group.count || 1, 1), 10);
-      const groupName = group.group_name || 'Custom Images';
-      const groupKey = (group.group_key || 'custom').replace(/[^a-z0-9_]/g, '_');
-      const w = group.width || 1024;
-      const h = group.height || 1024;
-      const imagePrompts = group.image_prompts || [];
-
-      // Continue numbering from existing items in this group
-      const startNum = (existingGroupCounts[groupKey] || 0) + 1;
-
-      for (let i = 0; i < count; i++) {
-        const key = `custom_${String(nextNum).padStart(3, '0')}`;
-        nextNum++;
-        const imgPrompt = imagePrompts[i] || imagePrompts[0] || `Create a professional image for the brand "${brand}" ${brandInfo}. No text, no logos, no words. Photorealistic, high quality.`;
-        const num = String(startNum + i).padStart(2, '0');
-        const label = `${groupName.toUpperCase().replace(/\s+IMAGES$/i, '')} ${num}`;
-        plan.push({ key, label, group: groupKey, w, h, desc: groupName, prompt: imgPrompt });
-      }
-
-      // Update count so subsequent groups referencing same key continue correctly
-      existingGroupCounts[groupKey] = (existingGroupCounts[groupKey] || 0) + count;
-    }
-
-    res.json({ plan });
-  } catch (err) {
-    console.error('[CustomImageGen] Error:', err.message);
-    res.status(500).json({ error: err.message || 'Failed to interpret prompt' });
-  }
-});
-
-// POST /api/images/regenerate-custom — regenerate a single custom image
-app.post('/api/images/regenerate-custom', async (req, res) => {
-  try {
-    const { key, prompt: imgPrompt, w, h, brand, brandDesc, industry, tone, visualStyle, colorPrimary, colorSecondary, websiteUrl, viewId } = req.body;
-    if (!key || !imgPrompt || !brand) return res.status(400).json({ error: 'key, prompt, and brand are required' });
-
-    const meta = { brand_desc: brandDesc, industry, tone, visual_style: visualStyle, color_primary: colorPrimary, color_secondary: colorSecondary, brand_url: websiteUrl };
-    const url = await generateSingleImage(brand, meta, key, viewId, { customPrompt: imgPrompt, w: w || 1024, h: h || 1024 });
-    res.json({ key, url });
-  } catch (err) {
-    console.error('[RegenCustom] Error:', err.message);
-    res.status(500).json({ error: err.message || 'Failed to regenerate image' });
-  }
-});
-
 // POST /api/items — create a new item
 app.post('/api/items', async (req, res) => {
   try {
     const { email, name, data } = req.body;
-    if (!email || !name) {
-      return res.status(400).json({ error: 'Missing required fields: email, name' });
-    }
+    if (!email || !name) return res.status(400).json({ error: 'Missing required fields: email, name' });
     try { assertNoEmbeddedImages(data); } catch (e) { return res.status(400).json({ error: e.message }); }
 
     const user = await getOrCreateUser(email);
@@ -1532,29 +1105,9 @@ app.post('/api/items', async (req, res) => {
     );
 
     const itemId = result.insertId;
-
-    // Respond immediately, then kick off background image generation
     res.status(201).json({
-      item: {
-        id: itemId,
-        name: name.trim(),
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString(),
-      }
+      item: { id: itemId, name: name.trim(), created_at: new Date().toISOString(), updated_at: new Date().toISOString() }
     });
-
-    // Fire-and-forget: generate missing images in background
-    const itemData = data || {};
-    const meta = itemData.metadata || {};
-    console.log(`[POST /api/items] Item ${itemId} created. Brand: "${meta.brand || 'NONE'}". Has metadata: ${!!itemData.metadata}. Keys: ${Object.keys(itemData).join(',')}`);
-    if (meta.brand) {
-      console.log(`[POST /api/items] Kicking off background image generation for item ${itemId} (brand: ${meta.brand})`);
-      backgroundGenerateImages(itemId, email).catch(err => {
-        console.error(`[BgImageGen] Uncaught error for item ${itemId}:`, err.message);
-      });
-    } else {
-      console.log(`[POST /api/items] No brand in metadata, skipping background image generation. Data keys: ${Object.keys(itemData).join(',')}, metadata keys: ${Object.keys(meta).join(',')}`);
-    }
   } catch (err) {
     console.error('Failed to create item:', err);
     res.status(500).json({ error: 'Failed to create item' });
@@ -1565,69 +1118,39 @@ app.post('/api/items', async (req, res) => {
 app.put('/api/items/:id', async (req, res) => {
   try {
     const { email, data, name } = req.body;
-    if (!email || !data) {
-      return res.status(400).json({ error: 'Email and data required' });
-    }
+    if (!email || !data) return res.status(400).json({ error: 'Email and data required' });
     try { assertNoEmbeddedImages(data); } catch (e) { return res.status(400).json({ error: e.message }); }
 
     const user = await getOrCreateUser(email);
-
-    // Verify ownership
     const existing = await query('SELECT * FROM items WHERE id = ? AND user_id = ?', [req.params.id, user.id]);
-    if (existing.length === 0) {
-      return res.status(404).json({ error: 'Item not found' });
-    }
+    if (existing.length === 0) return res.status(404).json({ error: 'Item not found' });
 
-    // Update data and optionally the name
     if (name && typeof name === 'string' && name.trim()) {
-      await query(
-        'UPDATE items SET name = ?, data = ?, updated_at = NOW() WHERE id = ? AND user_id = ?',
-        [name.trim(), JSON.stringify(data), req.params.id, user.id]
-      );
+      await query('UPDATE items SET name = ?, data = ?, updated_at = NOW() WHERE id = ? AND user_id = ?',
+        [name.trim(), JSON.stringify(data), req.params.id, user.id]);
     } else {
-      await query(
-        'UPDATE items SET data = ?, updated_at = NOW() WHERE id = ? AND user_id = ?',
-        [JSON.stringify(data), req.params.id, user.id]
-      );
+      await query('UPDATE items SET data = ?, updated_at = NOW() WHERE id = ? AND user_id = ?',
+        [JSON.stringify(data), req.params.id, user.id]);
     }
 
     res.json({ success: true });
-
-    // Check if this update added brand metadata — if so, generate missing images in background
-    const meta = data?.metadata || {};
-    const images = data?.images || {};
-    const allTypes = ['brand_01','brand_02','brand_03','brand_hero','card_01','card_02','card_03','card_04','card_05','card_06','card_07','product_01','product_02','product_03','product_04'];
-    const missing = allTypes.filter(t => !images[t] || !images[t].startsWith?.('http'));
-    console.log(`[PUT /api/items/${req.params.id}] Brand: "${meta.brand || 'NONE'}". Images present: ${allTypes.length - missing.length}/${allTypes.length}. Missing: ${missing.length}`);
-
-    if (meta.brand && missing.length > 0) {
-      console.log(`[PUT /api/items/${req.params.id}] Kicking off background generation for ${missing.length} missing images`);
-      backgroundGenerateImages(parseInt(req.params.id), email).catch(err => {
-        console.error(`[BgImageGen] Uncaught error for item ${req.params.id}:`, err.message);
-      });
-    }
   } catch (err) {
     console.error('Failed to update item:', err);
     res.status(500).json({ error: 'Failed to update item' });
   }
 });
 
-// DELETE /api/items/:id — delete an item (with R2 image cleanup)
+// DELETE /api/items/:id — delete an item
 app.delete('/api/items/:id', async (req, res) => {
   try {
     const email = req.query.email;
     if (!email) return res.status(400).json({ error: 'Email required' });
 
     const user = await getOrCreateUser(email);
-
-    // Fetch item data first to find R2 images for cleanup
     const items = await query('SELECT * FROM items WHERE id = ? AND user_id = ?', [req.params.id, user.id]);
-    if (items.length === 0) {
-      return res.status(404).json({ error: 'Item not found' });
-    }
+    if (items.length === 0) return res.status(404).json({ error: 'Item not found' });
 
-    // Delete only OUR OWN (views/) files that no other item (e.g. a shared copy) still uses.
-    // Logos/personas owned by DemoForge or Brand Kit Builder are never touched.
+    // Clean up storage assets
     const itemData = typeof items[0].data === 'string' ? JSON.parse(items[0].data) : items[0].data;
     if (itemData) {
       const ownUrls = extractAssetUrls(itemData, { ownOnly: true });
@@ -1638,11 +1161,7 @@ app.delete('/api/items/:id', async (req, res) => {
       }
     }
 
-    const result = await query(
-      'DELETE FROM items WHERE id = ? AND user_id = ?',
-      [req.params.id, user.id]
-    );
-
+    await query('DELETE FROM items WHERE id = ? AND user_id = ?', [req.params.id, user.id]);
     res.json({ success: true });
   } catch (err) {
     console.error('Failed to delete item:', err);
@@ -1652,57 +1171,36 @@ app.delete('/api/items/:id', async (req, res) => {
 
 // ─── Share Items ───
 
-// Helper: create a shared copy of an item for a recipient
 async function createSharedCopy(sourceItem, senderEmail, recipientEmail) {
   const recipientUser = await getOrCreateUser(recipientEmail);
-
   const copyResult = await query(
     'INSERT INTO items (user_id, name, data, shared_by_email, shared_at) VALUES (?, ?, ?, ?, NOW())',
     [recipientUser.id, sourceItem.name, typeof sourceItem.data === 'string' ? sourceItem.data : JSON.stringify(sourceItem.data), senderEmail]
   );
-
   return copyResult.insertId;
 }
 
-// POST /api/items/:id/share — share an item with another user
 app.post('/api/items/:id/share', async (req, res) => {
   try {
     const { email, recipientEmail } = req.body;
-    if (!email || !recipientEmail) {
-      return res.status(400).json({ error: 'Sender email and recipientEmail are required' });
-    }
-
-    if (email.toLowerCase() === recipientEmail.toLowerCase()) {
-      return res.status(400).json({ error: 'You cannot share an item with yourself' });
-    }
+    if (!email || !recipientEmail) return res.status(400).json({ error: 'Sender email and recipientEmail are required' });
+    if (email.toLowerCase() === recipientEmail.toLowerCase()) return res.status(400).json({ error: 'You cannot share an item with yourself' });
 
     const sender = await getOrCreateUser(email);
-
-    // Verify sender owns the item
     const items = await query('SELECT * FROM items WHERE id = ? AND user_id = ?', [req.params.id, sender.id]);
-    if (items.length === 0) {
-      return res.status(404).json({ error: 'Item not found' });
-    }
+    if (items.length === 0) return res.status(404).json({ error: 'Item not found' });
     const sourceItem = items[0];
 
-    // Check if already shared to this recipient from this item
     const existing = await query(
       'SELECT id, copied_item_id, created_at FROM shared_items WHERE item_id = ? AND sender_user_id = ? AND recipient_email = ?',
       [req.params.id, sender.id, recipientEmail.toLowerCase()]
     );
 
     if (existing.length > 0) {
-      return res.json({
-        alreadyShared: true,
-        sharedAt: existing[0].created_at,
-        copiedItemId: existing[0].copied_item_id,
-        shareRecordId: existing[0].id
-      });
+      return res.json({ alreadyShared: true, sharedAt: existing[0].created_at, copiedItemId: existing[0].copied_item_id, shareRecordId: existing[0].id });
     }
 
-    // First-time share: create copy and tracking record
     const copiedItemId = await createSharedCopy(sourceItem, email, recipientEmail);
-
     await query(
       'INSERT INTO shared_items (item_id, sender_user_id, sender_email, recipient_email, copied_item_id) VALUES (?, ?, ?, ?, ?)',
       [req.params.id, sender.id, email.toLowerCase(), recipientEmail.toLowerCase(), copiedItemId]
@@ -1715,60 +1213,36 @@ app.post('/api/items/:id/share', async (req, res) => {
   }
 });
 
-// POST /api/items/:id/share/confirm — replace or send new copy
 app.post('/api/items/:id/share/confirm', async (req, res) => {
   try {
     const { email, recipientEmail, action } = req.body;
-    if (!email || !recipientEmail || !action) {
-      return res.status(400).json({ error: 'email, recipientEmail, and action are required' });
-    }
-    if (!['replace', 'copy'].includes(action)) {
-      return res.status(400).json({ error: 'action must be "replace" or "copy"' });
-    }
+    if (!email || !recipientEmail || !action) return res.status(400).json({ error: 'email, recipientEmail, and action are required' });
+    if (!['replace', 'copy'].includes(action)) return res.status(400).json({ error: 'action must be "replace" or "copy"' });
 
     const sender = await getOrCreateUser(email);
-
-    // Verify sender owns the item
     const items = await query('SELECT * FROM items WHERE id = ? AND user_id = ?', [req.params.id, sender.id]);
-    if (items.length === 0) {
-      return res.status(404).json({ error: 'Item not found' });
-    }
+    if (items.length === 0) return res.status(404).json({ error: 'Item not found' });
     const sourceItem = items[0];
 
     if (action === 'replace') {
-      // Find existing share record
       const existing = await query(
         'SELECT id, copied_item_id FROM shared_items WHERE item_id = ? AND sender_user_id = ? AND recipient_email = ?',
         [req.params.id, sender.id, recipientEmail.toLowerCase()]
       );
-
-      if (existing.length === 0) {
-        return res.status(404).json({ error: 'No previous share found' });
-      }
-
+      if (existing.length === 0) return res.status(404).json({ error: 'No previous share found' });
       const copiedId = existing[0].copied_item_id;
-
-      // Update the existing copy with current data
       if (copiedId) {
-        await query(
-          'UPDATE items SET name = ?, data = ?, shared_by_email = ?, shared_at = NOW(), updated_at = NOW() WHERE id = ?',
-          [sourceItem.name, typeof sourceItem.data === 'string' ? sourceItem.data : JSON.stringify(sourceItem.data), email.toLowerCase(), copiedId]
-        );
+        await query('UPDATE items SET name = ?, data = ?, shared_by_email = ?, shared_at = NOW(), updated_at = NOW() WHERE id = ?',
+          [sourceItem.name, typeof sourceItem.data === 'string' ? sourceItem.data : JSON.stringify(sourceItem.data), email.toLowerCase(), copiedId]);
       }
-
-      // Update tracking timestamp
       await query('UPDATE shared_items SET created_at = NOW() WHERE id = ?', [existing[0].id]);
-
       res.json({ success: true, action: 'replaced', copiedItemId: copiedId });
     } else {
-      // Send a new copy
       const copiedItemId = await createSharedCopy(sourceItem, email, recipientEmail);
-
       await query(
         'INSERT INTO shared_items (item_id, sender_user_id, sender_email, recipient_email, copied_item_id) VALUES (?, ?, ?, ?, ?)',
         [req.params.id, sender.id, email.toLowerCase(), recipientEmail.toLowerCase(), copiedItemId]
       );
-
       res.status(201).json({ success: true, action: 'copied', copiedItemId });
     }
   } catch (err) {
@@ -1785,18 +1259,13 @@ const BRANDKIT_API_URL = process.env.BRANDKIT_BUILDER_URL
   ? `${process.env.BRANDKIT_BUILDER_URL}/api`
   : 'https://brandkit-builder.aubreydemo.com/api';
 
-// GET /api/brandkit-builder/items?email=<user-email> — List brand kits for a user
 app.get('/api/brandkit-builder/items', async (req, res) => {
   const apiKey = process.env.BRANDKIT_BUILDER_API_KEY;
   if (!apiKey) return res.status(500).json({ error: 'Brand Kit Builder not configured' });
-
   const email = req.query.email;
   if (!email) return res.status(400).json({ error: 'email query parameter required' });
-
   try {
-    const resp = await fetch(`${BRANDKIT_API_URL}/items?email=${encodeURIComponent(email)}`, {
-      headers: { 'x-api-key': apiKey },
-    });
+    const resp = await fetch(`${BRANDKIT_API_URL}/items?email=${encodeURIComponent(email)}`, { headers: { 'x-api-key': apiKey } });
     if (!resp.ok) throw new Error(`Brand Kit Builder responded ${resp.status}`);
     const data = await resp.json();
     res.json(data);
@@ -1806,18 +1275,13 @@ app.get('/api/brandkit-builder/items', async (req, res) => {
   }
 });
 
-// GET /api/brandkit-builder/items/:id?email=<user-email> — Get full brand kit data
 app.get('/api/brandkit-builder/items/:id', async (req, res) => {
   const apiKey = process.env.BRANDKIT_BUILDER_API_KEY;
   if (!apiKey) return res.status(500).json({ error: 'Brand Kit Builder not configured' });
-
   const email = req.query.email;
   if (!email) return res.status(400).json({ error: 'email query parameter required' });
-
   try {
-    const resp = await fetch(`${BRANDKIT_API_URL}/items/${req.params.id}?email=${encodeURIComponent(email)}`, {
-      headers: { 'x-api-key': apiKey },
-    });
+    const resp = await fetch(`${BRANDKIT_API_URL}/items/${req.params.id}?email=${encodeURIComponent(email)}`, { headers: { 'x-api-key': apiKey } });
     if (!resp.ok) throw new Error(`Brand Kit Builder responded ${resp.status}`);
     const data = await resp.json();
     res.json(data);
@@ -1835,26 +1299,15 @@ const SCRIPT_API_URL = process.env.SCRIPTWRITER_URL
   ? `${process.env.SCRIPTWRITER_URL}/api`
   : 'https://scriptwriter.aubreydemo.com/api';
 
-// GET /api/scriptwriter/scripts?email=<user-email> — List scripts for a user
 app.get('/api/scriptwriter/scripts', async (req, res) => {
   const apiKey = process.env.SCRIPTWRITER_API_KEY;
   if (!apiKey) return res.status(500).json({ error: 'Scriptwriter not configured' });
-
   const email = req.query.email;
   if (!email) return res.status(400).json({ error: 'email query parameter required' });
-
   try {
-    const resp = await fetch(`${SCRIPT_API_URL}/scripts?email=${encodeURIComponent(email)}`, {
-      headers: { 'x-api-key': apiKey },
-    });
+    const resp = await fetch(`${SCRIPT_API_URL}/scripts?email=${encodeURIComponent(email)}`, { headers: { 'x-api-key': apiKey } });
     if (!resp.ok) throw new Error(`Scriptwriter responded ${resp.status}`);
     const data = await resp.json();
-    // Log first script's keys for debugging name field
-    const scripts = data.scripts || [];
-    if (scripts.length > 0) {
-      console.log('[Scriptwriter] First script keys:', Object.keys(scripts[0]).join(', '));
-      console.log('[Scriptwriter] First script sample:', JSON.stringify(scripts[0]).substring(0, 500));
-    }
     res.json(data);
   } catch (err) {
     console.error('Scriptwriter proxy error:', err.message);
@@ -1862,18 +1315,13 @@ app.get('/api/scriptwriter/scripts', async (req, res) => {
   }
 });
 
-// GET /api/scriptwriter/scripts/:id?email=<user-email> — Get full script data
 app.get('/api/scriptwriter/scripts/:id', async (req, res) => {
   const apiKey = process.env.SCRIPTWRITER_API_KEY;
   if (!apiKey) return res.status(500).json({ error: 'Scriptwriter not configured' });
-
   const email = req.query.email;
   if (!email) return res.status(400).json({ error: 'email query parameter required' });
-
   try {
-    const resp = await fetch(`${SCRIPT_API_URL}/scripts/${req.params.id}?email=${encodeURIComponent(email)}`, {
-      headers: { 'x-api-key': apiKey },
-    });
+    const resp = await fetch(`${SCRIPT_API_URL}/scripts/${req.params.id}?email=${encodeURIComponent(email)}`, { headers: { 'x-api-key': apiKey } });
     if (!resp.ok) throw new Error(`Scriptwriter responded ${resp.status}`);
     const data = await resp.json();
     res.json(data);
@@ -1883,7 +1331,7 @@ app.get('/api/scriptwriter/scripts/:id', async (req, res) => {
   }
 });
 
-// SPA catch-all — serve index.html for any non-API route (enables /views/:id deep links)
+// SPA catch-all
 app.get('/{*splat}', (req, res) => {
   if (spaHtml) {
     res.set('Content-Type', 'text/html');
@@ -1893,7 +1341,7 @@ app.get('/{*splat}', (req, res) => {
   }
 });
 
-// Seed API key from environment variable on startup (for fresh databases)
+// Seed API key from environment variable on startup
 async function seedApiKey() {
   const seedKey = process.env.SEED_API_KEY;
   if (!seedKey) return;
@@ -1912,9 +1360,9 @@ async function seedApiKey() {
     }
     await query('INSERT INTO api_keys (user_id, name, key_prefix, key_hash) VALUES (?, ?, ?, ?)',
       [userId, 'DemoForge Integration', seedKey.substring(0, 8), keyHash]);
-    console.log('✓ SEED_API_KEY registered');
+    console.log('\u2713 SEED_API_KEY registered');
   } catch (e) {
-    console.warn('⚠️  Failed to seed API key:', e.message);
+    console.warn('\u26a0\ufe0f  Failed to seed API key:', e.message);
   }
 }
 
@@ -1923,18 +1371,17 @@ async function seedApiKey() {
 // ═══════════════════════════════════════════════
 
 async function start() {
-  // Run database migrations
   try {
     await migrate();
-    console.log('✓ Database ready');
+    console.log('\u2713 Database ready');
     await seedApiKey();
   } catch (err) {
-    console.error('⚠️  Database migration failed:', err.message);
-    console.warn('  Features requiring a database will not work until JAWSDB_URL is configured');
+    console.error('\u26a0\ufe0f  Database migration failed:', err.message);
+    console.warn('  Features requiring a database will not work until DATABASE_URL is configured');
   }
 
   if (isPostgres && process.env.RUN_DATA_MIGRATION === 'true') {
-    console.log('Starting MySQL → PostgreSQL data migration...');
+    console.log('Starting MySQL \u2192 PostgreSQL data migration...');
     try {
       const mysql = require('mysql2/promise');
       const srcUrl = process.env.JAWSDB_URL;
@@ -1954,10 +1401,7 @@ async function start() {
               try {
                 const onConflict = (table === 'users') ? ' ON CONFLICT (email) DO NOTHING' :
                                    (table === 'api_keys') ? ' ON CONFLICT (key_hash) DO NOTHING' : '';
-                await pgPool.query(
-                  `INSERT INTO ${table} (${colList}) VALUES (${placeholders})${onConflict}`,
-                  vals
-                );
+                await pgPool.query(`INSERT INTO ${table} (${colList}) VALUES (${placeholders})${onConflict}`, vals);
               } catch (e) {
                 if (e.code !== '23505') console.error(`  Row error in ${table}:`, e.message);
               }
@@ -1972,7 +1416,7 @@ async function start() {
           } catch (e) { /* ignore */ }
         }
         await src.end();
-        console.log('✓ Data migration completed');
+        console.log('\u2713 Data migration completed');
       }
     } catch (e) {
       console.error('Data migration error:', e.message);
@@ -1980,10 +1424,9 @@ async function start() {
   }
 
   const server = app.listen(PORT, () => {
-    console.log(`Saleo Builder running on http://localhost:${PORT}`);
-    if (!process.env.GEMINI_API_KEY) {
-      console.warn('⚠️  GEMINI_API_KEY not set — AI features will not work');
-    }
+    console.log(`Saleo Builder v2.0.0 running on http://localhost:${PORT}`);
+    if (!process.env.GEMINI_API_KEY) console.warn('\u26a0\ufe0f  GEMINI_API_KEY not set \u2014 AI features will not work');
+    if (!saleo.isConfigured()) console.warn('\u26a0\ufe0f  SALEO_API_KEY not set \u2014 Saleo view creation will not work');
   });
 
   server.timeout = 300000;
