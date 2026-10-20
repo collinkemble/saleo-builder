@@ -13,13 +13,19 @@ const SALEO_API_BASE = process.env.SALEO_API_BASE || 'https://api.platform.saleo
  * Make an RPC call to the Saleo API with retry on 429/5xx.
  */
 async function saleoRpc(method, body, retries = 3) {
-  const key = process.env.SALEO_API_KEY;
-  if (!key) throw new Error('SALEO_API_KEY not configured');
+  const rawKey = process.env.SALEO_API_KEY;
+  if (!rawKey) throw new Error('SALEO_API_KEY not configured');
+
+  // Trim whitespace/quotes that may have been pasted into config vars
+  const key = rawKey.trim().replace(/^["']|["']$/g, '');
+
+  const url = `${SALEO_API_BASE}/v1/${method}`;
+  console.log(`[Saleo] Calling ${url} (key length: ${key.length}, prefix: ${key.substring(0, 4)}...)`);
 
   for (let attempt = 1; attempt <= retries; attempt++) {
     try {
       const resp = await Promise.race([
-        fetch(`${SALEO_API_BASE}/v1/${method}`, {
+        fetch(url, {
           method: 'POST',
           headers: {
             'Authorization': `Bearer ${key}`,

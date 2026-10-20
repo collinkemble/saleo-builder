@@ -775,9 +775,23 @@ app.post('/api/images/delete', async (req, res) => {
 // APP-SPECIFIC: Saleo API Routes
 // ═══════════════════════════════════════════════
 
-// GET /api/saleo/status — Check if Saleo API is configured
-app.get('/api/saleo/status', (req, res) => {
-  res.json({ configured: saleo.isConfigured() });
+// GET /api/saleo/status — Check if Saleo API is configured + test connection
+app.get('/api/saleo/status', async (req, res) => {
+  const configured = saleo.isConfigured();
+  if (!configured) return res.json({ configured: false });
+
+  // Quick diagnostic: try to call the API
+  if (req.query.test === 'true') {
+    try {
+      const demo = await saleo.findGoldenDemo();
+      return res.json({ configured: true, connected: true, goldenDemo: demo.name, demoId: demo.id });
+    } catch (err) {
+      console.error('[Saleo] Connection test failed:', err.message);
+      return res.json({ configured: true, connected: false, error: err.message });
+    }
+  }
+
+  res.json({ configured: true });
 });
 
 // GET /api/saleo/templates — Find the golden demo template
