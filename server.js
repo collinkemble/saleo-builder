@@ -426,7 +426,7 @@ app.get('/api/users/:userId/items', async (req, res) => {
 // ═══════════════════════════════════════════════
 
 app.get('/api/version', (req, res) => {
-  res.json({ version: '2.0.9', app: 'saleo-builder', mode: 'saleo-api' });
+  res.json({ version: '2.0.10', app: 'saleo-builder', mode: 'saleo-api' });
 });
 
 // ═══════════════════════════════════════════════
@@ -892,8 +892,8 @@ Return ONLY: {"tokenValues":[{"tokenId":"...","value":"..."},...]}`
       if (jsonStart >= 0 && jsonEnd > jsonStart) text = text.substring(jsonStart, jsonEnd + 1);
       parsed = JSON.parse(text);
     } catch (e) {
-      console.error('[Saleo] Parse error:', e.message, 'Raw:', rawText.substring(0, 500));
-      throw new Error('Failed to parse AI response. Try again.');
+      console.error('[Saleo] Parse error:', e.message, 'Raw:', rawText.substring(0, 1000));
+      throw new Error('Failed to parse AI response. Raw preview: ' + rawText.substring(0, 300));
     }
 
     // Validate and clean
