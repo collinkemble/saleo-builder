@@ -854,15 +854,24 @@ Respond with ONLY valid JSON:
 
     const result = await callGeminiWithRetry({
       prompt,
-      generationConfig: { temperature: 0.7, maxOutputTokens: 8192 },
+      generationConfig: { temperature: 0.7, maxOutputTokens: 16384, responseMimeType: 'application/json' },
     });
 
     let parsed;
     try {
-      const text = (result.text || '').replace(/```json\s*\n?/g, '').replace(/```\s*$/g, '').trim();
+      let text = (result.text || '').trim();
+      // Strip markdown fences if present
+      text = text.replace(/^```(?:json)?\s*\n?/i, '').replace(/\n?```\s*$/i, '').trim();
+      // Try to find the JSON object if there's surrounding text
+      const jsonStart = text.indexOf('{');
+      const jsonEnd = text.lastIndexOf('}');
+      if (jsonStart >= 0 && jsonEnd > jsonStart) {
+        text = text.substring(jsonStart, jsonEnd + 1);
+      }
       parsed = JSON.parse(text);
     } catch (e) {
-      console.error('[Saleo] Failed to parse Gemini response:', result.text?.substring(0, 500));
+      console.error('[Saleo] Failed to parse Gemini response. Error:', e.message);
+      console.error('[Saleo] Raw response (first 1000 chars):', (result.text || '').substring(0, 1000));
       return res.status(500).json({ error: 'Failed to parse AI response. Try again.' });
     }
 
