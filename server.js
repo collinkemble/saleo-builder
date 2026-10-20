@@ -824,40 +824,27 @@ app.post('/api/saleo/generate-values', async (req, res) => {
       return res.status(400).json({ error: 'brand and tokens[] are required' });
     }
 
+    // Keep prompt small — only send token IDs and short labels, not full example values
     const tokenList = tokens.map(t => {
       const label = t.name || t.label || t.tokenId;
-      const currentVal = (t.value || t.currentValue || '').substring(0, 200);
-      return `- tokenId: "${t.tokenId}", label: "${label}", exampleFormat: "${currentVal}"`;
-    }).join('\n');
+      return `{"id":"${t.tokenId}","label":"${label.substring(0, 60)}"}`;
+    }).join(',');
 
-    const prompt = `You are a Salesforce demo personalization expert. You MUST generate brand-specific values for "${brand}" — a ${industry || 'business'} company.
+    const prompt = `Generate personalized Saleo demo token values for "${brand}" (${industry || 'General'}${brandDesc ? ', ' + brandDesc.substring(0, 100) : ''}).
 
-CRITICAL: Do NOT copy or reuse the example values. The examples show the FORMAT and TYPE of value expected (e.g. if the example is a company name, generate "${brand}" or a related name; if it's a dollar amount, generate a realistic dollar amount for ${brand}; if it's a percentage, generate a realistic percentage for ${brand}'s industry).
+For each token, generate a realistic value matching the label's implied type. Company names → "${brand}", currency → realistic figures, percentages → realistic metrics, person names → realistic names, etc.
+${synopsis ? 'Synopsis: ' + synopsis.substring(0, 300) : ''}
 
-Target Brand: ${brand}
-Industry: ${industry || 'General'}
-Description: ${brandDesc || 'N/A'}
-Synopsis: ${synopsis || 'N/A'}
+Tokens: [${tokenList}]
 
-RULES:
-1. EVERY value must be personalized for "${brand}" — replace ALL company names, product names, person names, metrics, and descriptions
-2. The "exampleFormat" shows what TYPE of value to generate (string, number, currency, percentage, name, etc.) — match the format but change the content to be about "${brand}"
-3. If a token's example contains a company name like "Cirrus" or any other brand, replace it with "${brand}" or a relevant ${brand} entity
-4. Generate realistic, specific data: real-sounding revenue figures, growth percentages, employee counts, product names, etc. that fit ${brand}'s ${industry || 'business'} industry
-5. Keep values ≤1000 characters. No markdown formatting.
+Return ONLY: {"tokenValues":[{"tokenId":"...","value":"..."},...]}`
 
-Tokens:
-${tokenList}
-
-Respond with ONLY valid JSON:
-{"tokenValues": [{"tokenId": "...", "value": "..."}, ...]}`;
-
-    // Use shorter timeout and fewer retries to stay within Heroku's 30s router timeout
+    // Single attempt, fast timeout to stay within Heroku's 30s router limit
     const result = await callGeminiWithRetry({
       prompt,
-      generationConfig: { temperature: 0.7, maxOutputTokens: 8192 },
+      generationConfig: { temperature: 0.7, maxOutputTokens: 4096 },
       timeoutMs: 25000,
-      maxRetries: 2,
+      maxRetries: 1,
     });
 
     let parsed;
