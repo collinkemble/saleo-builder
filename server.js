@@ -426,7 +426,7 @@ app.get('/api/users/:userId/items', async (req, res) => {
 // ═══════════════════════════════════════════════
 
 app.get('/api/version', (req, res) => {
-  res.json({ version: '2.1.0', app: 'saleo-builder', mode: 'saleo-api' });
+  res.json({ version: '2.2.0', app: 'saleo-builder', mode: 'saleo-api' });
 });
 
 // ═══════════════════════════════════════════════
@@ -1343,6 +1343,63 @@ app.get('/api/brandkit-builder/items/:id', async (req, res) => {
   } catch (err) {
     console.error('Brand Kit Builder proxy error:', err.message);
     res.status(502).json({ error: 'Failed to fetch brand kit' });
+  }
+});
+
+app.post('/api/brandkit-builder/create', async (req, res) => {
+  const apiKey = process.env.BRANDKIT_BUILDER_API_KEY;
+  if (!apiKey) return res.status(500).json({ error: 'Brand Kit Builder not configured' });
+  try {
+    const resp = await fetch(`${BRANDKIT_API_URL}/items`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json', 'x-api-key': apiKey },
+      body: JSON.stringify(req.body)
+    });
+    if (!resp.ok) throw new Error(`Brand Kit Builder responded ${resp.status}`);
+    const data = await resp.json();
+    res.json(data);
+  } catch (err) {
+    console.error('Brand Kit Builder create error:', err.message);
+    res.status(502).json({ error: 'Failed to create brand kit' });
+  }
+});
+
+app.post('/api/brandkit-builder/generate/:id', async (req, res) => {
+  const apiKey = process.env.BRANDKIT_BUILDER_API_KEY;
+  if (!apiKey) return res.status(500).json({ error: 'Brand Kit Builder not configured' });
+  try {
+    const resp = await fetch(`${BRANDKIT_API_URL}/items/${req.params.id}/generate`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json', 'x-api-key': apiKey },
+      body: JSON.stringify(req.body)
+    });
+    if (!resp.ok) throw new Error(`Brand Kit Builder responded ${resp.status}`);
+    const data = await resp.json();
+    res.json(data);
+  } catch (err) {
+    console.error('Brand Kit Builder generate error:', err.message);
+    res.status(502).json({ error: 'Failed to generate brand kit' });
+  }
+});
+
+app.post('/api/detect-industry', async (req, res) => {
+  const apiKey = process.env.GEMINI_API_KEY;
+  if (!apiKey) return res.status(500).json({ error: 'Gemini not configured' });
+  const { brand_name } = req.body || {};
+  if (!brand_name) return res.status(400).json({ error: 'brand_name required' });
+  const supportedIndustries = ['Retail', 'Consumer Goods', 'Manufacturing', 'Auto', 'Energy'];
+  try {
+    const prompt = `What industry does the brand "${brand_name}" belong to? Pick ONLY ONE from this exact list: ${supportedIndustries.join(', ')}. If none fit well, respond with one of those that fits best. Respond with ONLY the industry name, nothing else.`;
+    const resp = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }], generationConfig: { temperature: 0.1, maxOutputTokens: 20 } })
+    });
+    if (!resp.ok) throw new Error(`Gemini responded ${resp.status}`);
+    const data = await resp.json();
+    const text = (data?.candidates?.[0]?.content?.parts?.[0]?.text || '').trim();
+    const matched = supportedIndustries.find(i => text.toLowerCase().includes(i.toLowerCase()));
+    res.json({ industry: matched || text, raw: text });
+  } catch (err) {
+    console.error('Industry detection error:', err.message);
+    res.status(500).json({ error: 'Failed to detect industry' });
   }
 });
 

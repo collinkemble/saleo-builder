@@ -207,7 +207,7 @@
               <label class="text-xs font-semibold text-gray-500 mb-1 block">Industry</label>
               <select id="edit-industry" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm" onchange="toggleCustomIndustry('edit'); checkSettingsChanged();">
                 <option value="">Select industry...</option>
-                <option>Retail</option><option>Financial Services</option><option>Healthcare</option><option>Manufacturing</option><option>Technology</option><option>Media</option><option>Education</option><option>Automotive</option><option>Energy</option><option>Telecommunications</option><option>Travel & Hospitality</option><option>Non-Profit</option><option>Government</option><option>Real Estate</option><option>Other</option>
+                <option>Retail</option><option>Consumer Goods</option><option>Manufacturing</option><option>Auto</option><option>Energy</option><option>Other</option>
               </select>
               <div id="edit-custom-industry-wrapper" class="hidden mt-1"><input id="edit-industry-custom" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm" placeholder="Specify industry" oninput="checkSettingsChanged()"></div>
             </div>
@@ -415,13 +415,13 @@
       <div style="flex:1;overflow-y:auto;padding:0 24px;">
         <!-- STEP 1: Basics -->
         <div id="wizard-step-1" style="display:flex;flex-direction:column;gap:12px;">
-          <div><label class="block text-xs font-bold mb-1" style="color:#032D60;">Saleo Demo Name <span style="color:#ea001e;">*</span></label><input id="new-project-name" type="text" placeholder="e.g. Acme Corp Spring Demo" oninput="clearFieldError('new-project-name')" class="w-full px-3 py-2 rounded-lg border border-gray-300 text-sm"></div>
-          <div><label class="block text-xs font-bold mb-1" style="color:#032D60;">Brand Name <span style="color:#ea001e;">*</span></label><input id="new-brand" type="text" placeholder="e.g. Sephora" oninput="clearFieldError('new-brand')" class="w-full px-3 py-2 rounded-lg border border-gray-300 text-sm"></div>
+          <div><label class="block text-xs font-bold mb-1" style="color:#032D60;">Saleo Demo Name <span style="color:#ea001e;">*</span></label><input id="new-project-name" type="text" placeholder="e.g. Acme Corp Spring Demo" oninput="clearFieldError('new-project-name'); autoFillBrandName();" class="w-full px-3 py-2 rounded-lg border border-gray-300 text-sm"></div>
+          <div><label class="block text-xs font-bold mb-1" style="color:#032D60;">Brand Name <span style="color:#ea001e;">*</span></label><input id="new-brand" type="text" placeholder="e.g. Sephora" oninput="clearFieldError('new-brand'); wizardAutoDetectIndustry();" class="w-full px-3 py-2 rounded-lg border border-gray-300 text-sm"><span id="industry-auto-detect" style="display:none;font-size:11px;margin-top:4px;color:#059669;"></span></div>
           <div>
             <label class="block text-xs font-bold mb-1" style="color:#032D60;">Industry <span style="color:#ea001e;">*</span></label>
             <select id="new-industry" class="w-full px-3 py-2 rounded-lg border border-gray-300 text-sm" onchange="toggleCustomIndustry('new'); clearFieldError('new-industry');">
-              <option value="">Select...</option>
-              <option>Retail</option><option>Financial Services</option><option>Healthcare</option><option>Manufacturing</option><option>Technology</option><option>Media</option><option>Education</option><option>Automotive</option><option>Energy</option><option>Telecommunications</option><option>Travel &amp; Hospitality</option><option>Non-Profit</option><option>Government</option><option>Real Estate</option><option>Other</option>
+              <option value="">Select industry...</option>
+              <option>Retail</option><option>Consumer Goods</option><option>Manufacturing</option><option>Auto</option><option>Energy</option><option>Other</option>
             </select>
             <div id="new-custom-industry-wrapper" class="hidden mt-1"><input id="new-industry-custom" class="w-full px-3 py-2 rounded-lg border border-gray-300 text-sm" placeholder="Specify industry"></div>
           </div>
@@ -441,17 +441,27 @@
           <div id="bk-picker-container" style="margin-bottom:4px;">
             <div style="background:linear-gradient(135deg,#f0f7ff,#e8f2ff);border-radius:10px;padding:16px;border:1px dashed #b0d4f1;">
               <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px;"><span style="font-size:16px;">&#127912;</span><span style="font-size:13px;font-weight:700;color:#032D60;">Brand Kit <span style="color:#ea001e;">*</span></span></div>
-              <p style="font-size:12px;color:#5a6f85;margin:0 0 12px;line-height:1.4;">Select an existing brand kit or create one in Brand Kit Builder.</p>
+              <p style="font-size:12px;color:#5a6f85;margin:0 0 12px;line-height:1.4;">Select an existing brand kit or create one automatically.</p>
               <div id="bk-applied-badge" style="display:none;margin-bottom:12px;padding:10px 14px;border-radius:8px;background:#E8F5E9;border:1px solid #A5D6A7;">
                 <div style="display:flex;align-items:center;gap:8px;justify-content:space-between;">
                   <div style="display:flex;align-items:center;gap:8px;"><span>&#10003;</span><span id="bk-applied-name" style="font-size:12px;font-weight:700;color:#2E7D32;"></span></div>
-                  <button type="button" onclick="wizardChangeBrandKit()" style="padding:4px 10px;font-size:11px;font-weight:600;color:#5a6f85;background:white;border:1px solid #d1d5db;border-radius:6px;cursor:pointer;">Change</button>
+                  <div style="display:flex;gap:6px;">
+                    <a id="bk-edit-link" href="#" target="_blank" rel="noopener noreferrer" style="font-size:11px;font-weight:600;color:#0176D3;text-decoration:none;">View in Brand Kit Builder &rarr;</a>
+                    <button type="button" onclick="wizardChangeBrandKit()" style="padding:4px 10px;font-size:11px;font-weight:600;color:#5a6f85;background:white;border:1px solid #d1d5db;border-radius:6px;cursor:pointer;">Change</button>
+                  </div>
+                </div>
+              </div>
+              <!-- Inline BK generation progress -->
+              <div id="bk-gen-progress" style="display:none;padding:14px;border-radius:8px;background:#F0F7FF;border:1px solid #b0d4f1;margin-bottom:12px;">
+                <div style="display:flex;align-items:center;gap:10px;">
+                  <div class="spinner" style="width:18px;height:18px;border:2px solid #e5e7eb;border-top-color:#0176D3;border-radius:50%;animation:spin 0.8s linear infinite;"></div>
+                  <span id="bk-gen-status" style="font-size:12px;font-weight:600;color:#0176D3;">Generating Brand Kit...</span>
                 </div>
               </div>
               <div id="bk-buttons-row" style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
-                <button type="button" onclick="openBrandKitPicker('')" style="padding:7px 14px;font-size:12px;font-weight:600;color:#0176D3;background:rgba(255,255,255,0.85);border:1px solid #b0d4f1;border-radius:7px;cursor:pointer;">&#127912; Select from Brand Kit Builder</button>
+                <button type="button" onclick="wizardCreateBrandKitInline()" style="padding:7px 14px;font-size:12px;font-weight:600;color:#fff;background:linear-gradient(135deg,#0176D3,#014486);border:none;border-radius:7px;cursor:pointer;">&#10024; Create Brand Kit</button>
                 <span style="font-size:12px;color:#9ca3af;font-weight:600;">or</span>
-                <a href="https://brandkit-builder.aubreydemo.com/" target="_blank" rel="noopener noreferrer" style="padding:7px 14px;font-size:12px;font-weight:700;color:#fff;background:linear-gradient(135deg,#0176D3,#014486);border:none;border-radius:7px;cursor:pointer;text-decoration:none;">+ Create New Brand Kit</a>
+                <button type="button" onclick="openBrandKitPicker('')" style="padding:7px 14px;font-size:12px;font-weight:600;color:#0176D3;background:rgba(255,255,255,0.85);border:1px solid #b0d4f1;border-radius:7px;cursor:pointer;">&#128203; Select Brand Kit</button>
               </div>
               <div id="bk-picker-dropdown" style="display:none;position:relative;background:white;border:1px solid #DDD6FE;border-radius:10px;box-shadow:0 4px 16px rgba(0,0,0,0.1);margin-top:8px;max-height:200px;overflow-y:auto;z-index:100;">
                 <div id="bk-picker-content"></div>
@@ -459,9 +469,24 @@
               <span id="bk-source-badge" style="display:none;"></span>
             </div>
           </div>
-          <div class="grid grid-cols-2 gap-3">
-            <div><label class="block text-xs font-bold mb-1" style="color:#032D60;">Brand Description</label><input id="new-brand-desc" class="w-full px-3 py-2 rounded-lg border border-gray-300 text-sm"></div>
-            <div><label class="block text-xs font-bold mb-1" style="color:#032D60;">Website URL</label><input id="new-brand-url" class="w-full px-3 py-2 rounded-lg border border-gray-300 text-sm" placeholder="https://"></div>
+          <!-- BK Fields (shown after BK applied) -->
+          <div id="wizard-step-2-fields" style="display:none;">
+            <div class="grid grid-cols-2 gap-3">
+              <div><label class="block text-xs font-bold mb-1" style="color:#032D60;">Brand Description</label><input id="new-brand-desc" class="w-full px-3 py-2 rounded-lg border border-gray-300 text-sm"></div>
+              <div><label class="block text-xs font-bold mb-1" style="color:#032D60;">Website URL</label><input id="new-brand-url" class="w-full px-3 py-2 rounded-lg border border-gray-300 text-sm" placeholder="https://"></div>
+            </div>
+            <div class="grid grid-cols-2 gap-3 mt-3">
+              <div><label class="block text-xs font-bold mb-1" style="color:#032D60;">Elevator Pitch</label><input id="new-elevator-pitch" class="w-full px-3 py-2 rounded-lg border border-gray-300 text-sm" readonly></div>
+              <div><label class="block text-xs font-bold mb-1" style="color:#032D60;">Tone</label><input id="new-tone" class="w-full px-3 py-2 rounded-lg border border-gray-300 text-sm" readonly></div>
+            </div>
+            <div class="grid grid-cols-2 gap-3 mt-3">
+              <div><label class="block text-xs font-bold mb-1" style="color:#032D60;">Visual Style</label><input id="new-visual-style" class="w-full px-3 py-2 rounded-lg border border-gray-300 text-sm" readonly></div>
+              <div><label class="block text-xs font-bold mb-1" style="color:#032D60;">Primary Color</label><input id="new-primary-color" class="w-full px-3 py-2 rounded-lg border border-gray-300 text-sm" readonly></div>
+            </div>
+            <div id="bk-logo-preview" style="display:none;margin-top:10px;">
+              <label class="block text-xs font-bold mb-1" style="color:#032D60;">Logo</label>
+              <img id="bk-logo-img" src="" alt="Brand logo" style="max-height:48px;border-radius:6px;background:#f9f9f9;padding:4px;">
+            </div>
           </div>
         </div>
         <!-- STEP 3: Finalize -->
@@ -1451,7 +1476,11 @@ let pendingScriptSource = null, pendingScriptId = null, pendingScriptSynopsis = 
 let wizardStep = 1;
 
 function openNewItemDialog() {
-  ['new-project-name','new-brand','new-brand-desc','new-brand-url','new-synopsis'].forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
+  ['new-project-name','new-brand','new-brand-desc','new-brand-url','new-synopsis','new-elevator-pitch','new-tone','new-visual-style','new-primary-color'].forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
+  const bkFields = document.getElementById('wizard-step-2-fields'); if (bkFields) bkFields.style.display = 'none';
+  const bkLogoPrev = document.getElementById('bk-logo-preview'); if (bkLogoPrev) bkLogoPrev.style.display = 'none';
+  const bkGenProg = document.getElementById('bk-gen-progress'); if (bkGenProg) bkGenProg.style.display = 'none';
+  const indBadge = document.getElementById('industry-auto-detect'); if (indBadge) indBadge.style.display = 'none';
   const indEl = document.getElementById('new-industry'); if (indEl) indEl.value = '';
   const indCust = document.getElementById('new-industry-custom'); if (indCust) indCust.value = '';
   const indWrap = document.getElementById('new-custom-industry-wrapper'); if (indWrap) indWrap.classList.add('hidden');
@@ -1521,6 +1550,139 @@ function wizardChangeBrandKit() {
   pendingBrandKitSource = null; pendingBrandKitId = null;
   document.getElementById('bk-applied-badge').style.display = 'none';
   document.getElementById('bk-buttons-row').style.display = 'flex';
+  const fields = document.getElementById('wizard-step-2-fields');
+  if (fields) fields.style.display = 'none';
+  const genProg = document.getElementById('bk-gen-progress');
+  if (genProg) genProg.style.display = 'none';
+}
+
+function autoFillBrandName() {
+  const projName = document.getElementById('new-project-name').value.trim();
+  const brandEl = document.getElementById('new-brand');
+  if (brandEl) { brandEl.value = projName; wizardAutoDetectIndustry(); }
+}
+
+let autoDetectTimer = null;
+function wizardAutoDetectIndustry() {
+  const brand = document.getElementById('new-brand').value.trim();
+  const badge = document.getElementById('industry-auto-detect');
+  if (!brand || brand.length < 2) { if (badge) badge.style.display = 'none'; return; }
+  clearTimeout(autoDetectTimer);
+  autoDetectTimer = setTimeout(async () => {
+    if (badge) { badge.style.display = 'inline-block'; badge.innerHTML = '&#10024; Detecting...'; badge.style.color = '#6B7280'; }
+    try {
+      const r = await fetch('/api/detect-industry', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ brand_name: brand }) });
+      if (!r.ok) throw new Error('Failed');
+      const d = await r.json();
+      if (d.industry) {
+        setIndustryFromStored('new', d.industry);
+        if (badge) { badge.innerHTML = '&#10003; Auto-detected'; badge.style.color = '#059669'; }
+      }
+    } catch (e) { if (badge) badge.style.display = 'none'; }
+  }, 800);
+}
+
+function showBrandKitFields(bk) {
+  const fields = document.getElementById('wizard-step-2-fields');
+  if (!fields) return;
+  fields.style.display = 'block';
+  const descEl = document.getElementById('new-brand-desc');
+  if (descEl) descEl.value = bk.elevator_pitch || bk.mission || bk.description || '';
+  const webEl = document.getElementById('new-brand-url');
+  if (webEl) webEl.value = bk.website_url || '';
+  const pitchEl = document.getElementById('new-elevator-pitch');
+  if (pitchEl) pitchEl.value = bk.elevator_pitch || '';
+  const toneEl = document.getElementById('new-tone');
+  if (toneEl) toneEl.value = bk.tone || '';
+  const vsEl = document.getElementById('new-visual-style');
+  if (vsEl) vsEl.value = bk.visual_style || '';
+  const colorEl = document.getElementById('new-primary-color');
+  if (colorEl) colorEl.value = bk.primary_color || '';
+  const logoPreview = document.getElementById('bk-logo-preview');
+  const logoImg = document.getElementById('bk-logo-img');
+  if (logoPreview && logoImg && bk.logo_url) { logoImg.src = bk.logo_url; logoPreview.style.display = 'block'; }
+  else if (logoPreview) logoPreview.style.display = 'none';
+}
+
+function wizardShowAppliedBrandKit(name, bkId) {
+  const appliedBadge = document.getElementById('bk-applied-badge');
+  const appliedName = document.getElementById('bk-applied-name');
+  const buttonsRow = document.getElementById('bk-buttons-row');
+  const editLink = document.getElementById('bk-edit-link');
+  if (appliedName) appliedName.textContent = name + ' applied';
+  if (appliedBadge) appliedBadge.style.display = 'block';
+  if (buttonsRow) buttonsRow.style.display = 'none';
+  if (editLink && bkId) editLink.href = 'https://brandkit-builder.aubreydemo.com/?item=' + bkId;
+  const genProg = document.getElementById('bk-gen-progress');
+  if (genProg) genProg.style.display = 'none';
+}
+
+async function wizardCreateBrandKitInline() {
+  const brandName = document.getElementById('new-brand').value.trim();
+  if (!brandName) { showToast('Enter a brand name first (Step 1)'); return; }
+  const email = document.getElementById('user-email').textContent;
+  const industry = getResolvedIndustry('new') || '';
+  const language = document.getElementById('new-language')?.value || 'English';
+  const buttonsRow = document.getElementById('bk-buttons-row');
+  const genProg = document.getElementById('bk-gen-progress');
+  const genStatus = document.getElementById('bk-gen-status');
+  if (buttonsRow) buttonsRow.style.display = 'none';
+  if (genProg) genProg.style.display = 'block';
+  if (genStatus) genStatus.textContent = 'Creating brand kit...';
+  try {
+    // 1. Create BK item
+    const createResp = await fetch('/api/brandkit-builder/create', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email, brand_name: brandName, name: brandName, language, industry })
+    });
+    if (!createResp.ok) throw new Error('Failed to create brand kit');
+    const createData = await createResp.json();
+    const itemId = createData.item?.id;
+    if (!itemId) throw new Error('No item ID returned');
+    if (genStatus) genStatus.textContent = 'Generating brand identity with AI...';
+    // 2. Trigger generation
+    await fetch('/api/brandkit-builder/generate/' + itemId, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email })
+    });
+    // 3. Poll for completion (5s intervals, 60 tries = 5 min)
+    let bkData = null;
+    for (let i = 0; i < 60; i++) {
+      await new Promise(r => setTimeout(r, 5000));
+      const pollResp = await fetch('/api/brandkit-builder/items/' + itemId + '?email=' + encodeURIComponent(email));
+      const pollData = await pollResp.json();
+      const bk = pollData?.item?.data?.brandKit || pollData?.item?.brandKit || {};
+      if (bk.brand_name || bk.elevator_pitch || bk.visual_style) { bkData = bk; break; }
+      if (genStatus && i === 6) genStatus.textContent = 'Still generating... almost done.';
+    }
+    if (!bkData) throw new Error('Brand kit generation timed out');
+    // 4. Apply
+    pendingBrandKitSource = brandName + ' (auto-generated)';
+    pendingBrandKitId = String(itemId);
+    wizardShowAppliedBrandKit(brandName, itemId);
+    showBrandKitFields(bkData);
+    if (bkData.industry) setIndustryFromStored('new', bkData.industry);
+    showToast('Brand kit generated and applied!');
+    // 5. Async logo polling
+    for (const delay of [3000, 8000, 15000]) {
+      await new Promise(r => setTimeout(r, delay));
+      try {
+        const lr = await fetch('/api/brandkit-builder/items/' + itemId + '?email=' + encodeURIComponent(email));
+        const ld = await lr.json();
+        const lbk = ld?.item?.data?.brandKit || ld?.item?.brandKit || {};
+        if (lbk.logo_url) {
+          const logoPreview = document.getElementById('bk-logo-preview');
+          const logoImg = document.getElementById('bk-logo-img');
+          if (logoPreview && logoImg) { logoImg.src = lbk.logo_url; logoPreview.style.display = 'block'; }
+          break;
+        }
+      } catch (e) { /* ignore logo poll errors */ }
+    }
+  } catch (e) {
+    if (genProg) genProg.style.display = 'none';
+    if (buttonsRow) buttonsRow.style.display = 'flex';
+    showToast('Brand kit creation failed: ' + e.message);
+  }
 }
 
 // switchInputMode removed — wizard handles input sections
@@ -1647,13 +1809,9 @@ async function selectBrandKit(itemId, sfx, kitName) {
 
     pendingBrandKitSource = kitName || 'Brand Kit';
     pendingBrandKitId = String(itemId);
-
-    // Show applied badge, hide buttons
-    const appliedBadge = document.getElementById('bk-applied-badge');
-    const appliedName = document.getElementById('bk-applied-name');
-    const buttonsRow = document.getElementById('bk-buttons-row');
-    if (appliedBadge && appliedName) { appliedName.textContent = pendingBrandKitSource + ' applied'; appliedBadge.style.display = 'block'; }
-    if (buttonsRow) buttonsRow.style.display = 'none';
+    wizardShowAppliedBrandKit(pendingBrandKitSource, itemId);
+    showBrandKitFields(bk);
+    if (bk.industry) setIndustryFromStored('new', bk.industry);
 
     document.getElementById('bk-picker-dropdown' + sfx).style.display = 'none';
     bkPickerOpen = false;
