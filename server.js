@@ -825,9 +825,11 @@ app.post('/api/saleo/generate-values', async (req, res) => {
     }
 
     // Keep prompt small — only send token IDs and short labels, not full example values
+    // Saleo API returns tokens with 'id' field, frontend may send as 'tokenId' or 'id'
     const tokenList = tokens.map(t => {
-      const label = t.name || t.label || t.tokenId;
-      return `{"id":"${t.tokenId}","label":"${label.substring(0, 60)}"}`;
+      const id = t.tokenId || t.id;
+      const label = (t.name || t.label || id || '').replace(/"/g, '');
+      return `{"id":"${id}","label":"${label.substring(0, 60)}"}`;
     }).join(',');
 
     const prompt = `Generate personalized Saleo demo token values for "${brand}" (${industry || 'General'}${brandDesc ? ', ' + brandDesc.substring(0, 100) : ''}).
@@ -866,19 +868,21 @@ Return ONLY: {"tokenValues":[{"tokenId":"...","value":"..."},...]}`
     }
 
     // Validate and clean token values
-    const validTokenIds = new Set(tokens.map(t => t.tokenId));
+    // Accept both 'tokenId' and 'id' from AI response
+    const validTokenIds = new Set(tokens.map(t => t.tokenId || t.id));
     const tokenValues = (parsed.tokenValues || [])
-      .filter(tv => validTokenIds.has(tv.tokenId))
+      .filter(tv => validTokenIds.has(tv.tokenId || tv.id))
       .map(tv => ({
-        tokenId: tv.tokenId,
+        tokenId: tv.tokenId || tv.id,
         value: String(tv.value || '').substring(0, 1000),
       }));
 
     // Fill missing tokens with their current values
     for (const t of tokens) {
-      if (!tokenValues.find(tv => tv.tokenId === t.tokenId)) {
+      const tid = t.tokenId || t.id;
+      if (!tokenValues.find(tv => tv.tokenId === tid)) {
         tokenValues.push({
-          tokenId: t.tokenId,
+          tokenId: tid,
           value: t.value || t.currentValue || '',
         });
       }
