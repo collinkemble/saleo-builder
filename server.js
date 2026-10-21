@@ -882,9 +882,28 @@ Return ONLY: {"tokenValues":[{"tokenId":"...","value":"..."},...]}`
       throw new Error(`Gemini API returned ${geminiResp.status}: ${errBody.substring(0, 200)}`);
     }
 
-    const geminiData = await geminiResp.json();
-    const rawText = geminiData.candidates?.[0]?.content?.parts?.[0]?.text || '';
+    let geminiData = await geminiResp.json();
+    let rawText = geminiData.candidates?.[0]?.content?.parts?.[0]?.text || '';
     console.log(`[Saleo] Gemini returned ${rawText.length} chars`);
+
+    // Retry once if empty response
+    if (!rawText.trim()) {
+      console.log('[Saleo] Empty response from Gemini, retrying...');
+      res.write(': retrying empty response\n\n');
+      const retryResp = await Promise.race([
+        fetch(geminiUrl, {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }], generationConfig: { temperature: 0.7, maxOutputTokens: 8192 } }),
+        }),
+        new Promise((_, reject) => setTimeout(() => reject(new Error('Gemini retry timed out')), 120000)),
+      ]);
+      if (retryResp.ok) {
+        geminiData = await retryResp.json();
+        rawText = geminiData.candidates?.[0]?.content?.parts?.[0]?.text || '';
+        console.log(`[Saleo] Retry returned ${rawText.length} chars`);
+      }
+      if (!rawText.trim()) throw new Error('No response from AI after retry. Please try again.');
+    }
 
     let parsed;
     try {
