@@ -12,7 +12,7 @@ const SALEO_API_BASE = process.env.SALEO_API_BASE || 'https://api.platform.saleo
 /**
  * Make an RPC call to the Saleo API with retry on 429/5xx.
  */
-async function saleoRpc(method, body, retries = 3) {
+async function saleoRpc(method, body, retries = 1) {
   const rawKey = process.env.SALEO_API_KEY;
   if (!rawKey) throw new Error('SALEO_API_KEY not configured');
 
@@ -126,7 +126,7 @@ module.exports = {
    * Retries with name suffix on duplicate-name errors.
    */
   async createView(demoId, name, tokenValues) {
-    for (let suffix = 0; suffix <= 5; suffix++) {
+    for (let suffix = 0; suffix <= 2; suffix++) {
       const viewName = suffix === 0 ? name : `${name} (${suffix + 1})`;
       try {
         return await saleoRpc('create_personalized_view', {
@@ -138,7 +138,7 @@ module.exports = {
         // Duplicate name — retry with suffix
         const msg = (err.message || '').toLowerCase();
         if (msg.includes('duplicate') || msg.includes('already exists') || msg.includes('unique')) {
-          if (suffix < 5) {
+          if (suffix < 2) {
             console.warn(`[Saleo] View name "${viewName}" already exists, trying suffix (${suffix + 2})...`);
             continue;
           }
