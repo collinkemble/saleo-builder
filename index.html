@@ -239,6 +239,12 @@
           <p class="text-xs text-red-600 mt-1">Contact your admin to set SALEO_API_KEY on this environment.</p>
         </div>
 
+        <!-- Org access callout -->
+        <div style="background:#EFF6FF;border:1px solid #BFDBFE;border-radius:8px;padding:12px 16px;margin-bottom:12px;">
+          <p class="text-sm font-semibold" style="color:#1E40AF;">&#x1F3AF; This Saleo view works with the Product C360 Golden Demo Org</p>
+          <p class="text-xs mt-1" style="color:#1E40AF;">Make sure you have access to this org before using your personalized view. If you don't have access yet, <a href="https://www.solutionswork.space/demos/requestdemo/cf25c32c-ce76-b6c0-9458-ba0ac06b357f" target="_blank" style="color:#2563EB;text-decoration:underline;font-weight:600;">request access here</a>.</p>
+        </div>
+
         <!-- Step 1: Generate token values -->
         <div id="saleo-step-generate" class="hidden">
           <p class="text-sm text-gray-600 mb-3">Generate AI-powered token values for your Saleo view based on the brand context, then review and edit before creating.</p>
@@ -1197,19 +1203,20 @@ async function createSaleoView() {
       if (inp) t.value = inp.value;
     });
 
-    const tokenValues = currentTokenValues.map(t => ({ tokenId: t.tokenId, value: t.value }));
+    const tokenValuesForApi = currentTokenValues.map(t => ({ tokenId: t.tokenId, value: t.value }));
+    const tokenValuesForDb = currentTokenValues.map(t => ({ tokenId: t.tokenId, label: t.label, value: t.value }));
 
     const r = await fetch('/api/saleo/views', {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email, itemId: currentItemId, demoId: goldenDemoId, projectName, tokenValues })
+      body: JSON.stringify({ email, itemId: currentItemId, demoId: goldenDemoId, projectName, tokenValues: tokenValuesForApi })
     });
     const d = await r.json();
     if (!r.ok) throw new Error(d.error || 'Failed to create view');
 
-    // Update local state
+    // Update local state — save labels so they persist on reload
     currentItemData.saleo = {
       demoId: goldenDemoId, viewId: d.viewId, viewName: d.viewName,
-      tokenValues, sharedWith: d.saleoUserId ? [{ email, userId: d.saleoUserId, canEdit: true }] : [],
+      tokenValues: tokenValuesForDb, sharedWith: d.saleoUserId ? [{ email, userId: d.saleoUserId, canEdit: true }] : [],
       status: d.shareStatus, error: d.shareError, createdAt: new Date().toISOString()
     };
 
