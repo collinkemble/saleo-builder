@@ -422,14 +422,23 @@
         <!-- STEP 1: Basics -->
         <div id="wizard-step-1" style="display:flex;flex-direction:column;gap:12px;">
           <div><label class="block text-xs font-bold mb-1" style="color:#032D60;">Saleo Demo Name <span style="color:#ea001e;">*</span></label><input id="new-project-name" type="text" placeholder="e.g. Acme Corp Spring Demo" oninput="clearFieldError('new-project-name'); autoFillBrandName();" class="w-full px-3 py-2 rounded-lg border border-gray-300 text-sm"></div>
-          <div><label class="block text-xs font-bold mb-1" style="color:#032D60;">Brand Name <span style="color:#ea001e;">*</span></label><input id="new-brand" type="text" placeholder="e.g. Sephora" oninput="clearFieldError('new-brand'); wizardAutoDetectIndustry();" class="w-full px-3 py-2 rounded-lg border border-gray-300 text-sm"><span id="industry-auto-detect" style="display:none;font-size:11px;margin-top:4px;color:#059669;"></span></div>
+          <div><label class="block text-xs font-bold mb-1" style="color:#032D60;">Brand Name <span style="color:#ea001e;">*</span></label><input id="new-brand" type="text" placeholder="e.g. Nike, Patagonia, Lululemon" oninput="clearFieldError('new-brand'); wizardAutoDetectIndustry();" class="w-full px-3 py-2 rounded-lg border border-gray-300 text-sm"></div>
           <div>
             <label class="block text-xs font-bold mb-1" style="color:#032D60;">Industry <span style="color:#ea001e;">*</span></label>
-            <select id="new-industry" class="w-full px-3 py-2 rounded-lg border border-gray-300 text-sm" onchange="toggleCustomIndustry('new'); clearFieldError('new-industry');">
-              <option value="">Select industry...</option>
-              <option>Retail</option><option>Consumer Goods</option><option>Manufacturing</option><option>Auto</option><option>Energy</option><option>Other</option>
-            </select>
-            <div id="new-custom-industry-wrapper" class="hidden mt-1"><input id="new-industry-custom" class="w-full px-3 py-2 rounded-lg border border-gray-300 text-sm" placeholder="Specify industry"></div>
+            <div style="position: relative;">
+              <select id="new-industry" class="w-full px-3 py-2 rounded-lg border border-gray-300 text-sm" style="background:white;" onchange="toggleCustomIndustry('new'); clearFieldError('new-industry');">
+                <option value="">Select industry...</option>
+                <option>Retail</option><option>Consumer Goods</option><option>Manufacturing</option><option>Auto</option><option>Energy</option><option>Other</option>
+              </select>
+              <div id="industry-auto-detect" style="display: none; position: absolute; right: 8px; top: 50%; transform: translateY(-50%); font-size: 11px; color: #0176D3; font-weight: 600;">
+                <span id="industry-detecting-spinner" style="display: none;">✨ Detecting...</span>
+                <span id="industry-detected-badge" style="display: none; background: #E8F5E9; color: #2E7D32; padding: 2px 8px; border-radius: 4px;">✓ Auto-detected</span>
+              </div>
+            </div>
+            <div id="new-custom-industry-wrapper" class="hidden" style="margin-top: 8px;">
+              <input id="new-industry-custom" class="w-full px-3 py-2 rounded-lg border border-gray-300 text-sm" placeholder="e.g. Logistics, Insurance, Pharmaceuticals" oninput="clearFieldError('new-industry-custom')">
+              <p style="font-size: 11px; color: #9ca3af; margin: 6px 0 0 0; line-height: 1.4;">This industry isn't officially supported yet, but the AI will do its best.</p>
+            </div>
           </div>
           <div>
             <label class="block text-xs font-bold mb-1" style="color:#032D60;">Output Language</label>
@@ -1584,20 +1593,35 @@ function autoFillBrandName() {
 let autoDetectTimer = null;
 function wizardAutoDetectIndustry() {
   const brand = document.getElementById('new-brand').value.trim();
-  const badge = document.getElementById('industry-auto-detect');
-  if (!brand || brand.length < 2) { if (badge) badge.style.display = 'none'; return; }
+  const industryEl = document.getElementById('new-industry');
+  if (industryEl.value) return; // Already selected, don't override
+  if (!brand || brand.length < 2) {
+    const c = document.getElementById('industry-auto-detect');
+    if (c) c.style.display = 'none';
+    return;
+  }
   clearTimeout(autoDetectTimer);
   autoDetectTimer = setTimeout(async () => {
-    if (badge) { badge.style.display = 'inline-block'; badge.innerHTML = '&#10024; Detecting...'; badge.style.color = '#6B7280'; }
+    const spinner = document.getElementById('industry-detecting-spinner');
+    const badge = document.getElementById('industry-detected-badge');
+    const container = document.getElementById('industry-auto-detect');
+    if (container) container.style.display = 'block';
+    if (spinner) spinner.style.display = 'inline';
+    if (badge) badge.style.display = 'none';
     try {
       const r = await fetch('/api/detect-industry', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ brand_name: brand }) });
       if (!r.ok) throw new Error('Failed');
       const d = await r.json();
-      if (d.industry) {
-        setIndustryFromStored('new', d.industry);
-        if (badge) { badge.innerHTML = '&#10003; Auto-detected'; badge.style.color = '#059669'; }
+      if (d.industry && !industryEl.value) {
+        const options = Array.from(industryEl.options).map(o => o.value).filter(v => v && v !== 'Other');
+        let match = options.find(o => o.toLowerCase() === d.industry.toLowerCase());
+        if (!match) match = options.find(o => d.industry.toLowerCase().includes(o.toLowerCase()) || o.toLowerCase().includes(d.industry.toLowerCase()));
+        if (match) { industryEl.value = match; }
+        else { industryEl.value = 'Other'; document.getElementById('new-industry-custom').value = d.industry; toggleCustomIndustry('new'); }
+        if (badge) { badge.style.display = 'inline'; badge.textContent = '✓ ' + d.industry; }
       }
-    } catch (e) { if (badge) badge.style.display = 'none'; }
+    } catch (e) { console.log('Industry auto-detect failed:', e); }
+    if (spinner) spinner.style.display = 'none';
   }, 800);
 }
 
