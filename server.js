@@ -1407,7 +1407,8 @@ app.post('/api/detect-industry', async (req, res) => {
   const supportedIndustries = ['Retail', 'Consumer Goods', 'Manufacturing', 'Auto', 'Energy'];
   try {
     const prompt = `What industry does the brand "${brand_name}" belong to? Pick ONLY ONE from this exact list: ${supportedIndustries.join(', ')}. If none fit well, respond with one of those that fits best. Respond with ONLY the industry name, nothing else.`;
-    const resp = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`, {
+    const model = process.env.GEMINI_MODEL || 'gemini-2.5-flash';
+    const resp = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`, {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }], generationConfig: { temperature: 0.1, maxOutputTokens: 20 } })
     });

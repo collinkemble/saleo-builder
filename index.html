@@ -1569,7 +1569,16 @@ function wizardChangeBrandKit() {
 function autoFillBrandName() {
   const projName = document.getElementById('new-project-name').value.trim();
   const brandEl = document.getElementById('new-brand');
-  if (brandEl) { brandEl.value = projName; wizardAutoDetectIndustry(); }
+  if (!brandEl) return;
+  // Only auto-fill if brand name is empty or was previously auto-filled
+  if (brandEl.dataset.autoFilled === 'true' || !brandEl.value.trim()) {
+    // Strip common suffixes like "Holiday Campaign", "Demo", "Q4", "test", etc. — same as DemoForge
+    const suffixes = /\s+(holiday|campaign|demo|q[1-4]|launch|project|test|preview|poc|pilot|experience)\b.*/i;
+    const brand = projName.replace(suffixes, '').trim();
+    brandEl.value = brand;
+    brandEl.dataset.autoFilled = brand ? 'true' : '';
+    wizardAutoDetectIndustry();
+  }
 }
 
 let autoDetectTimer = null;
