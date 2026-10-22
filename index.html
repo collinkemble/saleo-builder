@@ -242,7 +242,7 @@
         <!-- Org access callout -->
         <div style="background:#EFF6FF;border:1px solid #BFDBFE;border-radius:8px;padding:12px 16px;margin-bottom:12px;">
           <p class="text-sm font-semibold" style="color:#1E40AF;">&#x1F3AF; This Saleo view works with the Product C360 Golden Demo Org</p>
-          <p class="text-xs mt-1" style="color:#1E40AF;">Make sure you have access to this org before using your personalized view. If you don't have access yet, <a href="https://www.solutionswork.space/demos/requestdemo/cf25c32c-ce76-b6c0-9458-ba0ac06b357f" target="_blank" style="color:#2563EB;text-decoration:underline;font-weight:600;">request access here</a>.</p>
+          <p class="text-xs mt-1" style="color:#1E40AF;">If you already have access, <a href="https://www.solutionswork.space/demos/" target="_blank" style="color:#2563EB;text-decoration:underline;font-weight:600;">log in to the golden demo here</a>. If you don't have access yet, <a href="https://www.solutionswork.space/demos/requestdemo/cf25c32c-ce76-b6c0-9458-ba0ac06b357f" target="_blank" style="color:#2563EB;text-decoration:underline;font-weight:600;">request access here</a>.</p>
         </div>
 
         <!-- Step 1: Generate token values -->
@@ -256,10 +256,10 @@
         </div>
 
         <!-- Token review table -->
-        <div id="saleo-token-review" class="hidden">
+        <div id="saleo-token-review" class="hidden" style="margin-bottom:20px;">
           <p class="text-sm text-gray-600 mb-3">Review and edit the token values below, then create your Saleo view.</p>
           <div id="token-table" style="max-height:400px;overflow-y:auto;border:1px solid #e5e7eb;border-radius:8px;"></div>
-          <div class="flex items-center gap-3 mt-4">
+          <div class="flex items-center gap-3 mt-4" style="margin-bottom:16px;">
             <button id="create-view-btn" onclick="createSaleoView()" class="cursor-pointer" style="padding:10px 24px;background:#059669;color:white;border:none;border-radius:8px;font-size:14px;font-weight:700;">Create Saleo View</button>
             <button onclick="generateTokenValues()" class="cursor-pointer" style="padding:10px 16px;background:#E8F4FD;color:#0176D3;border:1px solid #B4D6F0;border-radius:8px;font-size:13px;font-weight:600;">Regenerate Values</button>
           </div>
@@ -270,7 +270,7 @@
         </div>
 
         <!-- View created status -->
-        <div id="saleo-view-status" class="hidden">
+        <div id="saleo-view-status" class="hidden" style="margin-bottom:20px;">
           <div id="saleo-status-card" style="border-radius:10px;padding:16px;margin-bottom:16px;"></div>
           <div class="flex flex-wrap items-center gap-2 mb-4">
             <button onclick="updateSaleoTokens()" class="cursor-pointer" style="padding:8px 16px;background:#E8F4FD;color:#0176D3;border:1px solid #B4D6F0;border-radius:6px;font-size:12px;font-weight:600;">Update Tokens in Saleo</button>
