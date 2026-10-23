@@ -1165,6 +1165,134 @@ app.get('/api/items/:id', async (req, res) => {
   }
 });
 
+// ─── Auto-generate Saleo tokens + view (background, called by DemoForge API) ───
+async function autoGenerateSaleoView(itemId, projectName, itemData) {
+  const meta = itemData?.metadata || {};
+  const brand = meta.brand || projectName;
+  const industry = meta.industry || '';
+  const brandDesc = meta.brand_desc || '';
+  const synopsis = meta.synopsis || '';
+  const email = 'ckemble@salesforce.com'; // admin key owner
+  const language = meta.language || 'English';
+
+  console.log(`[AutoSaleo] Starting background generation for item ${itemId} (brand: ${brand})`);
+
+  try {
+    // Step 1: Find golden demo
+    const goldenDemo = await saleo.findGoldenDemo();
+    if (!goldenDemo) throw new Error('Golden demo not found');
+    const demoId = goldenDemo.id;
+    console.log(`[AutoSaleo] Golden demo: ${goldenDemo.name} (${demoId})`);
+
+    // Step 2: Get tokens from Saleo
+    const rawTokens = await saleo.getTokens(demoId);
+    const tokens = (Array.isArray(rawTokens) ? rawTokens : rawTokens?.tokens || []);
+    if (tokens.length === 0) throw new Error('No tokens returned from golden demo');
+    console.log(`[AutoSaleo] Got ${tokens.length} tokens`);
+
+    // Step 3: Generate values with Gemini (same logic as /api/saleo/generate-values)
+    const geminiKey = process.env.GEMINI_API_KEY;
+    const model = process.env.GEMINI_MODEL || 'gemini-3.7-flash';
+    const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${geminiKey}`;
+
+    const tokenList = tokens.map(t => {
+      const id = t.tokenId || t.id;
+      const label = (t.name || t.label || id || '').replace(/"/g, '');
+      return `{"id":"${id}","label":"${label.substring(0, 60)}"}`;
+    }).join(',');
+
+    const langInstr = language && language !== 'English' ? `\nIMPORTANT: Generate ALL values in ${language}.` : '';
+    const prompt = `Generate personalized Saleo demo token values for "${brand}" (${industry || 'General'}${brandDesc ? ', ' + brandDesc.substring(0, 100) : ''}).
+For each token, generate a realistic value matching the label's implied type. Company names → "${brand}", currency → realistic figures, percentages → realistic metrics, person names → realistic names, etc.${langInstr}
+${synopsis ? 'Synopsis: ' + synopsis.substring(0, 300) : ''}
+Tokens: [${tokenList}]
+Return ONLY: {"tokenValues":[{"tokenId":"...","value":"..."},...]}`
+
+    let geminiData, rawText = '';
+    for (let attempt = 0; attempt < 2; attempt++) {
+      const geminiResp = await Promise.race([
+        fetch(geminiUrl, {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }], generationConfig: { temperature: 0.7, maxOutputTokens: 8192 } }),
+        }),
+        new Promise((_, reject) => setTimeout(() => reject(new Error('Gemini timeout')), 120000)),
+      ]);
+      if (!geminiResp.ok) throw new Error(`Gemini ${geminiResp.status}`);
+      geminiData = await geminiResp.json();
+      rawText = geminiData.candidates?.[0]?.content?.parts?.[0]?.text || '';
+      if (rawText.trim()) break;
+      console.log(`[AutoSaleo] Empty Gemini response, attempt ${attempt + 1}`);
+    }
+    if (!rawText.trim()) throw new Error('No AI response after retries');
+
+    let text = rawText.trim().replace(/^```(?:json)?\s*\n?/i, '').replace(/\n?```\s*$/i, '').trim();
+    const jsonStart = text.indexOf('{');
+    const jsonEnd = text.lastIndexOf('}');
+    if (jsonStart >= 0 && jsonEnd > jsonStart) text = text.substring(jsonStart, jsonEnd + 1);
+    const parsed = JSON.parse(text);
+
+    const validTokenIds = new Set(tokens.map(t => t.tokenId || t.id));
+    const tokenValues = (parsed.tokenValues || [])
+      .filter(tv => validTokenIds.has(tv.tokenId || tv.id))
+      .map(tv => ({ tokenId: tv.tokenId || tv.id, value: String(tv.value || '').substring(0, 1000) }));
+
+    // Fill missing tokens with defaults
+    for (const t of tokens) {
+      const tid = t.tokenId || t.id;
+      if (!tokenValues.find(tv => tv.tokenId === tid)) {
+        tokenValues.push({ tokenId: tid, value: t.value || t.currentValue || '' });
+      }
+    }
+    console.log(`[AutoSaleo] Generated ${tokenValues.length} token values`);
+
+    // Step 4: Create Saleo view
+    const now = new Date();
+    const dateStr = `${String(now.getDate()).padStart(2, '0')}/${String(now.getMonth() + 1).padStart(2, '0')}/${now.getFullYear()}`;
+    const viewName = `Aubrey Demo - ${projectName} - ${dateStr}`;
+
+    const viewResult = await saleo.createView(demoId, viewName, tokenValues);
+    const viewId = viewResult.viewId || viewResult.id || viewResult.view?.id;
+    if (!viewId) throw new Error('No viewId returned');
+    console.log(`[AutoSaleo] View created: ${viewId} (${viewName})`);
+
+    // Step 5: Share with user (if item has user email from metadata)
+    let shareStatus = 'created';
+    let shareError = null;
+
+    // Step 6: Save to item data
+    const items = await query('SELECT data FROM items WHERE id = ?', [itemId]);
+    if (items.length > 0) {
+      let data = typeof items[0].data === 'string' ? JSON.parse(items[0].data) : (items[0].data || {});
+      // Add token labels for display
+      const tokenValuesWithLabels = tokenValues.map(tv => {
+        const tok = tokens.find(t => (t.tokenId || t.id) === tv.tokenId);
+        return { ...tv, label: tok ? (tok.name || tok.label || tv.tokenId) : tv.tokenId };
+      });
+      data.saleo = {
+        demoId, viewId, viewName,
+        tokenValues: tokenValuesWithLabels,
+        sharedWith: [],
+        status: shareStatus,
+        error: shareError,
+        createdAt: new Date().toISOString(),
+      };
+      await query('UPDATE items SET data = ?, updated_at = NOW() WHERE id = ?', [JSON.stringify(data), itemId]);
+    }
+    console.log(`[AutoSaleo] Item ${itemId} updated with Saleo view ${viewId}`);
+  } catch (err) {
+    console.error(`[AutoSaleo] Failed for item ${itemId}:`, err.message);
+    // Save error to item so UI can show it
+    try {
+      const items = await query('SELECT data FROM items WHERE id = ?', [itemId]);
+      if (items.length > 0) {
+        let data = typeof items[0].data === 'string' ? JSON.parse(items[0].data) : (items[0].data || {});
+        data.saleo = { status: 'error', error: err.message, createdAt: new Date().toISOString() };
+        await query('UPDATE items SET data = ?, updated_at = NOW() WHERE id = ?', [JSON.stringify(data), itemId]);
+      }
+    } catch (dbErr) { console.error('[AutoSaleo] Failed to save error:', dbErr.message); }
+  }
+}
+
 // POST /api/items — create a new item
 app.post('/api/items', async (req, res) => {
   try {
@@ -1182,6 +1310,13 @@ app.post('/api/items', async (req, res) => {
     res.status(201).json({
       item: { id: itemId, name: name.trim(), created_at: new Date().toISOString(), updated_at: new Date().toISOString() }
     });
+
+    // Auto-generate tokens + create Saleo view in background when called via API (DemoForge)
+    if (data && data.source_type === 'api' && process.env.SALEO_API_KEY && process.env.GEMINI_API_KEY) {
+      autoGenerateSaleoView(itemId, name.trim(), data).catch(err => {
+        console.error(`[AutoSaleo] Background generation for item ${itemId} failed:`, err.message);
+      });
+    }
   } catch (err) {
     console.error('Failed to create item:', err);
     res.status(500).json({ error: 'Failed to create item' });
