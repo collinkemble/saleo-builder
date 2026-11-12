@@ -431,6 +431,10 @@ app.get('/api/demoforge-link/:id', async (req, res) => {
     const demoforgeUrl = (process.env.DEMOFORGE_URL || 'https://demoforge.aubreydemo.com').replace(/\/+$/, '');
     const resp = await fetch(`${demoforgeUrl}/api/project-link?app=saleobuilder&remote_id=${encodeURIComponent(req.params.id)}`, { signal: AbortSignal.timeout(5000) });
     const data = await resp.json();
+    if (data.linked) {
+      const browserDfUrl = (typeof toBrowserUrl === 'function' ? toBrowserUrl(demoforgeUrl) : demoforgeUrl) || demoforgeUrl;
+      data.projectUrl = browserDfUrl.replace(/\/+$/, '') + '/demos/' + data.projectId;
+    }
     res.json(data);
   } catch (err) {
     res.json({ linked: false });
